@@ -431,22 +431,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnIcon = document.querySelector("#mobileMenuToggle i");
 
   if (menu) {
-    // Bắt sự kiện click vào chính cái Menu cha
+    // Bắt sự kiện click vào menu
     menu.addEventListener("click", (e) => {
-      // Kiểm tra: Nếu cái được bấm là thẻ A, thẻ Button, hoặc có class nav-link
-      const targetLink =
-        e.target.closest("a") ||
-        e.target.closest("button") ||
-        e.target.closest(".nav-link");
+      // 1. Nếu bấm vào chính cái vùng nền trống của menu thì KHÔNG đóng
+      if (e.target === menu) return;
 
-      if (targetLink) {
-        // Thì đóng menu ngay lập tức
-        menu.classList.remove("active");
+      // 2. Nếu bấm vào BẤT KỲ thành phần nào bên trong (Icon, Chữ, Nút Xem chung...)
+      // -> Đóng menu ngay lập tức
+      menu.classList.remove("active");
 
-        // Đổi icon X trở lại thành 3 gạch
-        if (btnIcon) {
-          btnIcon.className = "fas fa-bars";
-        }
+      // Đổi icon X trở lại thành 3 gạch
+      if (btnIcon) {
+        btnIcon.className = "fas fa-bars";
       }
     });
   }
