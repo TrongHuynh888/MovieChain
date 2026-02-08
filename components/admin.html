@@ -1,0 +1,385 @@
+<!-- ADMIN PAGE -->
+<div id="adminPage" class="page">
+  <div class="admin-layout">
+    <!-- Admin Sidebar -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <nav class="admin-nav">
+        <div
+          class="admin-nav-item active"
+          data-panel="dashboard"
+          onclick="showAdminPanel('dashboard')"
+        >
+          <i class="fas fa-chart-line"></i>
+          <span>Dashboard</span>
+        </div>
+        <div
+          class="admin-nav-item"
+          data-panel="movies"
+          onclick="showAdminPanel('movies')"
+        >
+          <i class="fas fa-film"></i>
+          <span>Quản lý Phim</span>
+        </div>
+        <div
+          class="admin-nav-item"
+          data-panel="episodes"
+          onclick="showAdminPanel('episodes')"
+        >
+          <i class="fas fa-list-ol"></i>
+          <span>Quản lý Tập</span>
+        </div>
+        <div
+          class="admin-nav-item"
+          data-panel="categories"
+          onclick="showAdminPanel('categories')"
+        >
+          <i class="fas fa-tags"></i>
+          <span>Thể loại</span>
+        </div>
+        <div
+          class="admin-nav-item"
+          data-panel="countries"
+          onclick="showAdminPanel('countries')"
+        >
+          <i class="fas fa-globe"></i>
+          <span>Quốc gia</span>
+        </div>
+        <div
+          class="admin-nav-item"
+          data-panel="users"
+          onclick="showAdminPanel('users')"
+        >
+          <i class="fas fa-users"></i>
+          <span>Người dùng</span>
+        </div>
+        <div
+          class="admin-nav-item"
+          data-panel="comments"
+          onclick="showAdminPanel('comments')"
+        >
+          <i class="fas fa-comments"></i>
+          <span>Bình luận</span>
+        </div>
+        <div
+          class="admin-nav-item"
+          data-panel="transactions"
+          onclick="showAdminPanel('transactions')"
+        >
+          <i class="fas fa-exchange-alt"></i>
+          <span>Giao dịch</span>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Admin Content -->
+    <div class="admin-content">
+      <!-- Dashboard Panel -->
+      <div class="admin-panel active" id="dashboardPanel">
+        <div class="admin-panel-header">
+          <h2 class="admin-panel-title">Dashboard</h2>
+          <span class="text-muted">Tổng quan hệ thống</span>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon movies">
+              <i class="fas fa-film"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="statTotalMovies">0</h3>
+              <p>Tổng số phim</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon views">
+              <i class="fas fa-eye"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="statTotalViews">0</h3>
+              <p>Tổng lượt xem</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon revenue">
+              <i class="fas fa-coins"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="statTotalRevenue">0 CRO</h3>
+              <p>Doanh thu ước tính</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon users">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="statTotalUsers">0</h3>
+              <p>Tổng người dùng</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Movies -->
+        <div class="mt-3">
+          <h3>Phim mới thêm gần đây</h3>
+          <table class="admin-table mt-2">
+            <thead>
+              <tr>
+                <th>Poster</th>
+                <th>Tên phim</th>
+                <th>Giá</th>
+                <th>Trạng thái</th>
+                <th>Ngày tạo</th>
+              </tr>
+            </thead>
+            <tbody id="recentMoviesTable">
+              <!-- Data sẽ được load động -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Movies Panel -->
+      <div class="admin-panel" id="moviesPanel">
+        <div class="admin-panel-header">
+          <h2 class="admin-panel-title">Quản lý Phim</h2>
+          <button class="btn btn-primary" onclick="openMovieModal()">
+            <i class="fas fa-plus"></i> Thêm phim mới
+          </button>
+        </div>
+
+        <div class="search-filter mb-3">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input
+              type="text"
+              class="form-input"
+              id="adminSearchMovies"
+              placeholder="Tìm kiếm phim..."
+            />
+          </div>
+          <select class="form-select" id="adminFilterStatus">
+            <option value="">Tất cả trạng thái</option>
+            <option value="public">Công khai</option>
+            <option value="hidden">Ẩn</option>
+            <option value="pending">Chờ duyệt</option>
+          </select>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Poster</th>
+              <th>Tên phim</th>
+              <th>Thể loại</th>
+              <th>Giá (CRO)</th>
+              <th>Lượt xem</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="adminMoviesTable">
+            <!-- Data sẽ được load động -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Episodes Panel -->
+      <div class="admin-panel" id="episodesPanel">
+        <div class="admin-panel-header">
+          <h2 class="admin-panel-title">Quản lý Tập Phim</h2>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Chọn phim:</label>
+
+          <div style="position: relative; margin-bottom: 10px">
+            <i
+              class="fas fa-search"
+              style="position: absolute; left: 10px; top: 10px; color: #888"
+            ></i>
+            <input
+              type="text"
+              class="form-input"
+              id="episodeMovieSearch"
+              placeholder="Gõ tên phim để lọc nhanh..."
+              oninput="filterEpisodeMovies()"
+              style="padding-left: 35px"
+            />
+          </div>
+          <select
+            class="form-select"
+            id="selectMovieForEpisodes"
+            onchange="loadEpisodesForMovie()"
+          >
+            <option value="">-- Chọn phim --</option>
+          </select>
+        </div>
+
+        <div id="episodesManagement" class="hidden">
+          <div class="flex-between mb-3">
+            <h3>Danh sách tập</h3>
+            <button class="btn btn-primary" onclick="openEpisodeModal()">
+              <i class="fas fa-plus"></i> Thêm tập mới
+            </button>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Tập</th>
+                <th>Tiêu đề</th>
+                <th>YouTube ID</th>
+                <th>Thời lượng</th>
+                <th>Chất lượng</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="adminEpisodesTable">
+              <!-- Data sẽ được load động -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Categories Panel -->
+      <div class="admin-panel" id="categoriesPanel">
+        <div class="admin-panel-header">
+          <h2 class="admin-panel-title">Quản lý Thể Loại</h2>
+          <button class="btn btn-primary" onclick="openCategoryModal()">
+            <i class="fas fa-plus"></i> Thêm thể loại
+          </button>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tên thể loại</th>
+              <th>Slug</th>
+              <th>Số phim</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="adminCategoriesTable">
+            <!-- Data sẽ được load động -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Countries Panel -->
+      <div class="admin-panel" id="countriesPanel">
+        <div class="admin-panel-header">
+          <h2 class="admin-panel-title">Quản lý Quốc Gia</h2>
+          <button class="btn btn-primary" onclick="openCountryModal()">
+            <i class="fas fa-plus"></i> Thêm Quốc Gia
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width: 50px">STT</th>
+                <th>ID</th>
+                <th>Tên Quốc Gia</th>
+                <th>Mã (Code)</th>
+                <th style="width: 120px">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="adminCountriesTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Users Panel -->
+      <div class="admin-panel" id="usersPanel">
+        <div class="admin-panel-header">
+          <h2 class="admin-panel-title">Quản lý Người Dùng</h2>
+        </div>
+
+        <div class="search-filter mb-3">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input
+              type="text"
+              class="form-input"
+              id="adminSearchUsers"
+              placeholder="Tìm kiếm người dùng..."
+            />
+          </div>
+          <select class="form-select" id="adminFilterRole">
+            <option value="">Tất cả vai trò</option>
+            <option value="admin">Admin</option>
+            <option value="editor">Editor</option>
+            <option value="user">User</option>
+          </select>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Avatar</th>
+              <th>Email</th>
+              <th>Tên</th>
+              <th>Vai trò</th>
+              <th>Trạng thái</th>
+              <th>Gói (VIP)</th>
+              <th>Thời hạn</th>
+              <th>Ngày tạo</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="adminUsersTable"></tbody>
+        </table>
+      </div>
+
+      <!-- Comments Panel -->
+      <div class="admin-panel" id="commentsPanel">
+        <div class="admin-panel-header">
+          <h2 class="admin-panel-title">Quản lý Bình Luận</h2>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Người dùng</th>
+              <th>Phim</th>
+              <th>Nội dung</th>
+              <th>Đánh giá</th>
+              <th>Thời gian</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="adminCommentsTable">
+            <!-- Data sẽ được load động -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Transactions Panel -->
+      <div class="admin-panel" id="transactionsPanel">
+        <div class="admin-panel-header">
+          <h2 class="admin-panel-title">Lịch Sử Giao Dịch</h2>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>TX Hash</th>
+              <th>Người dùng</th>
+              <th>Phim</th>
+              <th>Số tiền</th>
+              <th>Trạng thái</th>
+              <th>Thời gian</th>
+            </tr>
+          </thead>
+          <tbody id="adminTransactionsTable">
+            <!-- Data sẽ được load động -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

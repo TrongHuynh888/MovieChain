@@ -1,0 +1,2814 @@
+/**
+ * ============================================
+ * STYLE.CSS - Rạp Chiếu Phim Blockchain
+ * ============================================
+ * Phong cách: Netflix + Cyberpunk
+ * Hỗ trợ: Dark/Light Theme, Responsive
+ */
+
+/* ============================================
+   CSS VARIABLES - DỄ DÀNG TÙY CHỈNH MÀU SẮC
+   ============================================ */
+:root {
+  /* Dark Theme (Mặc định) */
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #1a1a2e;
+  --bg-tertiary: #16213e;
+  --bg-card: rgba(26, 26, 46, 0.8);
+  --bg-glass: rgba(26, 26, 46, 0.6);
+
+  /* Accent Colors */
+  --accent-primary: #e50914;
+  --accent-secondary: #00d4ff;
+  --accent-tertiary: #ff00ff;
+  --accent-gradient: linear-gradient(135deg, #e50914, #ff00ff);
+  --accent-neon: linear-gradient(135deg, #00d4ff, #ff00ff);
+
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  --text-muted: #666666;
+
+  /* Status Colors */
+  --success: #00ff88;
+  --warning: #ffaa00;
+  --error: #ff4444;
+  --info: #00d4ff;
+
+  /* Shadows & Effects */
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --shadow-neon: 0 0 20px rgba(0, 212, 255, 0.5);
+  --shadow-red: 0 0 20px rgba(229, 9, 20, 0.5);
+
+  /* Border */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-radius: 12px;
+  --border-radius-sm: 8px;
+  --border-radius-lg: 20px;
+
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+
+  /* Font Sizes */
+  --font-xs: 12px;
+  --font-sm: 14px;
+  --font-md: 16px;
+  --font-lg: 18px;
+  --font-xl: 24px;
+  --font-xxl: 32px;
+  --font-hero: 48px;
+}
+
+/* Light Theme */
+/* Light Theme (Đã Fix lỗi hiển thị) */
+[data-theme="light"] {
+  --bg-primary: #f0f2f5; /* Xám nhạt dịu mắt */
+  --bg-secondary: #ffffff; /* Trắng tinh */
+  --bg-tertiary: #e4e6eb; /* Xám đậm hơn chút cho input */
+  --bg-card: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+
+  --text-primary: #050505; /* Đen gần như tuyệt đối */
+  --text-secondary: #65676b; /* Xám đậm */
+  --text-muted: #8c949e;
+
+  --border-color: rgba(0, 0, 0, 0.1); /* Viền màu đen mờ */
+
+  /* Shadow mềm hơn cho nền sáng */
+  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+  --shadow-neon: 0 0 15px rgba(0, 212, 255, 0.4);
+  --shadow-red: 0 0 15px rgba(229, 9, 20, 0.4);
+}
+
+/* ============================================
+   RESET & BASE STYLES
+   ============================================ */
+/* 1. Mặc định ẩn tất cả các trang */
+.page {
+  display: none;
+  width: 100%;
+  min-height: 100vh;
+  padding-top: 80px; /* Tạo khoảng trống để không bị Header che */
+  animation: fadeEffect 0.5s; /* Hiệu ứng hiện ra từ từ cho đẹp */
+}
+
+/* 2. Chỉ hiện trang nào có class là 'active' */
+.page.active {
+  display: block;
+}
+
+/* 3. Hiệu ứng chuyển cảnh */
+@keyframes fadeEffect {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* --- KẾT THÚC ĐOẠN CODE ẨN THANH BÊN TRÁI --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family:
+    "Roboto",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition:
+    background-color var(--transition-normal),
+    color var(--transition-normal);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* Firefox Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-secondary) var(--bg-secondary);
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Orbitron", "Rajdhani", sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: var(--spacing-md);
+}
+
+h1 {
+  font-size: var(--font-hero);
+}
+h2 {
+  font-size: var(--font-xxl);
+}
+h3 {
+  font-size: var(--font-xl);
+}
+h4 {
+  font-size: var(--font-lg);
+}
+
+a {
+  color: var(--accent-secondary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   NAVIGATION
+   ============================================ */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-color);
+  /* 👇 SỬA DÒNG NÀY: Bỏ padding cũ đi để container bên trong tự xử lý */
+  padding: 0;
+  transition: all var(--transition-normal);
+}
+
+.navbar.scrolled {
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-md);
+}
+
+.nav-container {
+  max-width: 100%;
+  width: 100%;
+  /* Thêm khoảng cách lề trái/phải tùy theo độ rộng màn hình cho đẹp */
+  padding: var(--spacing-md) 40px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 👇 THÊM ĐOẠN NÀY ĐỂ TÙY BIẾN THEO KÍCH THƯỚC MÀN HÌNH 👇 */
+@media (max-width: 1024px) {
+  .nav-container {
+    padding: var(--spacing-md) 20px; /* Màn hình Laptop nhỏ: Lề 20px */
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-container {
+    padding: var(--spacing-sm) 15px; /* Mobile: Lề 15px */
+  }
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-family: "Orbitron", sans-serif;
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.nav-logo i {
+  color: var(--accent-primary);
+  font-size: var(--font-xxl);
+}
+
+.nav-logo span {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.nav-link {
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--text-primary);
+  background: var(--bg-glass);
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--accent-gradient);
+  transition: all var(--transition-fast);
+  transform: translateX(-50%);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  width: 80%;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+/* Theme Toggle */
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-glass);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-lg);
+  transition: all var(--transition-fast);
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent-secondary);
+  box-shadow: var(--shadow-neon);
+  transform: rotate(180deg);
+}
+
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-xl);
+  cursor: pointer;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: var(--accent-gradient);
+  color: white;
+  box-shadow: var(--shadow-red);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(229, 9, 20, 0.7);
+}
+
+.btn-secondary {
+  background: var(--bg-glass);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent-secondary);
+  box-shadow: var(--shadow-neon);
+}
+
+.btn-neon {
+  background: transparent;
+  color: var(--accent-secondary);
+  border: 2px solid var(--accent-secondary);
+  box-shadow: var(--shadow-neon);
+}
+
+.btn-neon:hover {
+  background: var(--accent-secondary);
+  color: var(--bg-primary);
+}
+
+.btn-success {
+  background: var(--success);
+  color: var(--bg-primary);
+}
+
+.btn-danger {
+  background: var(--error);
+  color: white;
+}
+
+.btn-lg {
+  padding: var(--spacing-md) var(--spacing-xl);
+  font-size: var(--font-md);
+}
+
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-xs);
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Wallet Button */
+.wallet-btn {
+  background: var(--accent-neon);
+  color: var(--bg-primary);
+  font-weight: 700;
+}
+
+.wallet-btn.connected {
+  background: var(--success);
+}
+
+/* ============================================
+   FORMS & INPUTS
+   ============================================ */
+.form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-md);
+  transition: all var(--transition-fast);
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--accent-secondary);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+.form-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.form-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23b0b0b0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-secondary);
+}
+
+.card-image {
+  position: relative;
+  width: 100%;
+  padding-top: 150%; /* 2:3 Aspect Ratio */
+  overflow: hidden;
+}
+
+.card-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-slow);
+}
+
+.card:hover .card-image img {
+  transform: scale(1.1);
+}
+
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+  display: flex;
+  align-items: flex-end;
+  padding: var(--spacing-md);
+}
+
+.card:hover .card-overlay {
+  opacity: 1;
+}
+
+.card-body {
+  padding: var(--spacing-md);
+}
+
+.card-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.card-price {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--accent-secondary);
+  font-weight: 700;
+  font-size: var(--font-lg);
+}
+
+.card-price i {
+  color: var(--warning);
+}
+
+.card-rating {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--warning);
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+}
+
+.tag {
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.tag.hot {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.tag.new {
+  background: var(--success);
+  color: var(--bg-primary);
+}
+
+/* ============================================
+   MOVIE GRID
+   ============================================ */
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg) 0;
+}
+
+/* ============================================
+   HERO SECTION
+   ============================================ */
+.hero {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px var(--spacing-xl) var(--spacing-xxl);
+  background: linear-gradient(
+    135deg,
+    var(--bg-primary) 0%,
+    var(--bg-secondary) 50%,
+    var(--bg-tertiary) 100%
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(circle, rgba(229, 9, 20, 0.1) 0%, transparent 50%),
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(0, 212, 255, 0.1) 0%,
+      transparent 40%
+    );
+  animation: heroGlow 10s ease-in-out infinite;
+}
+
+@keyframes heroGlow {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(180deg);
+  }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+}
+
+.hero-title {
+  font-size: clamp(32px, 8vw, 64px);
+  margin-bottom: var(--spacing-lg);
+  text-shadow: 0 0 40px rgba(229, 9, 20, 0.5);
+}
+
+.hero-title span {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: var(--font-lg);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xl);
+}
+
+.hero-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ============================================
+   SECTIONS
+   ============================================ */
+.section {
+  padding: var(--spacing-xxl) 40px; /* Đổi padding cố định 40px hai bên */
+  max-width: 100%; /* Đổi từ 1400px thành 100% để tràn màn hình */
+  margin: 0; /* Bỏ margin auto */
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.section-title {
+  font-size: var(--font-xxl);
+  position: relative;
+  padding-left: var(--spacing-md);
+}
+
+.section-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent-gradient);
+  border-radius: 2px;
+}
+
+/* ============================================
+   MODALS
+   ============================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-normal);
+  padding: var(--spacing-md);
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: scale(0.9) translateY(20px);
+  transition: transform var(--transition-normal);
+}
+
+.modal-overlay.active .modal {
+  transform: scale(1) translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title {
+  font-size: var(--font-xl);
+  margin: 0;
+}
+
+.modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+  background: var(--accent-primary);
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: var(--spacing-lg);
+}
+
+.modal-footer {
+  padding: var(--spacing-lg);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+}
+
+/* Auth Modal Tabs */
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.auth-tab {
+  flex: 1;
+  padding: var(--spacing-md);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.auth-tab.active {
+  color: var(--accent-secondary);
+}
+
+.auth-tab::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-secondary);
+  transform: scaleX(0);
+  transition: transform var(--transition-fast);
+}
+
+.auth-tab.active::after {
+  transform: scaleX(1);
+}
+
+.auth-form {
+  display: none;
+}
+
+.auth-form.active {
+  display: block;
+}
+
+/* ============================================
+   VIDEO PLAYER
+   ============================================ */
+.video-container {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.video-locked {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+
+.video-locked i {
+  font-size: 64px;
+  color: var(--accent-primary);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.video-locked h3 {
+  font-size: var(--font-xl);
+  margin: 0;
+}
+
+.video-locked p {
+  color: var(--text-secondary);
+  max-width: 400px;
+}
+
+/* ============================================
+   MOVIE DETAIL PAGE
+   ============================================ */
+.movie-detail {
+  padding: 100px 40px var(--spacing-xxl); /* Lề 40px */
+  max-width: 100%; /* Tràn màn hình */
+  margin: 0;
+}
+
+.movie-detail-header {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xxl);
+}
+
+.movie-poster {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.movie-poster img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.movie-info h1 {
+  font-size: var(--font-hero);
+  margin-bottom: var(--spacing-md);
+}
+
+.movie-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  color: var(--text-secondary);
+}
+
+.movie-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.movie-meta-item i {
+  color: var(--accent-secondary);
+}
+
+.movie-description {
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin-bottom: var(--spacing-xl);
+}
+
+.movie-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+/* Episodes List */
+.episodes-section {
+  margin-top: var(--spacing-xxl);
+}
+
+.episodes-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.episode-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-md);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.episode-item:hover,
+.episode-item.active {
+  border-color: var(--accent-secondary);
+  box-shadow: var(--shadow-neon);
+}
+
+.episode-item.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.episode-number {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--accent-secondary);
+}
+
+.episode-title {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+/* ============================================
+   COMMENTS SECTION
+   ============================================ */
+.comments-section {
+  margin-top: var(--spacing-xxl);
+  padding-top: var(--spacing-xxl);
+  border-top: 1px solid var(--border-color);
+}
+
+.comment-form {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.rating-input {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.rating-input label {
+  color: var(--text-secondary);
+}
+
+.rating-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.rating-stars i {
+  font-size: var(--font-xl);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.rating-stars i:hover,
+.rating-stars i.active {
+  color: var(--warning);
+  transform: scale(1.2);
+}
+
+.rating-value {
+  font-weight: 700;
+  color: var(--warning);
+  margin-left: var(--spacing-sm);
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.comment-item {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+}
+
+.comment-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--font-lg);
+  flex-shrink: 0;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.comment-author {
+  font-weight: 600;
+}
+
+.comment-rating {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--warning);
+  font-size: var(--font-sm);
+}
+
+.comment-text {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--spacing-sm);
+}
+
+.comment-time {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.comment-actions {
+  margin-top: var(--spacing-sm);
+}
+
+/* ============================================
+   ADMIN DASHBOARD
+   ============================================ */
+/* 👇 THÊM ĐOẠN NÀY ĐỂ KÍCH HOẠT CHUYỂN TAB 👇 */
+/* =========================================
+   FIX TOGGLE SIDEBAR TRÊN PC (Desktop)
+   ========================================= */
+
+/* 1. Khi menu bị thu nhỏ (Collapsed) */
+.admin-sidebar.collapsed {
+  width: 80px; /* Thu nhỏ từ 260px xuống 80px */
+  overflow: visible; /* Để hiện tooltip nếu cần */
+}
+
+/* Ẩn chữ, chỉ hiện icon */
+.admin-sidebar.collapsed .admin-nav-item span {
+  display: none;
+}
+
+/* Căn giữa icon cho đẹp */
+.admin-sidebar.collapsed .admin-nav-item {
+  justify-content: center;
+  padding: 15px 0;
+}
+
+/* Hiệu ứng khi rê chuột vào icon lúc đang thu nhỏ */
+.admin-sidebar.collapsed .admin-nav-item:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  border-radius: 50%; /* Icon tròn */
+  width: 50px;
+  height: 50px;
+  margin: 0 auto; /* Căn giữa thẻ cha */
+}
+
+/* 2. Khi nội dung mở rộng ra (Expanded) */
+.admin-content.expanded {
+  margin-left: 80px; /* Kéo nội dung sát vào bên trái để lấp chỗ trống */
+  width: calc(100% - 80px); /* Tính toán lại chiều rộng */
+}
+
+/* Hiệu ứng chuyển động mượt mà */
+.admin-sidebar,
+.admin-content {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.admin-panel {
+  display: none !important; /* Mặc định ẩn tất cả các tab */
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.admin-panel.active {
+  display: block !important; /* Chỉ hiện tab nào có class active */
+  opacity: 1;
+  animation: slideUpFade 0.4s ease forwards;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  padding-top: 70px;
+}
+
+.admin-sidebar {
+  width: 260px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  padding: var(--spacing-lg);
+  position: fixed;
+  top: 70px;
+  bottom: 0;
+  left: 0;
+  overflow-y: auto;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.admin-nav-item:hover,
+.admin-nav-item.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.admin-nav-item.active {
+  border-left: 3px solid var(--accent-primary);
+}
+
+.admin-nav-item i {
+  width: 20px;
+  text-align: center;
+}
+
+.admin-content {
+  flex: 1;
+  margin-left: 260px;
+  padding: var(--spacing-xl);
+}
+
+/* Stats Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xl);
+}
+
+.stat-icon.movies {
+  background: rgba(229, 9, 20, 0.2);
+  color: var(--accent-primary);
+}
+.stat-icon.views {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--accent-secondary);
+}
+.stat-icon.revenue {
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--success);
+}
+.stat-icon.users {
+  background: rgba(255, 170, 0, 0.2);
+  color: var(--warning);
+}
+
+.stat-info h3 {
+  font-size: var(--font-xxl);
+  margin-bottom: var(--spacing-xs);
+}
+
+.stat-info p {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+/* Admin Tables */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: var(--spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-table th {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-size: var(--font-xs);
+}
+
+.admin-table tr:hover {
+  background: var(--bg-tertiary);
+}
+
+.admin-table img {
+  width: 50px;
+  height: 75px;
+  object-fit: cover;
+  border-radius: var(--border-radius-sm);
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: var(--font-xs);
+  font-weight: 600;
+}
+
+.status-badge.public {
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--success);
+}
+.status-badge.hidden {
+  background: rgba(255, 68, 68, 0.2);
+  color: var(--error);
+}
+.status-badge.pending {
+  background: rgba(255, 170, 0, 0.2);
+  color: var(--warning);
+}
+.status-badge.active {
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--success);
+}
+.status-badge.blocked {
+  background: rgba(255, 68, 68, 0.2);
+  color: var(--error);
+}
+
+/* Admin Panel Header */
+.admin-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xl);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.admin-panel-title {
+  font-size: var(--font-xxl);
+}
+
+/* Search & Filter */
+.search-filter {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+}
+
+.search-box input {
+  padding-left: 40px;
+  min-width: 250px;
+}
+
+.search-box i {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+/* ============================================
+   NOTIFICATIONS
+   ============================================ */
+.notification-container {
+  position: fixed;
+  top: 90px;
+  right: var(--spacing-lg);
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.notification {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+  min-width: 300px;
+  max-width: 450px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification.success {
+  border-color: var(--success);
+}
+.notification.error {
+  border-color: var(--error);
+}
+.notification.warning {
+  border-color: var(--warning);
+}
+.notification.info {
+  border-color: var(--info);
+}
+
+.notification i {
+  font-size: var(--font-xl);
+}
+
+.notification.success i {
+  color: var(--success);
+}
+.notification.error i {
+  color: var(--error);
+}
+.notification.warning i {
+  color: var(--warning);
+}
+.notification.info i {
+  color: var(--info);
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 4000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-normal);
+}
+
+.loading-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--accent-secondary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin-top: var(--spacing-lg);
+  color: var(--text-secondary);
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-secondary) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--border-radius-sm);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+.footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: var(--spacing-xxl) var(--spacing-xl);
+  margin-top: var(--spacing-xxl);
+}
+
+.footer-content {
+  max-width: 100%; /* Tràn màn hình */
+  margin: 0;
+  padding: 0 40px; /* Lề 40px */
+  /* Giữ nguyên grid layout cũ */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-xl);
+}
+
+.footer-section h4 {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-primary);
+}
+
+.footer-section ul {
+  list-style: none;
+}
+
+.footer-section li {
+  margin-bottom: var(--spacing-sm);
+}
+
+.footer-section a {
+  color: var(--text-secondary);
+}
+
+.footer-section a:hover {
+  color: var(--accent-secondary);
+}
+
+.footer-bottom {
+  max-width: 100%; /* Tràn màn hình */
+  margin: var(--spacing-xl) auto 0;
+  padding: var(--spacing-xl) 40px 0; /* Lề 40px */
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.social-links {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.social-links a {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.social-links a:hover {
+  background: var(--accent-gradient);
+  color: white;
+  transform: translateY(-3px);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.hidden {
+  display: none !important;
+}
+.text-center {
+  text-align: center;
+}
+.text-right {
+  text-align: right;
+}
+.text-muted {
+  color: var(--text-muted);
+}
+.text-success {
+  color: var(--success);
+}
+.text-error {
+  color: var(--error);
+}
+.text-warning {
+  color: var(--warning);
+}
+.mt-1 {
+  margin-top: var(--spacing-sm);
+}
+.mt-2 {
+  margin-top: var(--spacing-md);
+}
+.mt-3 {
+  margin-top: var(--spacing-lg);
+}
+.mb-1 {
+  margin-bottom: var(--spacing-sm);
+}
+.mb-2 {
+  margin-bottom: var(--spacing-md);
+}
+.mb-3 {
+  margin-bottom: var(--spacing-lg);
+}
+.flex {
+  display: flex;
+}
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gap-1 {
+  gap: var(--spacing-sm);
+}
+.gap-2 {
+  gap: var(--spacing-md);
+}
+.gap-3 {
+  gap: var(--spacing-lg);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+/* ============================================
+   RESPONSIVE DESIGN (ĐÃ FIX TOÀN DIỆN MOBILE/TABLET)
+   ============================================ */
+
+/* -------------------------------------------
+   1. TABLET (iPad, Máy tính bảng dọc)
+   ------------------------------------------- */
+@media (max-width: 1024px) {
+  /* Thu nhỏ sidebar admin */
+  .admin-sidebar {
+    width: 80px;
+    overflow: hidden;
+  }
+  .admin-sidebar:hover {
+    width: 260px; /* Rê chuột vào mới hiện full */
+    z-index: 1000;
+  }
+  .admin-content {
+    margin-left: 80px;
+  }
+  .admin-nav-item span {
+    display: none; /* Ẩn chữ menu admin */
+  }
+  .admin-sidebar:hover .admin-nav-item span {
+    display: inline;
+  }
+
+  /* Fix lỗi Footer mất thống kê: Chia thành 2 cột đều nhau */
+  .footer-content {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 30px;
+    padding: 0 30px;
+  }
+
+  /* Cho bảng thống kê nằm tràn ra để dễ nhìn */
+  .stats-box {
+    grid-column: span 2;
+    margin-top: 10px;
+  }
+}
+
+/* -------------------------------------------
+   2. MOBILE (Điện thoại)
+   ------------------------------------------- */
+@media (max-width: 768px) {
+  :root {
+    --font-hero: 32px;
+    --font-xxl: 22px;
+    --font-xl: 18px;
+  }
+
+  /* --- A. FIX MENU 3 GẠCH (Z-INDEX CAO) --- */
+  .mobile-menu-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999; /* Luôn nổi trên cùng */
+    font-size: 24px;
+  }
+
+  .nav-menu {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 80px;
+
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 280px; /* Chiều rộng menu vừa phải */
+    height: 100vh;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.9);
+
+    /* Hiệu ứng trượt mượt mà */
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility: hidden;
+    z-index: 5000;
+  }
+
+  .nav-menu.active {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .nav-link {
+    width: 100%;
+    padding: 15px 20px;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .nav-actions {
+    flex-direction: column;
+    width: 100%;
+    padding: 20px;
+    gap: 15px;
+  }
+
+  /* --- B. FIX THẺ PHIM (TỰ ĐỘNG CO GIÃN) --- */
+  .movie-grid {
+    /* Công thức này giúp thẻ không bao giờ bé hơn 140px */
+    /* Màn hình nhỏ hiện 2 cột, màn hình to hiện 3 cột -> Rất đẹp */
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+    gap: 12px;
+  }
+
+  /* Thu nhỏ chữ trong thẻ phim cho gọn */
+  .movie-card-static .card-title {
+    font-size: 13px;
+  }
+  .movie-card-static .card-meta {
+    font-size: 11px;
+  }
+
+  .section {
+    padding: 30px 15px !important;
+  }
+
+  /* --- C. FIX FOOTER (DẠNG LƯỚI 2 CỘT) --- */
+  .footer-content {
+    /* Chia 2 cột thay vì danh sách đứng */
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px;
+    padding: 0 15px;
+    text-align: left;
+  }
+
+  /* Logo & Info nằm dòng đầu tiên, tràn màn hình */
+  .footer-section:first-child {
+    grid-column: span 2;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+    margin-bottom: 10px;
+  }
+
+  /* Bảng thống kê nằm dòng cuối, tràn màn hình */
+  .footer-section.stats-box {
+    grid-column: span 2;
+    margin-top: 10px;
+  }
+
+  /* --- D. CÁC THÀNH PHẦN KHÁC --- */
+  .hero {
+    min-height: 50vh;
+    padding: 100px 15px 40px;
+  }
+
+  .hero-content {
+    width: 100%;
+  }
+
+  .hero-title {
+    font-size: 28px;
+  }
+
+  /* Ẩn sidebar admin mặc định trên mobile */
+  .admin-sidebar {
+    left: -100%;
+    width: 260px;
+    z-index: 6000;
+    transition: left 0.3s ease;
+  }
+  .admin-sidebar.active {
+    left: 0;
+  }
+
+  /* Modal full màn hình trên điện thoại */
+  .modal {
+    max-width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+}
+
+/* =======================================================
+   GIAO DIỆN LIGHT MODE (ĐÃ KHỬ CHÓI TOÀN DIỆN)
+   ======================================================= */
+[data-theme="light"] {
+  /* 1. Nền xám nhẹ (Dịu mắt hơn trắng tinh) */
+  --bg-color: #f3f4f6 !important;
+  --card-bg: #ffffff !important;
+  --text-color: #1f2937 !important;
+  --text-muted: #6b7280 !important;
+}
+
+/* 2. SỬA CÁI NÚT VÍ MÀU XANH CHÓI (QUAN TRỌNG NHẤT) */
+/* Chuyển từ Xanh Neon -> Xanh Lá Cây Đậm (Forest Green) */
+[data-theme="light"] #walletBtn.connected,
+[data-theme="light"] .btn-success {
+  background: #10b981 !important; /* Màu xanh lá dịu */
+  background-image: none !important; /* Bỏ gradient chói */
+  color: white !important;
+  box-shadow: none !important; /* TẮT HOÀN TOÀN BÓNG PHÁT SÁNG */
+  border: 1px solid #059669 !important;
+}
+
+/* 3. Sửa nút "Kết nối ví" (Khi chưa kết nối - Màu xanh dương) */
+[data-theme="light"] #walletBtn:not(.connected),
+[data-theme="light"] .btn-info {
+  background: #3b82f6 !important; /* Xanh dương lì */
+  box-shadow: none !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* 4. Sửa nút "Khám phá ngay" (Màu hồng chói -> Đỏ mận) */
+[data-theme="light"] .btn-primary,
+[data-theme="light"] .btn-danger {
+  background: #db2777 !important; /* Hồng đậm lì */
+  box-shadow: none !important; /* Tắt phát sáng */
+  border: none !important;
+}
+
+/* 5. Sửa chữ MovieChain (Bỏ hiệu ứng nhòe) */
+[data-theme="light"] .text-gradient {
+  background: #be185d !important; /* Chuyển thành màu hồng đậm đơn sắc */
+  -webkit-text-fill-color: #be185d !important;
+  text-shadow: none !important; /* Bỏ bóng */
+  font-weight: 800;
+}
+
+/* 6. Sửa tiêu đề to đùng */
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3 {
+  color: #111827 !important; /* Màu đen than */
+  text-shadow: none !important; /* Bỏ hiệu ứng Neon */
+}
+/* =========================================
+   NETFLIX HOVER EFFECT PRO (BUTTONS & SCALE)
+   ========================================= */
+
+.movie-card-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: z-index 0.3s;
+}
+
+.movie-card-wrapper:hover {
+  z-index: 1000;
+}
+
+/* Card Tĩnh */
+.movie-card-static {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* POPUP HOVER - CHỈNH TO HƠN TẠI ĐÂY */
+.movie-card-popup {
+  position: absolute;
+  /* 👇 Làm popup to ra 150% so với thẻ gốc */
+  width: 165%;
+  /* 👇 Căn giữa lại (Vì to hơn 50% nên phải dịch trái 25%) */
+  left: -20%;
+  top: 5%; /* Nhô lên cao hơn */
+
+  background: #181818;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8); /* Bóng đổ sâu hơn */
+  /* hiệu ứng xuất hiện mượt mà */
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.9); /* Bắt đầu nhỏ hơn */
+
+  transition: all 0.3s ease-in-out;
+  transition-delay: 0.4s;
+
+  cursor: pointer;
+  overflow: hidden;
+  z-index: 9999; /* Đảm bảo popup luôn ở trên cùng */
+  /* 👇 GIẢM LAG 3: Báo trước cho trình duyệt để tối ưu GPU */
+  will-change: opacity, transform;
+}
+
+.movie-card-wrapper:hover .movie-card-popup {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+/* Ảnh trong Popup */
+.popup-image {
+  position: relative;
+  width: 100%;
+  height: 180px;
+}
+
+.popup-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px 8px 0 0;
+  /* Thêm dòng này để mượt hơn */
+  backface-visibility: hidden;
+}
+
+/* Icon Play mờ giữa ảnh */
+.popup-play-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 50px;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.popup-info {
+  padding: 15px;
+  color: #fff;
+  background: linear-gradient(to bottom, #181818, #111);
+}
+
+/* --- STYLE CHO CÁC NÚT BẤM MỚI --- */
+.popup-actions-row {
+  display: flex;
+  gap: 8px; /* Khoảng cách giữa các nút */
+  margin-bottom: 15px;
+  flex-wrap: wrap; /* Tự xuống dòng nếu tên nút quá dài */
+}
+
+/* 1. Nút Xem ngay (Màu Vàng chanh giống ảnh) */
+.btn-netflix-primary {
+  background-color: #dbfb03; /* Màu vàng chanh neon */
+  color: #000; /* Chữ đen */
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+
+.btn-netflix-primary:hover {
+  background-color: #c9e503;
+  transform: scale(1.05);
+}
+
+/* 2. Nút Phụ (Màu tối, viền trắng mờ) */
+.btn-netflix-secondary {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-netflix-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: #fff;
+}
+
+/* Các thông tin khác */
+.popup-title {
+  font-size: 16px;
+  margin-bottom: 8px;
+  font-weight: bold;
+  /* 👇 THÊM 3 DÒNG NÀY ĐỂ CÂN BẰNG CHIỀU CAO 👇 */
+  min-height: 48px; /* Ép chiều cao luôn đủ cho 2-3 dòng chữ */
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Tối đa 3 dòng (nếu dài hơn sẽ hiện dấu ...) */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.popup-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.match-score {
+  color: #46d369;
+  font-weight: bold;
+}
+.age-badge {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 10px;
+}
+.quality-badge {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 9px;
+}
+
+.popup-genres {
+  font-size: 12px;
+  color: #bcbcbc;
+  display: flex;
+  gap: 5px;
+}
+.popup-genres .dot {
+  color: #666;
+}
+/* =========================================
+   TINH CHỈNH CUỐI CÙNG: THU GỌN THẺ & FIX VỊ TRÍ
+   ========================================= */
+
+/* 1. Giảm khoảng cách lề bên trong (Padding) */
+.movie-card-static .card-body {
+  padding: 6px 8px !important; /* Cũ là 15px -> Giảm mạnh xuống */
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Căn giữa nội dung */
+  margin-top: -2px; /* Xóa khe hở nhỏ nếu có */
+}
+
+/* 2. Thu nhỏ tên phim và giảm khoảng cách dưới */
+.movie-card-static .card-title {
+  font-size: 13px; /* Chữ nhỏ lại 1 xíu cho gọn */
+  margin-bottom: 2px !important; /* Kéo các dòng dưới lên sát hơn */
+  line-height: 1.3;
+}
+
+/* 3. Thu nhỏ dòng Năm - Số sao */
+.movie-card-static .card-meta {
+  font-size: 11px; /* Chữ bé lại */
+  margin-bottom: 2px !important;
+  gap: 8px; /* Khoảng cách giữa năm và sao gần hơn */
+}
+
+/* 4. Thu nhỏ dòng Giá tiền */
+.movie-card-static .card-price {
+  font-size: 13px;
+  margin-top: 0 !important;
+}
+
+/* 5. Làm ảnh phim ngắn lại (Quan trọng để thẻ lùn đi) */
+.movie-card-static .card-image {
+  /* Giảm xuống 125% để thẻ ngắn gọn hơn (thay vì 135% hay 150%) */
+  padding-top: 125% !important;
+}
+
+/* 6. Chỉnh lại nút Play trên ảnh cho cân đối */
+.movie-card-static .card-overlay {
+  padding: 10px;
+}
+
+/* 7. 👇 QUAN TRỌNG NHẤT: KÉO POPUP XUỐNG ĐÈ LÊN THẺ 👇 */
+.movie-card-popup {
+  /* Đặt top = -2% để nó nằm gần như ngang bằng thẻ gốc, không bay lên trời */
+  top: -2% !important;
+
+  /* Tự động co giãn chiều cao */
+  height: auto !important;
+  min-height: 100%;
+}
+/* =========================================
+   USER DROPDOWN MENU (STYLE GIỐNG ẢNH MẪU)
+   ========================================= */
+
+.nav-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-secondary);
+  object-fit: cover;
+  transition: transform 0.2s;
+}
+.nav-user-avatar:hover {
+  transform: scale(1.1);
+}
+
+/* Khung Menu thả xuống */
+.user-dropdown {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 300px;
+  background: #1f1f2e; /* Màu nền tối hơi tím than */
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 9999;
+}
+
+/* Class để hiện menu */
+.user-dropdown.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Header */
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: #252535;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+#dropdownAvatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.dropdown-user-info {
+  display: flex;
+  flex-direction: column;
+}
+.dropdown-role {
+  font-size: 10px;
+  color: #aaa;
+  border: 1px solid #aaa;
+  padding: 1px 4px;
+  border-radius: 3px;
+  width: fit-content;
+  margin-bottom: 4px;
+}
+
+/* Upgrade Banner */
+.dropdown-upgrade {
+  background: #2b2b3d;
+  padding: 15px;
+  margin: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+.dropdown-upgrade p {
+  font-size: 12px;
+  color: #ccc;
+  margin-bottom: 10px;
+}
+.btn-upgrade {
+  background: #fcd535;
+  color: #000;
+  border: none;
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* List Items */
+.dropdown-list {
+  list-style: none;
+  padding: 0 10px 10px;
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.dropdown-item i {
+  width: 20px;
+  text-align: center;
+  color: #aaa;
+}
+.dropdown-item.logout {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 15px;
+}
+.dropdown-item.logout:hover {
+  color: #ff4444;
+}
+
+/* Balance Badge */
+.balance-badge {
+  margin-left: auto;
+  color: #fcd535;
+  font-weight: bold;
+}
+.btn-deposit {
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: none;
+  background: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  margin-left: 8px;
+  cursor: pointer;
+}
+/* =========================================
+   STYLE CHO NÚT NÂNG CẤP (ĐỒNG BỘ GIAO DIỆN)
+   ========================================= */
+.btn-upgrade {
+  /* Dùng màu Gradient chủ đạo của web (Đỏ -> Hồng) */
+  background: var(--accent-gradient);
+  color: #ffffff;
+  border: none;
+
+  /* Kích thước và căn chỉnh */
+  width: 100%;
+  padding: 10px 15px;
+  border-radius: var(--border-radius-sm); /* Bo góc 8px giống các nút khác */
+  margin-top: 12px;
+
+  /* Font chữ */
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+
+  /* Hiệu ứng bóng đỏ chuẩn Cyberpunk */
+  box-shadow: var(--shadow-red);
+
+  /* Flexbox để căn giữa icon */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  transition: all 0.3s ease;
+}
+
+/* Hiệu ứng khi rê chuột vào */
+.btn-upgrade:hover {
+  transform: translateY(-2px); /* Nổi lên một chút */
+  box-shadow: 0 0 20px rgba(229, 9, 20, 0.6); /* Phát sáng mạnh hơn */
+  background: linear-gradient(
+    135deg,
+    #ff00ff,
+    #e50914
+  ); /* Đảo chiều màu cho đẹp */
+}
+/* =========================================
+   NÚT XÓA TRONG DANH SÁCH YÊU THÍCH
+   ========================================= */
+.btn-remove-fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10; /* Nằm đè lên trên ảnh */
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.btn-remove-fav:hover {
+  background: #e50914; /* Màu đỏ khi rê chuột vào */
+  border-color: #e50914;
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(229, 9, 20, 0.5);
+}
+/* =========================================
+   STYLE CHO CHỨC NĂNG VIP
+   ========================================= */
+
+/* Huy hiệu VIP (Màu vàng kim) */
+.status-badge.vip {
+  background: rgba(252, 213, 53, 0.2);
+  color: #fcd535;
+  border: 1px solid #fcd535;
+  box-shadow: 0 0 5px rgba(252, 213, 53, 0.3);
+}
+
+/* Huy hiệu Free (Màu xám) */
+.status-badge.free {
+  background: rgba(255, 255, 255, 0.1);
+  color: #aaa;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Nút kích hoạt VIP nhanh (Vương miện) */
+.btn-vip-action {
+  background: linear-gradient(45deg, #fcd535, #ff9900);
+  color: #000;
+  border: none;
+  font-weight: bold;
+}
+.btn-vip-action:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(252, 213, 53, 0.6);
+}
+/* =========================================
+   STYLE CHO AVATAR VÀ BADGE VIP (CẬP NHẬT)
+   ========================================= */
+
+/* 1. Hiệu ứng Viền Vàng cho Avatar VIP */
+.vip-border {
+  border: 3px solid #fcd535 !important; /* Tăng độ dày lên 3px */
+  box-shadow: 0 0 20px rgba(252, 213, 53, 0.8); /* Bóng sáng hơn */
+  animation: vipGlow 1.5s infinite alternate; /* Nhấp nháy nhanh hơn chút */
+  z-index: 10;
+}
+
+@keyframes vipGlow {
+  from {
+    box-shadow: 0 0 10px rgba(252, 213, 53, 0.5);
+    border-color: #fcd535;
+  }
+  to {
+    box-shadow: 0 0 25px rgba(252, 213, 53, 1);
+    border-color: #fff; /* Chuyển nhẹ sang trắng để tạo hiệu ứng kim loại */
+  }
+}
+
+/* 2. Style cho chữ VIP */
+.dropdown-role.vip-badge {
+  background: linear-gradient(45deg, #ffd700, #ffa500); /* Vàng kim đậm hơn */
+  color: #000 !important;
+  border: 1px solid #fff;
+  font-weight: 900;
+  padding: 2px 10px;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+/* ============================================
+   RESPONSIVE GLOBAL (TỰ ĐỘNG CHỈNH LỀ TOÀN WEB)
+   ============================================ */
+@media (max-width: 1024px) {
+  .nav-container,
+  .section,
+  .movie-detail,
+  .footer-content,
+  .footer-bottom,
+  .party-container {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-container,
+  .section,
+  .movie-detail,
+  .footer-content,
+  .footer-bottom,
+  .party-container {
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+}
+/* =========================================
+   STYLE CHO TRANG THỂ LOẠI (NEW)
+   ========================================= */
+
+/* Cấu hình lưới hiển thị (Grid) */
+#categoriesList {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(220px, 1fr)
+  ); /* Tự động chia cột */
+  gap: 25px;
+  padding: 20px 0;
+}
+
+/* Thẻ Category Pro */
+.category-card-pro {
+  position: relative;
+  height: 180px;
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Hiệu ứng nảy */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Hiệu ứng khi rê chuột vào */
+.category-card-pro:hover {
+  transform: translateY(-10px) scale(1.02); /* Bay lên và phóng to nhẹ */
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+
+/* Lớp phủ đen mờ để chữ dễ đọc hơn */
+.cat-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.2); /* Đen mờ 20% */
+  transition: background 0.3s;
+}
+
+.category-card-pro:hover .cat-overlay {
+  background: rgba(0, 0, 0, 0.5); /* Đậm hơn khi hover */
+}
+
+/* Nội dung bên trong */
+.cat-content {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  width: 100%;
+  padding: 20px;
+}
+
+/* Icon */
+.cat-icon-box {
+  font-size: 3rem;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s;
+}
+
+.category-card-pro:hover .cat-icon-box {
+  transform: scale(1.2) rotate(-10deg); /* Icon xoay nhẹ khi hover */
+}
+
+/* Tiêu đề */
+.cat-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Dòng chữ "Khám phá ngay" (Ẩn mặc định, hiện khi hover) */
+.cat-subtitle {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  font-weight: 500;
+  color: var(--accent-color); /* Màu vàng neon của web */
+}
+
+.category-card-pro:hover .cat-subtitle {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* =========================================
+   STYLE CHO FOOTER THỐNG KÊ (NEW)
+   ========================================= */
+
+/* 1. Căn đều 4 cột */
+.footer-content {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* Chia 4 cột đều nhau */
+  gap: 30px;
+  padding: 60px 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* 2. Trang trí cột Thống kê */
+.stats-box {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+}
+
+.live-stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  font-size: 0.9rem;
+}
+
+.live-stat-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.stat-label {
+  color: #aaa;
+}
+
+.stat-label i {
+  width: 20px;
+  color: var(--primary-color);
+}
+
+.stat-value {
+  font-weight: bold;
+  color: #fff;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 1.1rem;
+}
+
+/* Hiệu ứng nhấp nháy cho số người online */
+.stat-value.highlight {
+  color: #00ff88; /* Màu xanh neon */
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+  position: relative;
+}
+
+.stat-value.highlight::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #00ff88;
+  border-radius: 50%;
+  margin-left: 5px;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Responsive: Trên điện thoại thì về 1 cột */
+@media (max-width: 768px) {
+  .footer-content {
+    grid-template-columns: 1fr; /* Về 1 cột */
+    text-align: center;
+  }
+  .stats-box {
+    margin-top: 20px;
+  }
+}
+/* =========================================
+   FIX LỖI HIỂN THỊ LIGHT MODE (BẮT BUỘC)
+   ========================================= */
+
+/* 1. Fix lỗi Footer & Bảng thống kê bị tàng hình */
+[data-theme="light"] .footer {
+  background: #ffffff;
+  border-top: 1px solid #e5e5e5;
+}
+
+[data-theme="light"] .stats-box {
+  background: rgba(0, 0, 0, 0.03); /* Nền xám nhẹ thay vì trắng mờ */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Viền đen mờ */
+}
+
+[data-theme="light"] .live-stat-item {
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .stat-value {
+  color: var(--accent-primary); /* Đổi màu chữ số thành màu đỏ/đen */
+  font-weight: 800;
+}
+
+[data-theme="light"] .stat-label {
+  color: var(--text-secondary);
+}
+
+/* 2. Fix lỗi Menu User (Dropdown) bị đen thui */
+[data-theme="light"] .user-dropdown {
+  background: #ffffff;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e5e5;
+}
+
+[data-theme="light"] .dropdown-header {
+  background: #f7f7f7;
+  border-bottom: 1px solid #eee;
+}
+
+[data-theme="light"] .dropdown-item {
+  color: #333;
+}
+
+[data-theme="light"] .dropdown-item:hover {
+  background: #f0f0f0;
+}
+
+[data-theme="light"] .dropdown-upgrade p {
+  color: #666;
+}
+
+/* 3. Fix lỗi Input nhập liệu (Chữ đen trên nền sáng) */
+[data-theme="light"] .form-input,
+[data-theme="light"] .form-select,
+[data-theme="light"] .form-textarea {
+  background: #ffffff;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+[data-theme="light"] .form-input:focus {
+  background: #fff;
+  border-color: var(--accent-secondary);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+/* 4. Fix lỗi Modal (Hộp thoại) */
+[data-theme="light"] .modal {
+  background: #ffffff;
+  color: #333;
+}
+
+[data-theme="light"] .modal-header,
+[data-theme="light"] .modal-footer {
+  border-color: #eee;
+}
+
+[data-theme="light"] .modal-close {
+  background: #f0f0f0;
+  color: #333;
+}
+
+/* 5. Fix lỗi Admin Tables (Bảng quản lý) */
+[data-theme="light"] .admin-table {
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="light"] .admin-table th {
+  background: #f8f9fa;
+  color: #333;
+  border-bottom: 2px solid #eee;
+}
+
+[data-theme="light"] .admin-table td {
+  border-bottom: 1px solid #eee;
+  color: #555;
+}
+
+[data-theme="light"] .admin-table tr:hover {
+  background: #f1f1f1;
+}

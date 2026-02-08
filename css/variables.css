@@ -1,0 +1,92 @@
+/**Chỉ chứa biến màu sắc, font chữ, theme (Light/Dark).
+ * ============================================
+ * STYLE.CSS - Rạp Chiếu Phim Blockchain
+ * ============================================
+ * Phong cách: Netflix + Cyberpunk
+ * Hỗ trợ: Dark/Light Theme, Responsive============================================
+ *  CSS VARIABLES - DỄ DÀNG TÙY CHỈNH MÀU SẮC
+   ============================================ **/
+:root {
+  /* Dark Theme (Mặc định) */
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #1a1a2e;
+  --bg-tertiary: #16213e;
+  --bg-card: rgba(26, 26, 46, 0.8);
+  --bg-glass: rgba(26, 26, 46, 0.6);
+
+  /* Accent Colors */
+  --accent-primary: #e50914;
+  --accent-secondary: #00d4ff;
+  --accent-tertiary: #ff00ff;
+  --accent-gradient: linear-gradient(135deg, #e50914, #ff00ff);
+  --accent-neon: linear-gradient(135deg, #00d4ff, #ff00ff);
+
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  --text-muted: #666666;
+
+  /* Status Colors */
+  --success: #00ff88;
+  --warning: #ffaa00;
+  --error: #ff4444;
+  --info: #00d4ff;
+
+  /* Shadows & Effects */
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --shadow-neon: 0 0 20px rgba(0, 212, 255, 0.5);
+  --shadow-red: 0 0 20px rgba(229, 9, 20, 0.5);
+
+  /* Border */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-radius: 12px;
+  --border-radius-sm: 8px;
+  --border-radius-lg: 20px;
+
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+
+  /* Font Sizes */
+  --font-xs: 12px;
+  --font-sm: 14px;
+  --font-md: 16px;
+  --font-lg: 18px;
+  --font-xl: 24px;
+  --font-xxl: 32px;
+  --font-hero: 48px;
+}
+
+/* Light Theme */
+/* Light Theme (Đã Fix lỗi hiển thị) */
+[data-theme="light"] {
+  --bg-primary: #f0f2f5; /* Xám nhạt dịu mắt */
+  --bg-secondary: #ffffff; /* Trắng tinh */
+  --bg-tertiary: #e4e6eb; /* Xám đậm hơn chút cho input */
+  --bg-card: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+
+  --text-primary: #050505; /* Đen gần như tuyệt đối */
+  --text-secondary: #65676b; /* Xám đậm */
+  --text-muted: #8c949e;
+
+  --border-color: rgba(0, 0, 0, 0.1); /* Viền màu đen mờ */
+
+  /* Shadow mềm hơn cho nền sáng */
+  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+  --shadow-neon: 0 0 15px rgba(0, 212, 255, 0.4);
+  --shadow-red: 0 0 15px rgba(229, 9, 20, 0.4);
+}

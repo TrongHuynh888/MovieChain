@@ -1,0 +1,168 @@
+<div id="upgradePage" class="page">
+  <div class="upgrade-container">
+    <div class="upgrade-header text-center">
+      <h1 class="gradient-text">Nâng Cấp Tài Khoản VIP</h1>
+      <p class="text-muted">
+        Mở khóa thế giới điện ảnh không giới hạn với chất lượng đỉnh cao.
+      </p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pricing-header">
+          <h3>Thành Viên</h3>
+          <div class="price">0đ<span>/tháng</span></div>
+        </div>
+        <ul class="pricing-features">
+          <li><i class="fas fa-check"></i> Xem phim chất lượng 720p</li>
+          <li><i class="fas fa-check"></i> Có quảng cáo</li>
+          <li><i class="fas fa-times text-muted"></i> Không hỗ trợ 4K</li>
+          <li><i class="fas fa-times text-muted"></i> Xem chậm hơn VIP</li>
+        </ul>
+        <button
+          class="btn btn-secondary"
+          disabled
+          style="width: 100%; opacity: 0.5"
+        >
+          Đang sử dụng
+        </button>
+      </div>
+
+      <div class="pricing-card popular">
+        <div class="badge-popular">KHUYÊN DÙNG</div>
+        <div class="pricing-header">
+          <h3 style="color: var(--accent-primary)">MovieChain VIP</h3>
+          <div class="price">99.000đ<span>/tháng</span></div>
+        </div>
+        <ul class="pricing-features">
+          <li>
+            <i class="fas fa-check-circle text-success"></i>
+            <strong>Chất lượng 4K Ultra HD</strong>
+          </li>
+          <li>
+            <i class="fas fa-check-circle text-success"></i>
+            <strong>Không quảng cáo</strong>
+          </li>
+          <li>
+            <i class="fas fa-check-circle text-success"></i> Âm thanh vòm Dolby
+            Atmos
+          </li>
+          <li>
+            <i class="fas fa-check-circle text-success"></i> Xem sớm phim bom
+            tấn
+          </li>
+          <li>
+            <i class="fas fa-check-circle text-success"></i> Huy hiệu VIP độc
+            quyền
+          </li>
+        </ul>
+        <button class="btn btn-primary btn-glow" onclick="openPaymentQRModal()">
+          Đăng Ký Ngay <i class="fas fa-crown"></i>
+        </button>
+      </div>
+
+      <div class="pricing-card">
+        <div class="pricing-header">
+          <h3>Trọn Đời</h3>
+          <div class="price">999.000đ<span>/lần</span></div>
+        </div>
+        <ul class="pricing-features">
+          <li><i class="fas fa-check"></i> Tất cả đặc quyền VIP</li>
+          <li><i class="fas fa-check"></i> Thanh toán 1 lần duy nhất</li>
+          <li><i class="fas fa-check"></i> Tặng 50 CRO vào ví</li>
+          <li><i class="fas fa-check"></i> Hỗ trợ 24/7 riêng biệt</li>
+        </ul>
+        <button
+          class="btn btn-secondary"
+          onclick="openPaymentQRModal('lifetime')"
+        >
+          Chọn Gói Này
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="paymentQRModal">
+  <div class="modal" style="max-width: 450px; text-align: center">
+    <div class="modal-header">
+      <h3 class="modal-title">Thanh Toán Qua Ngân Hàng</h3>
+      <button class="modal-close" onclick="closeModal('paymentQRModal')">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted mb-3">
+        Mở ứng dụng ngân hàng và quét mã QR bên dưới để thanh toán.
+      </p>
+
+      <div
+        class="qr-container"
+        style="
+          background: #fff;
+          padding: 15px;
+          border-radius: 10px;
+          display: inline-block;
+          margin-bottom: 20px;
+        "
+      >
+        <img
+          id="vietqrImage"
+          src=""
+          alt="QR Code"
+          style="width: 250px; height: 250px; object-fit: contain"
+        />
+      </div>
+
+      <div
+        class="payment-info"
+        style="
+          text-align: left;
+          background: rgba(255, 255, 255, 0.05);
+          padding: 15px;
+          border-radius: 8px;
+        "
+      >
+        <p>
+          <strong>Ngân hàng:</strong> Agribank (Ngân hàng Nông nghiệp và Phát
+          triển Nông thôn Việt Nam)
+        </p>
+        <p>
+          <strong>Số tài khoản:</strong>
+          <span
+            id="bankAccount"
+            style="
+              color: var(--accent-primary);
+              font-weight: bold;
+              font-family: monospace;
+              font-size: 16px;
+            "
+            >88880384495717</span
+          >
+          <i
+            class="fas fa-copy"
+            style="cursor: pointer"
+            onclick="copyToClipboard('88880384495717')"
+          ></i>
+        </p>
+        <p><strong>Chủ tài khoản:</strong> HUYNH PHU TRONG</p>
+        <p>
+          <strong>Số tiền:</strong>
+          <span id="paymentAmount" style="color: #fcd535">99,000đ</span>
+        </p>
+        <p>
+          <strong>Nội dung:</strong>
+          <span id="paymentMemo" style="color: #fff">VIP USER123</span>
+        </p>
+      </div>
+
+      <button
+        class="btn btn-success"
+        style="width: 100%; margin-top: 20px"
+        onclick="confirmPayment()"
+      >
+        <i class="fas fa-check-circle"></i> Tôi Đã Chuyển Khoản
+      </button>
+    </div>
+  </div>
+</div>

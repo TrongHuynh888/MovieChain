@@ -1,0 +1,661 @@
+<!-- ============================================
+         MODALS
+         ============================================ -->
+
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="authModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">Tài Khoản</h3>
+          <button class="modal-close" onclick="closeModal('authModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="auth-tabs">
+          <button
+            class="auth-tab active"
+            data-tab="login"
+            onclick="switchAuthTab('login')"
+          >
+            Đăng nhập
+          </button>
+          <button
+            class="auth-tab"
+            data-tab="register"
+            onclick="switchAuthTab('register')"
+          >
+            Đăng ký
+          </button>
+        </div>
+        <div class="modal-body">
+        <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="loginEmail" placeholder="Nhập email..." required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mật khẩu</label>
+                <input type="password" class="form-input" id="loginPassword" placeholder="Nhập mật khẩu..." required />
+                <div style="text-align: right; margin-top: 5px;">
+                    <a href="#" onclick="switchAuthTab('forgot')" style="font-size: 13px; color: var(--accent-secondary);">Quên mật khẩu?</a>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%">
+                <i class="fas fa-sign-in-alt"></i> Đăng nhập
+            </button>
+        </form>
+
+        <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label class="form-label">Tên hiển thị</label>
+                <input type="text" class="form-input" id="registerName" placeholder="Tên của bạn" required />
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Link Avatar (Tùy chọn)</label>
+                <input type="url" class="form-input" id="registerAvatar" placeholder="https://..." />
+                <small class="text-muted" style="font-size: 12px;">Link ảnh online hoặc để trống</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="registerEmail" placeholder="email@example.com" required />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mật khẩu</label>
+                <input type="password" class="form-input" id="registerPassword" placeholder="Mật khẩu (6+ ký tự)" required minlength="6" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Xác nhận mật khẩu</label>
+                <input type="password" class="form-input" id="registerConfirmPassword" placeholder="Nhập lại mật khẩu" required />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%">
+                <i class="fas fa-user-plus"></i> Đăng ký ngay
+            </button>
+        </form>
+
+        <form class="auth-form" id="forgotForm" onsubmit="handleForgotPassword(event)">
+            <div class="text-center mb-3">
+                <i class="fas fa-lock" style="font-size: 40px; color: var(--accent-secondary); margin-bottom: 10px;"></i>
+                <p class="text-muted">Nhập email để nhận link khôi phục mật khẩu.</p>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Email đăng ký</label>
+                <input type="email" class="form-input" id="forgotEmail" placeholder="name@example.com" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%">
+                <i class="fas fa-paper-plane"></i> Gửi yêu cầu
+            </button>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="#" onclick="switchAuthTab('login')" class="text-muted">
+                    <i class="fas fa-arrow-left"></i> Quay lại Đăng nhập
+                </a>
+            </div>
+        </form>
+    </div>
+
+          <!-- Register Form -->
+          <form
+            class="auth-form"
+            id="registerForm"
+            onsubmit="handleRegister(event)"
+          >
+            <div class="form-group">
+              <label class="form-label">Link Ảnh đại diện (Avatar)</label>
+              <input
+                type="url"
+                class="form-input"
+                id="registerAvatar"
+                placeholder="https://i.imgur.com/..."
+              />
+              <small class="text-muted" style="font-size: 12px"
+                >Link ảnh từ Facebook, Imgur hoặc để trống để dùng mặc
+                định</small
+              >
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tên hiển thị</label>
+              <input
+                type="text"
+                class="form-input"
+                id="registerName"
+                placeholder="Nhập tên của bạn"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input
+                type="email"
+                class="form-input"
+                id="registerEmail"
+                placeholder="Nhập email của bạn"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mật khẩu</label>
+              <input
+                type="password"
+                class="form-input"
+                id="registerPassword"
+                placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
+                required
+                minlength="6"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Xác nhận mật khẩu</label>
+              <input
+                type="password"
+                class="form-input"
+                id="registerConfirmPassword"
+                placeholder="Nhập lại mật khẩu"
+                required
+              />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%">
+              <i class="fas fa-user-plus"></i> Đăng ký
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Movie Modal (Add/Edit) -->
+    <div class="modal-overlay" id="movieModal">
+      <div class="modal" style="max-width: 700px">
+        <div class="modal-header">
+          <h3 class="modal-title" id="movieModalTitle">Thêm Phim Mới</h3>
+          <button class="modal-close" onclick="closeModal('movieModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="movieForm" onsubmit="handleMovieSubmit(event)">
+            <input type="hidden" id="movieId" />
+            <div class="form-group">
+              <label class="form-label">Tên phim *</label>
+              <input
+                type="text"
+                class="form-input"
+                id="movieTitle"
+                placeholder="Nhập tên phim"
+                required
+              />
+            </div>
+            <div class="form-group">
+    <label class="form-label">Tên Phần / Mùa</label>
+    <input type="text" class="form-input" id="moviePart" placeholder="VD: Phần 1, Season 2, Tập Đặc Biệt..." />
+    <small class="text-muted" style="font-size: 12px;">Để trống nếu là phim độc lập không có phần.</small>
+</div>
+            <div class="form-group">
+              <label class="form-label">Link ảnh Poster *</label>
+              <input
+                type="url"
+                class="form-input"
+                id="moviePoster"
+                placeholder="/images/MoviePoster.jpg"
+                required
+              />
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px"
+            >
+              <div class="form-group">
+                <label class="form-label">Thể loại *</label>
+                <select class="form-select" id="movieCategory" required>
+                  <option value="">Chọn thể loại</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Quốc gia *</label>
+                <select class="form-select" id="movieCountry" required>
+                  <option value="">Chọn quốc gia</option>
+                </select>
+                <div class="form-group">
+    <label class="form-label">Loại phim *</label>
+    <select class="form-select" id="movieType" required>
+        <option value="single">Phim Lẻ</option>
+        <option value="series">Phim Bộ (Nhiều tập)</option>
+    </select>
+</div>
+              </div>
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px"
+            >
+              <div class="form-group">
+                <label class="form-label">Năm phát hành *</label>
+                <input
+                  type="number"
+                  class="form-input"
+                  id="movieYear"
+                  placeholder="2024"
+                  min="1900"
+                  max="2030"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Giá vé (CRO) *</label>
+                <input
+                  type="number"
+                  class="form-input"
+                  id="moviePrice"
+                  placeholder="10"
+                  min="0"
+                  step="0.1"
+                  required
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mô tả</label>
+              <textarea
+                class="form-textarea"
+                id="movieDescription"
+                placeholder="Nhập mô tả phim..."
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tags (phân cách bằng dấu phẩy)</label>
+              <input
+                type="text"
+                class="form-input"
+                id="movieTags"
+                placeholder="hot, mới, đề cử"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Trạng thái</label>
+              <select class="form-select" id="movieStatus">
+                <option value="public">Công khai</option>
+                <option value="hidden">Ẩn</option>
+                <option value="pending">Chờ duyệt</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('movieModal')">
+            Hủy
+          </button>
+          <button
+            class="btn btn-primary"
+            onclick="document.getElementById('movieForm').requestSubmit()"
+          >
+            <i class="fas fa-save"></i> Lưu
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Episode Modal -->
+    <div class="modal-overlay" id="episodeModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" id="episodeModalTitle">Thêm Tập Mới</h3>
+          <button class="modal-close" onclick="closeModal('episodeModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="episodeForm" onsubmit="handleEpisodeSubmit(event)">
+            <input type="hidden" id="episodeIndex" />
+            <div class="form-group" id="episodeNumberGroup">
+    <label class="form-label">Số tập *</label>
+    <input type="number" class="form-input" id="episodeNumber" placeholder="1" min="1" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tiêu đề tập</label>
+              <input
+                type="text"
+                class="form-input"
+                id="episodeTitle"
+                placeholder="Tập 1: Khởi đầu"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">YouTube Video ID *</label>
+              <input
+                type="text"
+                class="form-input"
+                id="episodeYoutubeId"
+                placeholder="dQw4w9WgXcQ"
+                required
+              />
+              <small class="text-muted"
+                >ID video từ link YouTube (phần sau v=)</small
+              >
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px"
+            >
+              <div class="form-group">
+                <label class="form-label">Thời lượng</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  id="episodeDuration"
+                  placeholder="45 phút"
+                />
+              </div>
+              <div class="form-group">
+    <label class="form-label">Chất lượng</label>
+    <select class="form-select" id="episodeQuality">
+        <option value="360p">360p</option>
+        <option value="480p">480p</option>
+        <option value="720p">720p</option>
+        <option value="720p60">720p60</option>
+        <option value="1080p">1080p</option>
+        <option value="1080p60" selected>1080p60</option> 
+        <option value="2K">2K (1440p)</option>
+        <option value="4K">4K (2160p)</option>
+    </select>
+</div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            onclick="closeModal('episodeModal')"
+          >
+            Hủy
+          </button>
+          <button
+            class="btn btn-primary"
+            onclick="document.getElementById('episodeForm').requestSubmit()"
+          >
+            <i class="fas fa-save"></i> Lưu
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div class="modal-overlay" id="categoryModal">
+      <div class="modal" style="max-width: 400px">
+        <div class="modal-header">
+          <h3 class="modal-title">Thêm Thể Loại</h3>
+          <button class="modal-close" onclick="closeModal('categoryModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="categoryForm" onsubmit="handleCategorySubmit(event)">
+            <input type="hidden" id="categoryId" />
+            <div class="form-group">
+              <label class="form-label">Tên thể loại *</label>
+              <input
+                type="text"
+                class="form-input"
+                id="categoryName"
+                placeholder="Hành động"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Slug</label>
+              <input
+                type="text"
+                class="form-input"
+                id="categorySlug"
+                placeholder="hanh-dong"
+              />
+              <small class="text-muted">Để trống sẽ tự động tạo từ tên</small>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            onclick="closeModal('categoryModal')"
+          >
+            Hủy
+          </button>
+          <button
+            class="btn btn-primary"
+            onclick="document.getElementById('categoryForm').requestSubmit()"
+          >
+            <i class="fas fa-save"></i> Lưu
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Country Modal -->
+    <div class="modal-overlay" id="countryModal">
+      <div class="modal" style="max-width: 400px">
+        <div class="modal-header">
+          <h3 class="modal-title">Thêm Quốc Gia</h3>
+          <button class="modal-close" onclick="closeModal('countryModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="countryForm" onsubmit="handleCountrySubmit(event)">
+            <input type="hidden" id="countryId" />
+            <div class="form-group">
+              <label class="form-label">Tên quốc gia *</label>
+              <input
+                type="text"
+                class="form-input"
+                id="countryName"
+                placeholder="Việt Nam"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mã quốc gia</label>
+              <input
+                type="text"
+                class="form-input"
+                id="countryCode"
+                placeholder="VN"
+                maxlength="3"
+              />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            onclick="closeModal('countryModal')"
+          >
+            Hủy
+          </button>
+          <button
+            class="btn btn-primary"
+            onclick="document.getElementById('countryForm').requestSubmit()"
+          >
+            <i class="fas fa-save"></i> Lưu
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Role Modal -->
+    <div class="modal-overlay" id="userRoleModal">
+      <div class="modal" style="max-width: 400px">
+        <div class="modal-header">
+          <h3 class="modal-title">Phân Quyền Người Dùng</h3>
+          <button class="modal-close" onclick="closeModal('userRoleModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="userRoleEmail" class="mb-2"></p>
+          <div class="form-group">
+            <label class="form-label">Vai trò</label>
+            <select class="form-select" id="userRoleSelect">
+              <option value="user">User</option>
+              <option value="editor">Editor</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            onclick="closeModal('userRoleModal')"
+          >
+            Hủy
+          </button>
+          <button class="btn btn-primary" onclick="updateUserRole()">
+            <i class="fas fa-save"></i> Cập nhật
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================
+         NOTIFICATION CONTAINER
+         ============================================ -->
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <!-- ============================================
+         LOADING OVERLAY
+         ============================================ -->
+    <!--Thêm Modal "Hồ sơ cá nhân" (Để cập nhật Avatar & Đăng xuất) -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-spinner"></div>
+      <p class="loading-text" id="loadingText">Đang xử lý...</p>
+    </div>
+
+    <div class="modal-overlay" id="profileModal">
+      <div class="modal" style="max-width: 400px">
+        <div class="modal-header">
+          <h3 class="modal-title">Hồ sơ cá nhân</h3>
+          <button class="modal-close" onclick="closeModal('profileModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body text-center">
+          <img
+            id="profileCurrentAvatar"
+            src=""
+            alt="Avatar"
+            style="
+              width: 100px;
+              height: 100px;
+              border-radius: 50%;
+              object-fit: cover;
+              margin-bottom: 15px;
+              border: 3px solid var(--accent-secondary);
+            "
+          />
+
+          <h3 id="profileDisplayName" style="margin-bottom: 5px">Tên User</h3>
+          <p id="profileEmail" class="text-muted" style="margin-bottom: 20px">
+            email@example.com
+          </p>
+          
+          <div class="form-group" style="text-align: left; margin-top: 20px;">
+            <label class="form-label">Tên hiển thị:</label>
+            <input type="text" class="form-input" id="profileNameInput" placeholder="Nhập tên mới...">
+          </div>
+
+          <div class="form-group" style="text-align: left">
+            <label class="form-label">Đổi Avatar mới (Link ảnh):</label>
+            <input
+              type="url"
+              class="form-input"
+              id="profileNewAvatar"
+              placeholder="Nhập link ảnh mới..."
+            />
+          </div>
+
+          <button
+            class="btn btn-primary"
+            style="width: 100%; margin-bottom: 10px"
+            onclick="updateUserProfile()"
+          >
+            <i class="fas fa-save"></i> Lưu thay đổi
+          </button>
+
+          <hr style="border-color: var(--border-color); margin: 15px 0" />
+
+          <button
+            class="btn btn-danger"
+            style="width: 100%"
+            onclick="handleLogout()"
+          >
+            <i class="fas fa-sign-out-alt"></i> Đăng xuất
+          </button>
+        </div> </div> </div> <div class="modal-overlay" id="libraryModal">
+        <div class="modal" style="max-width: 900px; height: 85vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="libraryModalTitle">Danh sách phim</h3>
+                <button class="modal-close" onclick="closeModal('libraryModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;">
+                <div class="movie-grid" id="libraryList"></div>
+            </div>
+        </div>
+    </div>
+    <div id="categoryModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="categoryModalTitle">Quản Lý Thể Loại</h3>
+            <button class="btn-icon" onclick="closeModal('categoryModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="categoryForm" onsubmit="handleCategorySubmit(event)">
+                <input type="hidden" id="categoryId">
+                
+                <div class="form-group">
+                    <label class="form-label">Tên thể loại</label>
+                    <input type="text" class="form-input" id="categoryName" required placeholder="Ví dụ: Hành động">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Slug (Đường dẫn - Tự động tạo nếu để trống)</label>
+                    <input type="text" class="form-input" id="categorySlug" placeholder="hanh-dong">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('categoryModal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu Lại</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="countryModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="countryModalTitle">Quản Lý Quốc Gia</h3>
+            <button class="btn-icon" onclick="closeModal('countryModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="countryForm" onsubmit="handleCountrySubmit(event)">
+                <input type="hidden" id="countryId">
+                
+                <div class="form-group">
+                    <label class="form-label">Tên quốc gia</label>
+                    <input type="text" class="form-input" id="countryName" required placeholder="Ví dụ: Hàn Quốc">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mã Quốc Gia (2 ký tự)</label>
+                    <input type="text" class="form-input" id="countryCode" required placeholder="KR" maxlength="5">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('countryModal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu Lại</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

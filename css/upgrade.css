@@ -1,0 +1,90 @@
+/* UPGRADE PAGE STYLES */
+.upgrade-container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+.upgrade-header {
+  margin-bottom: 50px;
+}
+.gradient-text {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 3rem;
+  font-weight: 800;
+}
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  align-items: center;
+}
+.pricing-card {
+  background: #1f1f2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 30px;
+  text-align: center;
+  transition: transform 0.3s ease;
+  position: relative;
+}
+.pricing-card:hover {
+  transform: translateY(-10px);
+}
+.pricing-card.popular {
+  background: linear-gradient(145deg, #1f1f2e, #2b2b3d);
+  border: 2px solid var(--accent-primary);
+  transform: scale(1.05);
+  box-shadow: 0 10px 40px rgba(229, 9, 20, 0.3);
+  z-index: 2;
+}
+.pricing-card.popular:hover {
+  transform: scale(1.08);
+}
+.badge-popular {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-gradient);
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 5px 15px rgba(229, 9, 20, 0.4);
+}
+.pricing-header h3 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+.pricing-header .price {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #fff;
+}
+.pricing-header .price span {
+  font-size: 1rem;
+  color: #aaa;
+  font-weight: normal;
+}
+.pricing-features {
+  list-style: none;
+  padding: 0;
+  margin: 30px 0;
+  text-align: left;
+}
+.pricing-features li {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ddd;
+}
+.text-success {
+  color: #46d369;
+}
+.btn-glow {
+  box-shadow: 0 0 20px rgba(229, 9, 20, 0.5);
+  animation: pulse-red 2s infinite;
+}

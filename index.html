@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+  <head>
+    <link rel="stylesheet" href="css/upgrade.css" />
+    <link rel="stylesheet" href="css/watch-party.css" />
+    <link rel="stylesheet" href="css/variables.css" />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/admin.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+    <!--<link rel="stylesheet" href="css/style.css" />-->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Rạp Chiếu Phim Blockchain - Xem phim trực tuyến, thanh toán bằng CRO Token"
+    />
+    <meta
+      name="keywords"
+      content="blockchain, movie, streaming, CRO, crypto, NFT"
+    />
+
+    <title>MovieChain - Rạp Chiếu Phim Blockchain</title>
+
+    <!-- Favicon -->
+    <link
+      rel="icon"
+      href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico"
+      type="image/x-icon"
+    />
+
+    <!-- Montserrat Font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- Custom CSS -->
+  </head>
+  <body>
+    <!-- ============================================
+         NAVIGATION BAR
+         ============================================ -->
+    <nav class="navbar" id="navbar">
+      <div class="nav-container">
+        <button
+          id="sidebarToggleBtn"
+          class="btn-icon"
+          onclick="toggleSidebar()"
+          style="
+            display: none;
+            margin-right: 15px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+          "
+        >
+          <i class="fas fa-bars" style="font-size: 24px"></i>
+        </button>
+
+        <!-- Logo -->
+        <a href="#" class="nav-logo" onclick="showPage('home')">
+          <i class="fas fa-film"></i>
+          <span>MovieChain</span>
+        </a>
+
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="navMenu">
+          <a
+            href="#"
+            class="nav-link active"
+            data-page="home"
+            onclick="showPage('home')"
+          >
+            <i class="fas fa-home"></i> Trang Chủ
+          </a>
+
+          <a
+            href="#"
+            class="nav-link"
+            data-page="movies"
+            onclick="showPage('movies')"
+          >
+            <i class="fas fa-film"></i> Tất cả Phim
+          </a>
+
+          <a href="#" class="nav-link" onclick="filterByMovieType('single')">
+            <i class="fas fa-video"></i> Phim Lẻ
+          </a>
+          <a href="#" class="nav-link" onclick="filterByMovieType('series')">
+            <i class="fas fa-layer-group"></i> Phim Bộ
+          </a>
+          <a
+            href="#"
+            class="nav-link"
+            data-page="categories"
+            onclick="showPage('categories')"
+          >
+            <i class="fas fa-tags"></i> Thể Loại
+          </a>
+          <!-- Admin Link - Chỉ hiện khi là Admin -->
+          <a
+            href="#"
+            class="nav-link hidden"
+            id="adminNavLink"
+            data-page="admin"
+            onclick="showPage('admin')"
+          >
+            <i class="fas fa-cog"></i> Admin
+          </a>
+        </div>
+
+        <!-- Navigation Actions -->
+        <div class="nav-actions">
+          <!-- Theme Toggle -->
+          <button
+            class="theme-toggle"
+            id="themeToggle"
+            onclick="toggleTheme()"
+            title="Đổi giao diện"
+          >
+            <i class="fas fa-moon" id="themeIcon"></i>
+          </button>
+
+          <!-- Wallet Button -->
+          <button
+            class="btn wallet-btn"
+            id="walletBtn"
+            onclick="connectWallet()"
+          >
+            <i class="fas fa-wallet"></i>
+            <span>Kết nối ví</span>
+          </button>
+
+          <!-- Auth Button -->
+          <div id="authContainer" style="position: relative">
+            <button
+              class="btn btn-primary"
+              id="loginBtn"
+              onclick="openAuthModal()"
+            >
+              <i class="fas fa-user"></i> <span>Đăng nhập</span>
+            </button>
+
+            <div
+              id="userMenuTrigger"
+              class="hidden"
+              onclick="toggleUserDropdown(event)"
+              style="cursor: pointer"
+            >
+              <img id="userAvatarSmall" src="" class="nav-user-avatar" />
+            </div>
+
+            <div id="userDropdown" class="user-dropdown">
+              <div class="dropdown-header">
+                <img id="dropdownAvatar" src="" alt="Avatar" />
+                <div class="dropdown-user-info">
+                  <span class="dropdown-role">Free</span>
+                  <strong id="dropdownName">Tên User</strong>
+                </div>
+              </div>
+
+              <div class="dropdown-upgrade">
+                <p>
+                  Nâng cấp tài khoản MoiveChain để có trải nghiệm đẳng cấp hơn.
+                </p>
+                <button class="btn-upgrade" onclick="showPage('upgrade')">
+                  Nâng cấp ngay <i class="fas fa-arrow-up"></i>
+                </button>
+              </div>
+
+              <ul class="dropdown-list">
+                <li class="dropdown-item">
+                  <i class="fas fa-wallet"></i>
+                  <span>Số dư</span>
+                  <span class="balance-badge">0 C</span>
+                  <button class="btn-deposit" onclick="showPage('upgrade')">
+                    + Nạp
+                  </button>
+                </li>
+                <li
+                  class="dropdown-item"
+                  onclick="openLibraryModal('favorites')"
+                >
+                  <i class="fas fa-heart"></i> Yêu thích
+                </li>
+                <li class="dropdown-item" onclick="openLibraryModal('history')">
+                  <i class="fas fa-history"></i> Xem tiếp
+                </li>
+                <li class="dropdown-item" onclick="openProfileModal()">
+                  <i class="fas fa-user-cog"></i> Tài khoản
+                </li>
+                <li class="dropdown-item logout" onclick="handleLogout()">
+                  <i class="fas fa-sign-out-alt"></i> Thoát
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Mobile Menu Toggle -->
+          <button
+            class="mobile-menu-toggle"
+            id="mobileMenuToggle"
+            onclick="toggleMobileMenu()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ============================================
+         MAIN CONTENT
+         ============================================ -->
+    <main id="mainContent">
+      <!-- HOME PAGE -->
+      <div id="homePage" class="page active">
+        <!-- Hero Section -->
+        <section class="hero">
+          <div class="hero-content">
+            <h1 class="hero-title">
+              Chào mừng đến với <span>MovieChain</span>
+            </h1>
+            <p class="hero-subtitle">
+              Trải nghiệm xem phim thế hệ mới với công nghệ Blockchain. Thanh
+              toán nhanh chóng, an toàn bằng CRO Token trên mạng Cronos.
+            </p>
+            <div class="hero-actions">
+              <button
+                class="btn btn-primary btn-lg"
+                onclick="showPage('movies')"
+              >
+                <i class="fas fa-play"></i> Khám Phá Ngay
+              </button>
+              <button class="btn btn-neon btn-lg" onclick="connectWallet()">
+                <i class="fas fa-wallet"></i> Kết Nối Ví
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Featured Movies Section -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Phim Nổi Bật</h2>
+            <a href="#" class="btn btn-secondary" onclick="showPage('movies')">
+              Xem tất cả <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
+          <div class="movie-grid" id="featuredMovies">
+            <!-- Movies sẽ được load từ Firestore -->
+            <div class="skeleton" style="height: 350px"></div>
+            <div class="skeleton" style="height: 350px"></div>
+            <div class="skeleton" style="height: 350px"></div>
+            <div class="skeleton" style="height: 350px"></div>
+          </div>
+        </section>
+
+        <!-- New Movies Section -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Phim Mới Cập Nhật</h2>
+          </div>
+          <div class="movie-grid" id="newMovies">
+            <!-- Movies sẽ được load từ Firestore -->
+          </div>
+        </section>
+      </div>
+
+      <!-- MOVIES PAGE -->
+      <div id="moviesPage" class="page">
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Tất Cả Phim</h2>
+            <div class="search-filter">
+              <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input
+                  type="text"
+                  class="form-input"
+                  id="searchMovies"
+                  placeholder="Tìm kiếm phim..."
+                  oninput="searchMovies()"
+                />
+              </div>
+              <select
+                class="form-select"
+                id="filterCategory"
+                onchange="filterMovies()"
+              >
+                <option value="">Tất cả thể loại</option>
+              </select>
+              <select
+                class="form-select"
+                id="filterCountry"
+                onchange="filterMovies()"
+              >
+                <option value="">Tất cả quốc gia</option>
+              </select>
+              <select
+                class="form-select"
+                id="filterYear"
+                onchange="filterMovies()"
+              >
+                <option value="">Tất cả năm</option>
+              </select>
+            </div>
+          </div>
+          <div class="movie-grid" id="allMovies">
+            <!-- Movies sẽ được load từ Firestore -->
+          </div>
+        </section>
+      </div>
+
+      <!-- CATEGORIES PAGE -->
+      <div id="categoriesPage" class="page">
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Thể Loại Phim</h2>
+          </div>
+          <div
+            class="movie-grid"
+            id="categoriesList"
+            style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr))"
+          >
+            <!-- Categories sẽ được load từ Firestore -->
+          </div>
+        </section>
+      </div>
+
+      <!-- MOVIE DETAIL PAGE -->
+      <div id="movieDetailPage" class="page">
+        <div class="movie-detail">
+          <div class="movie-detail-header">
+            <div class="movie-poster">
+              <img id="detailPoster" src="" alt="Movie Poster" />
+            </div>
+            <div class="movie-info">
+              <h1 id="detailTitle">Tên Phim</h1>
+              <div class="movie-meta">
+                <span class="movie-meta-item">
+                  <i class="fas fa-calendar"></i>
+                  <span id="detailYear">2024</span>
+                </span>
+                <span class="movie-meta-item">
+                  <i class="fas fa-globe"></i>
+                  <span id="detailCountry">Việt Nam</span>
+                </span>
+                <span class="movie-meta-item">
+                  <i class="fas fa-tags"></i>
+                  <span id="detailCategory">Hành động</span>
+                </span>
+                <span class="movie-meta-item">
+                  <i class="fas fa-eye"></i>
+                  <span id="detailViews">0</span> lượt xem
+                </span>
+                <span class="movie-meta-item card-rating">
+                  <i class="fas fa-star"></i>
+                  <span id="detailRating">0</span>/10
+                </span>
+              </div>
+              <div class="card-tags" id="detailTags">
+                <!-- Tags sẽ được thêm động -->
+              </div>
+              <p class="movie-description" id="detailDescription">
+                Mô tả phim...
+              </p>
+              <div class="movie-actions">
+                <div class="card-price" style="font-size: 24px">
+                  <i class="fas fa-coins"></i>
+                  <span id="detailPrice">0</span> CRO
+                </div>
+                <button
+                  class="btn btn-primary btn-lg"
+                  id="buyTicketBtn"
+                  onclick="buyTicket()"
+                >
+                  <i class="fas fa-ticket-alt"></i> Mua Vé Ngay
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Video Player -->
+          <div class="video-container" id="videoContainer">
+            <div class="video-locked" id="videoLocked">
+              <i class="fas fa-lock"></i>
+              <h3>Video Đã Bị Khóa</h3>
+              <p>
+                Vui lòng mua vé để mở khóa và xem phim. Thanh toán nhanh chóng,
+                an toàn bằng CRO Token.
+              </p>
+              <button class="btn btn-primary btn-lg" onclick="buyTicket()">
+                <i class="fas fa-unlock"></i> Mở Khóa Ngay
+              </button>
+            </div>
+            <iframe
+              id="videoPlayer"
+              class="hidden"
+              src=""
+              allowfullscreen
+            ></iframe>
+          </div>
+
+          <!-- Episodes Section -->
+          <div class="episodes-section" id="episodesSection">
+            <h3 class="section-title">Danh Sách Tập</h3>
+            <div class="episodes-list" id="episodesList">
+              <!-- Episodes sẽ được load động -->
+            </div>
+          </div>
+
+          <!-- Comments Section -->
+          <div class="comments-section">
+            <h3 class="section-title">Bình Luận & Đánh Giá</h3>
+
+            <!-- Comment Form -->
+            <div class="comment-form" id="commentForm">
+              <div class="rating-input">
+                <label>Đánh giá của bạn:</label>
+                <div class="rating-stars" id="ratingStars">
+                  <!-- Stars sẽ được tạo bằng JS -->
+                </div>
+                <span class="rating-value" id="ratingValue">0/10</span>
+              </div>
+              <div class="form-group">
+                <textarea
+                  class="form-textarea"
+                  id="commentContent"
+                  placeholder="Viết bình luận của bạn..."
+                ></textarea>
+              </div>
+              <button class="btn btn-primary" onclick="submitComment()">
+                <i class="fas fa-paper-plane"></i> Gửi Bình Luận
+              </button>
+            </div>
+
+            <!-- Comments List -->
+            <div class="comments-list" id="commentsList">
+              <!-- Comments sẽ được load từ Firestore -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="modals-container"></div>
+      <div id="admin-container"></div>
+    </main>
+
+    <!-- ============================================
+         FOOTER
+         ============================================ -->
+    <footer class="footer" id="footer">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h4><i class="fas fa-film"></i> MovieChain</h4>
+          <p class="text-muted">
+            Nền tảng xem phim Blockchain. Thanh toán an toàn, minh bạch bằng
+            CRO.
+          </p>
+          <div class="social-links">
+            <a href="#"><i class="fab fa-facebook-f"></i></a>
+            <a href="#"><i class="fab fa-telegram-plane"></i></a>
+            <a href="#"><i class="fab fa-discord"></i></a>
+          </div>
+        </div>
+
+        <div class="footer-section">
+          <h4>Khám Phá</h4>
+          <ul>
+            <li><a href="#" onclick="showPage('movies')">Kho Phim</a></li>
+            <li><a href="#" onclick="showPage('categories')">Thể Loại</a></li>
+            <li><a href="#" onclick="showPage('upgrade')">Gói VIP</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Hỗ Trợ</h4>
+          <ul>
+            <li><a href="#">Điều khoản</a></li>
+            <li><a href="#">Bảo mật</a></li>
+            <li><a href="#">Liên hệ Admin</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section stats-box">
+          <h4><i class="fas fa-chart-line"></i> Thống Kê</h4>
+
+          <div class="live-stat-item">
+            <span class="stat-label"
+              ><i class="fas fa-users"></i> Đang Online:</span
+            >
+            <span class="stat-value highlight" id="statOnline">--</span>
+          </div>
+
+          <div class="live-stat-item">
+            <span class="stat-label"
+              ><i class="fas fa-globe"></i> Tổng truy cập:</span
+            >
+            <span class="stat-value" id="statVisits">--</span>
+          </div>
+
+          <div class="live-stat-item">
+            <span class="stat-label"
+              ><i class="fas fa-clock"></i> TG trung bình:</span
+            >
+            <span class="stat-value" id="statTime">--</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 MovieChain. Powered by Blockchain Technology.</p>
+      </div>
+    </footer>
+    <div id="modals-container"></div>
+
+    <!-- PeerJS for WebRTC -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- ============================================
+         SCRIPTS
+
+         
+         ============================================ -->
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Ethers.js for Web3 -->
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <!-- Firebase Config -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/web3-config.js"></script>
+
+    <script src="js/globals.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/data.js"></script>
+
+    <script src="js/auth.js"></script>
+    <script src="js/user.js"></script>
+    <script src="js/home.js"></script>
+    <script src="js/detail.js"></script>
+    <script src="js/admin.js"></script>
+
+    <script src="js/upgrade.js"></script>
+    <script src="js/watch-party.js"></script>
+
+    <script src="js/main.js"></script>
+    <script src="js/loader.js"></script>
+
+    <script>
+      // Buộc trình duyệt phải dùng hàm này (Ghi đè mọi hàm cũ bị lỗi)
+      window.showAdminPanel = function (panelName) {
+        console.log("🖱️ Đang chuyển sang tab:", panelName);
+
+        // 1. Ẩn tất cả các trang con
+        var allPanels = document.querySelectorAll(".admin-panel");
+        allPanels.forEach(function (panel) {
+          panel.classList.remove("active");
+        });
+
+        // 2. Hiện trang cần chọn
+        var targetId = panelName + "Panel"; // Ví dụ: dashboardPanel
+        var targetPanel = document.getElementById(targetId);
+
+        if (targetPanel) {
+          targetPanel.classList.add("active");
+        } else {
+          console.error("❌ Không tìm thấy trang có ID là: " + targetId);
+          // Nếu không tìm thấy panel, thử hiện thông báo để kiểm tra
+          // alert("Lỗi: Không tìm thấy giao diện " + panelName);
+        }
+
+        // 3. Đổi màu menu bên trái (Active)
+        var allNavItems = document.querySelectorAll(".admin-nav-item");
+        allNavItems.forEach(function (item) {
+          item.classList.remove("active");
+          // Kiểm tra xem nút này có phải là nút vừa bấm không
+          if (
+            item.getAttribute("onclick") &&
+            item.getAttribute("onclick").includes(panelName)
+          ) {
+            item.classList.add("active");
+          }
+        });
+      };
+    </script>
+    <script>
+      // Hàm load file HTML bên ngoài vào trang chính
+      async function loadUpgradePage() {
+        try {
+          // Tải file upgrade.html
+          const response = await fetch("./components/upgrade.html");
+          const html = await response.text();
+
+          // Chèn vào cuối thẻ <main>
+          document
+            .getElementById("mainContent")
+            .insertAdjacentHTML("beforeend", html);
+          console.log("✅ Đã tải giao diện Upgrade thành công!");
+        } catch (error) {
+          console.error("Lỗi tải trang Upgrade:", error);
+        }
+      }
+
+      // Gọi hàm chạy ngay khi web mở
+      loadUpgradePage();
+    </script>
+  </body>
+</html>

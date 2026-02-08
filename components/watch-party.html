@@ -1,0 +1,161 @@
+<div id="watchPartyPage" class="page">
+  <div id="partyLobby" class="party-container">
+    <div class="section-header">
+      <h2 class="section-title">Phòng Xem Chung 🍿</h2>
+      <button class="btn btn-primary" onclick="openCreateRoomModal()">
+        <i class="fas fa-plus-circle"></i> Tạo Phòng Mới
+      </button>
+    </div>
+
+    <div class="party-grid" id="roomList">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+
+  <div id="partyRoom" class="hidden">
+    <div class="room-layout">
+      <div class="room-main">
+        <div class="room-header-bar">
+          <button class="btn btn-secondary btn-sm" onclick="leaveRoom()">
+            <i class="fas fa-arrow-left"></i> Rời phòng
+          </button>
+          <h3 id="roomTitleDisplay">Tên Phòng</h3>
+          <div class="room-meta">
+            <button
+              id="roomInviteBtn"
+              class="btn btn-sm btn-neon"
+              onclick="copyRoomLink()"
+              title="Sao chép liên kết chia sẻ"
+            >
+              <i class="fas fa-link"></i> Mời bạn bè
+            </button>
+
+            <span class="live-badge">LIVE</span>
+          </div>
+        </div>
+
+        <div class="video-container room-player-wrapper">
+          <div id="floatingEmojis" class="floating-emojis"></div>
+
+          <div id="partyPlayer"></div>
+
+          <div id="syncStatus" class="sync-overlay hidden">
+            <div class="spinner-border"></div>
+            <span>Đang đồng bộ...</span>
+          </div>
+        </div>
+
+        <div class="room-controls" id="hostControls" style="display: none">
+          <button class="btn btn-primary" onclick="syncPlay()">
+            <i class="fas fa-play"></i> Play All
+          </button>
+          <button class="btn btn-warning" onclick="syncPause()">
+            <i class="fas fa-pause"></i> Pause All
+          </button>
+          <button class="btn btn-secondary" onclick="syncSeek(-10)">
+            -10s
+          </button>
+          <button class="btn btn-secondary" onclick="syncSeek(10)">+10s</button>
+        </div>
+      </div>
+
+      <div class="room-sidebar">
+        <div class="room-tabs">
+          <button class="room-tab active" onclick="switchRoomTab('chat')">
+            Chat
+          </button>
+          <button class="room-tab" onclick="switchRoomTab('members')">
+            Thành viên (<span id="memberCount">0</span>)
+          </button>
+        </div>
+
+        <div id="tabChat" class="room-tab-content active">
+          <div class="chat-messages" id="chatMessages">
+            <div class="system-msg">Chào mừng đến phòng chat!</div>
+          </div>
+          <div class="emoji-bar">
+            <span onclick="sendReaction('❤️')">❤️</span>
+            <span onclick="sendReaction('😂')">😂</span>
+            <span onclick="sendReaction('😮')">😮</span>
+            <span onclick="sendReaction('😭')">😭</span>
+            <span onclick="sendReaction('😡')">😡</span>
+            <span onclick="sendReaction('🎉')">🎉</span>
+          </div>
+          <form class="chat-input-area" onsubmit="sendChatMessage(event)">
+            <input
+              type="text"
+              id="chatInput"
+              placeholder="Chat gì đó..."
+              autocomplete="off"
+            />
+            <button type="submit"><i class="fas fa-paper-plane"></i></button>
+          </form>
+        </div>
+
+        <div id="tabMembers" class="room-tab-content">
+          <div class="member-list" id="memberList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="createRoomModal">
+  <div class="modal" style="max-width: 500px">
+    <div class="modal-header">
+      <h3>Tạo Phòng Xem Chung</h3>
+      <button class="modal-close" onclick="closeModal('createRoomModal')">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form onsubmit="handleCreateRoom(event)">
+        <div class="form-group">
+          <label>Tên phòng</label>
+          <input
+            type="text"
+            class="form-input"
+            id="roomNameInput"
+            required
+            placeholder="VD: Xem phim kinh dị..."
+          />
+        </div>
+        <div class="form-group">
+          <label>Chọn phim</label>
+          <select
+            class="form-select"
+            id="roomMovieSelect"
+            required
+            onchange="updateEpisodeSelect()"
+          >
+            <option value="">-- Chọn phim --</option>
+          </select>
+        </div>
+        <div class="form-group hidden" id="roomEpisodeGroup">
+          <label>Chọn tập</label>
+          <select class="form-select" id="roomEpisodeSelect"></select>
+        </div>
+        <div class="form-group">
+          <label>Loại phòng</label>
+          <select class="form-select" id="roomType" onchange="toggleRoomPass()">
+            <option value="public">Công khai</option>
+            <option value="private">Riêng tư (Mật khẩu)</option>
+          </select>
+        </div>
+        <div class="form-group hidden" id="roomPassGroup">
+          <label>Mật khẩu</label>
+          <input
+            type="password"
+            class="form-input"
+            id="roomPassword"
+            placeholder="Nhập mật khẩu..."
+            autocomplete="new-password"
+          />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%">
+          Tạo & Vào Ngay 🚀
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

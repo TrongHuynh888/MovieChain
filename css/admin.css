@@ -1,0 +1,239 @@
+/*Tách biệt hoàn toàn giao diện Admin.
+   ADMIN.CSS - GIAO DIỆN QUẢN TRỊ VIÊN
+   ============================================ */
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  padding-top: 70px;
+}
+
+/* --- SIDEBAR (THANH MENU TRÁI) --- */
+.admin-sidebar {
+  width: 260px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  padding: var(--spacing-lg) 0;
+  position: fixed;
+  top: 70px;
+  bottom: 0;
+  left: 0;
+  overflow-y: auto;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 10px;
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-nav-item:hover,
+.admin-nav-item.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.admin-nav-item.active {
+  border-left: 3px solid var(--accent-primary);
+  background: linear-gradient(
+    90deg,
+    rgba(229, 9, 20, 0.1) 0%,
+    transparent 100%
+  );
+}
+
+.admin-nav-item i {
+  width: 20px;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+/* --- PC: COLLAPSED STATE (THU NHỎ) --- */
+.admin-sidebar.collapsed {
+  width: 80px;
+  overflow: visible;
+}
+.admin-sidebar.collapsed .admin-nav-item span {
+  display: none;
+}
+.admin-sidebar.collapsed .admin-nav-item {
+  justify-content: center;
+  padding: 15px 0;
+}
+.admin-sidebar.collapsed .admin-nav-item:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  margin: 0 auto;
+}
+
+/* --- CONTENT AREA (NỘI DUNG PHẢI) --- */
+.admin-content {
+  flex: 1;
+  margin-left: 260px;
+  padding: 30px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.admin-content.expanded {
+  margin-left: 80px;
+  width: calc(100% - 80px);
+}
+
+/* Tabs Logic */
+.admin-panel {
+  display: none !important;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.admin-panel.active {
+  display: block !important;
+  opacity: 1;
+  animation: slideUpFade 0.4s ease forwards;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- STATS CARDS (THẺ THỐNG KÊ) --- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xl);
+}
+.stat-icon.movies {
+  background: rgba(229, 9, 20, 0.2);
+  color: var(--accent-primary);
+}
+.stat-icon.views {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--accent-secondary);
+}
+.stat-icon.revenue {
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--success);
+}
+.stat-icon.users {
+  background: rgba(255, 170, 0, 0.2);
+  color: var(--warning);
+}
+
+.stat-info h3 {
+  font-size: var(--font-xxl);
+  margin-bottom: var(--spacing-xs);
+}
+.stat-info p {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+/* --- ADMIN TABLES (BẢNG DỮ LIỆU) --- */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-table th {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.admin-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+.admin-table img {
+  width: 40px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* Admin Header & Search */
+.admin-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xl);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+.search-filter {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+.search-box {
+  position: relative;
+}
+.search-box input {
+  padding-left: 40px;
+  min-width: 250px;
+}
+.search-box i {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}

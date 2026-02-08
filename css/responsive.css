@@ -1,0 +1,207 @@
+/**Các quy tắc về responsive design (giao diện đáp ứng trên các thiết bị Mobile/Tablet.).**/
+/* ============================================
+   RESPONSIVE.CSS - GIAO DIỆN MOBILE & TABLET
+   ============================================ */
+
+/* ============================================
+   RESPONSIVE.CSS - GIAO DIỆN MOBILE & TABLET
+   (Đã Fix lỗi vỡ menu trên điện thoại)
+   ============================================ */
+
+/* 1. TABLET (iPad - Dọc) */
+@media (max-width: 1024px) {
+  .nav-container,
+  .section,
+  .footer-content {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  /* Admin Tablet */
+  .admin-sidebar {
+    width: 80px;
+  }
+  .admin-sidebar:hover {
+    width: 260px;
+  }
+  .admin-content {
+    margin-left: 80px;
+  }
+  .admin-nav-item span {
+    display: none;
+  }
+  .admin-sidebar:hover .admin-nav-item span {
+    display: inline;
+  }
+
+  /* Footer Tablet */
+  .footer-content {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 30px;
+  }
+  .stats-box {
+    grid-column: span 2;
+    margin-top: 10px;
+  }
+}
+
+/* 2. MOBILE (Điện thoại) - SỬA LỖI TẠI ĐÂY */
+@media (max-width: 768px) {
+  /* --- CẤU HÌNH CƠ BẢN --- */
+  :root {
+    --font-hero: 28px;
+    --font-xxl: 20px;
+    --font-xl: 18px;
+  }
+
+  /* --- THANH MENU (HEADER) --- */
+  .nav-container {
+    padding: 10px 15px !important; /* Giảm lề 2 bên */
+    flex-wrap: nowrap !important; /* ⛔ Cấm tuyệt đối việc xuống dòng */
+    gap: 10px;
+  }
+
+  /* Logo nhỏ lại xíu */
+  .nav-logo {
+    font-size: 18px !important;
+  }
+  .nav-logo i {
+    font-size: 24px !important;
+  }
+
+  /* Khu vực chứa các nút bên phải (Ví, Avatar, Menu) */
+  .nav-actions {
+    gap: 8px !important; /* Các nút xích lại gần nhau */
+    flex-shrink: 0; /* Không cho phép bị co lại quá mức */
+  }
+
+  /* 🛠️ QUAN TRỌNG: Thu gọn nút "KẾT NỐI VÍ" thành hình tròn (chỉ hiện Icon) */
+  .wallet-btn,
+  #connectWalletBtn {
+    width: 38px;
+    height: 38px;
+    padding: 0 !important; /* Bỏ padding để icon nằm giữa */
+    border-radius: 50% !important; /* Bo tròn */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0 !important; /* Ẩn chữ đi */
+  }
+  /* Hiện lại icon bên trong nút ví */
+  .wallet-btn i,
+  #connectWalletBtn i {
+    font-size: 16px !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+  /* Nếu trong nút ví có thẻ span chứa chữ, ẩn nó đi */
+  .wallet-btn span,
+  #connectWalletBtn span {
+    display: none !important;
+  }
+
+  /* Ẩn nút đổi Theme (Mặt trăng) trên header mobile cho đỡ chật (nếu muốn) */
+  /* .theme-toggle { display: none !important; } */
+
+  /* Avatar User nhỏ lại */
+  .nav-user-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Nút 3 gạch (Menu) */
+  .mobile-menu-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    width: 38px;
+    height: 38px;
+    margin-left: 2px;
+  }
+
+  /* --- SIDEBAR DRAWER (MENU TRƯỢT TỪ PHẢI) --- */
+  .nav-menu {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 80px;
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100vh;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.9);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility: hidden;
+    z-index: 5000;
+  }
+  .nav-menu.active {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  .nav-link {
+    width: 100%;
+    padding: 15px 20px;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* --- CÁC PHẦN KHÁC --- */
+  .movie-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 10px;
+  }
+  .section {
+    padding: 30px 15px !important;
+  }
+
+  .footer-content {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px;
+    padding: 0 15px;
+  }
+  .footer-section:first-child {
+    grid-column: span 2;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+    margin-bottom: 10px;
+  }
+  .footer-section.stats-box {
+    grid-column: span 2;
+    margin-top: 10px;
+  }
+
+  /* Admin Mobile */
+  .admin-sidebar {
+    left: -100%;
+    width: 260px;
+    z-index: 6000;
+    transition: left 0.3s ease;
+  }
+  .admin-sidebar.active {
+    left: 0;
+  }
+  .admin-content {
+    margin-left: 0;
+    padding: 15px;
+  }
+  #adminSidebarOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 4999;
+    display: none;
+  }
+  .modal {
+    max-width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+}

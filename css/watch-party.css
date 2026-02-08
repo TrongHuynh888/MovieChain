@@ -1,0 +1,532 @@
+/* =========================================
+   WATCH PARTY STYLES
+   ========================================= */
+.party-container {
+  max-width: 100%; /* Đổi từ 1200px thành 100% */
+  margin: 0; /* Bỏ auto */
+  padding: 20px 40px; /* Thêm lề 40px hai bên */
+}
+.party-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* Room Layout */
+.room-layout {
+  display: grid;
+  grid-template-columns: 1fr 350px; /* Cột trái to, cột phải nhỏ */
+  gap: 20px;
+  height: calc(100vh - 100px);
+  padding: 10px;
+}
+@media (max-width: 900px) {
+  .room-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .room-sidebar {
+    height: 500px;
+  }
+}
+
+/* Main Area */
+.room-header-bar {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: var(--bg-secondary);
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+.room-player-wrapper {
+  flex: 1;
+  min-height: 480px;
+  background: #000;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* Đảm bảo Player YouTube chiếm full khung */
+#partyPlayer {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#partyPlayer iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: none;
+}
+
+.sync-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  z-index: 20;
+}
+
+/* Sidebar Chat */
+.room-sidebar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.room-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+}
+.room-tab {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: bold;
+}
+.room-tab.active {
+  color: var(--accent-secondary);
+  border-bottom: 2px solid var(--accent-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+.room-tab-content {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  flex-direction: column;
+}
+.room-tab-content.active {
+  display: flex;
+}
+
+/* Chat UI */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 10px;
+}
+.chat-msg {
+  font-size: 13px;
+  word-wrap: break-word;
+  animation: fadeIn 0.2s;
+}
+.chat-msg .author {
+  font-weight: bold;
+  color: var(--accent-secondary);
+  margin-right: 5px;
+}
+.chat-msg.system {
+  color: #fcd535;
+  font-style: italic;
+  text-align: center;
+  font-size: 11px;
+  background: rgba(252, 213, 53, 0.1);
+  padding: 4px;
+  border-radius: 4px;
+}
+.chat-msg.me {
+  text-align: right;
+}
+.chat-msg.me .text {
+  background: var(--accent-primary);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 10px 10px 0 10px;
+  display: inline-block;
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 5px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+.chat-input-area input {
+  flex: 1;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  padding: 8px;
+  border-radius: 20px;
+  color: #fff;
+}
+.chat-input-area button {
+  background: var(--accent-secondary);
+  border: none;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  color: #000;
+  cursor: pointer;
+}
+
+/* Emojis */
+.emoji-bar {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 5px 0;
+  margin-bottom: 5px;
+}
+.emoji-bar span {
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 5px;
+  transition: transform 0.2s;
+  font-size: 18px;
+}
+.emoji-bar span:hover {
+  transform: scale(1.3);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.floating-emojis {
+  position: absolute;
+  bottom: 50px;
+  right: 20px;
+  width: 100px;
+  height: 300px;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+.float-icon {
+  position: absolute;
+  bottom: 0;
+  font-size: 24px;
+  animation: floatUp 3s linear forwards;
+  opacity: 0;
+}
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-200px) scale(1.5);
+    opacity: 0;
+  }
+}
+/* =========================================
+   CẬP NHẬT NÚT XÓA PHÒNG
+   ========================================= */
+.btn-delete-room {
+  position: absolute;
+  top: 12px; /* Đẩy xuống một chút */
+  right: 12px; /* Đẩy sang trái một chút */
+  width: 28px; /* Thu nhỏ lại xíu cho tinh tế */
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(30, 30, 40, 0.9); /* Nền tối hơn */
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20; /* Đảm bảo luôn nằm trên cùng */
+  font-size: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.btn-delete-room:hover {
+  background: #ff4444;
+  color: #fff;
+  transform: scale(1.1) rotate(15deg); /* Hiệu ứng xoay nhẹ khi hover */
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.6);
+}
+/* =========================================
+   VOICE CHAT & MODERATION STYLES
+   ========================================= */
+
+/* Nút Mic của tôi (Nằm trên thanh header) */
+.btn-mic-toggle {
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin-right: 10px;
+}
+.btn-mic-toggle:hover {
+  background: #444;
+}
+.btn-mic-toggle.active {
+  background: #e50914;
+  border-color: #e50914; /* Màu đỏ khi tắt mic */
+  animation: pulse-red 2s infinite;
+}
+
+/* Controls quản trị viên trong danh sách thành viên */
+.member-controls {
+  display: flex;
+  gap: 5px;
+  margin-left: auto;
+}
+.btn-mod {
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.btn-mod:hover {
+  color: #fff;
+}
+.btn-mod.kick:hover {
+  color: #ffae00;
+} /* Vàng */
+.btn-mod.ban:hover {
+  color: #ff4444;
+} /* Đỏ */
+
+/* Trạng thái Mic của thành viên */
+.mic-status {
+  font-size: 10px;
+  margin-left: 5px;
+}
+.mic-off {
+  color: #ff4444;
+}
+.mic-on {
+  color: #00d4ff;
+}
+
+/* Thông báo cấm chat */
+.chat-banned-notice {
+  background: #ff4444;
+  color: #fff;
+  text-align: center;
+  padding: 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+/* =========================================
+   DANH SÁCH THÀNH VIÊN (BỔ SUNG ĐỂ SỬA LỖI)
+   ========================================= */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  overflow-y: auto; /* Cho phép cuộn nếu danh sách dài */
+  max-height: 100%;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05); /* Nền mờ nhẹ */
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.member-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* QUAN TRỌNG: Định cỡ ảnh đại diện để không bị to đùng */
+.member-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50%;
+  object-fit: cover; /* Cắt ảnh tròn đẹp */
+  border: 2px solid #00d4ff; /* Viền xanh */
+  flex-shrink: 0; /* Không cho ảnh bị méo */
+}
+
+.member-info {
+  flex: 1;
+  overflow: hidden; /* Ẩn chữ nếu quá dài */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.member-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Hiện dấu ... nếu tên dài */
+}
+
+.member-role {
+  font-size: 11px;
+  color: #aaa;
+}
+
+/* Nút quản lý của Admin (Kick, Ban...) */
+.member-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-mod {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.btn-mod:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+/* =========================================
+   CẬP NHẬT: NÚT DEAFEN & LOCAL VOLUME bật tắt lao
+   ========================================= */
+
+/* Nút Tai nghe (Deafen) - Nằm cạnh nút Mic */
+.btn-deafen-toggle {
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin-right: 10px;
+}
+.btn-deafen-toggle:hover {
+  background: #444;
+}
+.btn-deafen-toggle.active {
+  background: #ffae00; /* Màu vàng cam khi tắt loa */
+  border-color: #ffae00;
+  color: #000;
+}
+
+/* Trạng thái BẬT (Mặc định): Màu Xanh Dương */
+.btn-volume-local {
+  background: rgba(41, 121, 255, 0.1); /* Nền xanh nhạt */
+  border: 1px solid #2979ff; /* Viền xanh */
+  color: #2979ff; /* Icon xanh */
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin-right: 8px;
+  cursor: pointer;
+}
+.btn-volume-local:hover {
+  color: #fff;
+}
+.btn-volume-local.muted {
+  color: #ff4444;
+} /* Màu đỏ khi đang tắt tiếng người này */
+/* =========================================
+   CẬP NHẬT: TRẠNG THÁI LOA & HIỆU ỨNG NÓI
+   ========================================= */
+
+/* 1. Nút Loa Thành Viên (Rõ ràng hơn) */
+.btn-volume-local {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #444;
+  color: #888; /* Màu mặc định (chưa load) */
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin-right: 8px;
+}
+
+/* Trạng thái BẬT: Màu xanh lá */
+.btn-volume-local.active {
+  color: #00ff88;
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+}
+
+/* Trạng thái TẮT (Muted): Màu Đỏ + Nền tối */
+.btn-volume-local.muted {
+  background: rgba(255, 68, 68, 0.1);
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+.btn-volume-local:hover {
+  transform: scale(1.1);
+  filter: brightness(1.2);
+}
+/* 2. Hiệu ứng Avatar khi đang nói (Glowing Pulse) */
+@keyframes speaking-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.7);
+    border-color: #00d4ff;
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 212, 255, 0);
+    border-color: #00ff88;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+    border-color: #00d4ff;
+  }
+}
+
+.member-avatar.is-speaking {
+  animation: speaking-pulse 1.5s infinite;
+  border: 2px solid #00ff88 !important; /* Đổi viền sang xanh lá */
+}
+
+/* Thêm icon sóng âm nhỏ cạnh tên khi nói */
+.speaking-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #00ff88;
+  border-radius: 50%;
+  margin-left: 5px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.is-speaking .speaking-indicator {
+  opacity: 1;
+}

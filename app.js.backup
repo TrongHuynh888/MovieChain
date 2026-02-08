@@ -1,0 +1,3791 @@
+/**
+ * ============================================
+ * APP.JS - Rạp Chiếu Phim Blockchain
+ * ============================================
+ * Main application logic
+ * Bao gồm: Authentication, CRUD, Web3 Payment, UI Logic
+ */
+
+// ============================================
+// GLOBAL STATE
+// ============================================
+let currentUser = null; // User hiện tại đang đăng nhập
+let isAdmin = false; // Có phải Admin không
+let currentMovieId = null; // ID phim đang xem chi tiết
+let currentEpisode = 0; // Tập phim đang xem
+let selectedRating = 0; // Đánh giá đã chọn
+let allMovies = []; // Cache danh sách phim
+let allCategories = []; // Cache danh sách thể loại
+let allCountries = []; // Cache danh sách quốc gia
+let editingUserId = null; // ID user đang chỉnh sửa role
+
+// ============================================
+// SAMPLE DATA (Dữ liệu mẫu khi chưa có Firebase)
+// ============================================
+const SAMPLE_CATEGORIES = [
+  { id: "action", name: "Hành động", slug: "hanh-dong" },
+  { id: "comedy", name: "Hài hước", slug: "hai-huoc" },
+  { id: "horror", name: "Kinh dị", slug: "kinh-di" },
+  { id: "romance", name: "Tình cảm", slug: "tinh-cam" },
+  { id: "scifi", name: "Khoa học viễn tưởng", slug: "khoa-hoc-vien-tuong" },
+  { id: "animation", name: "Hoạt hình", slug: "hoat-hinh" },
+  { id: "drama", name: "Chính kịch", slug: "chinh-kich" },
+  { id: "thriller", name: "Giật gân", slug: "giat-gan" },
+];
+
+const SAMPLE_COUNTRIES = [
+  { id: "vn", name: "Việt Nam", code: "VN" },
+  { id: "us", name: "Mỹ", code: "US" },
+  { id: "kr", name: "Hàn Quốc", code: "KR" },
+  { id: "jp", name: "Nhật Bản", code: "JP" },
+  { id: "cn", name: "Trung Quốc", code: "CN" },
+  { id: "th", name: "Thái Lan", code: "TH" },
+  { id: "uk", name: "Anh", code: "UK" },
+  { id: "fr", name: "Pháp", code: "FR" },
+];
+
+const SAMPLE_MOVIES = [
+  {
+    id: "movie1",
+    title: "Người Nhện: Du Hành Vũ Trụ",
+    posterUrl:
+      "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+    description:
+      "Miles Morales trở lại trong cuộc phiêu lưu xuyên đa vũ trụ, gặp gỡ các phiên bản Người Nhện từ nhiều thế giới khác nhau.",
+    price: 15,
+    status: "public",
+    category: "Hoạt hình",
+    country: "Mỹ",
+    year: 2023,
+    tags: ["hot", "đề cử"],
+    views: 15420,
+    rating: 9.2,
+    episodes: [
+      {
+        episodeNumber: 1,
+        title: "Full Movie",
+        youtubeId: "cqGjhVJWtEg",
+        duration: "140 phút",
+        quality: "Full HD",
+      },
+    ],
+    createdAt: new Date("2024-01-15"),
+  },
+  {
+    id: "movie2",
+    title: "Oppenheimer",
+    posterUrl:
+      "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+    description:
+      "Câu chuyện về J. Robert Oppenheimer và vai trò của ông trong việc phát triển bom nguyên tử.",
+    price: 20,
+    status: "public",
+    category: "Chính kịch",
+    country: "Mỹ",
+    year: 2023,
+    tags: ["hot", "mới"],
+    views: 28350,
+    rating: 8.9,
+    episodes: [
+      {
+        episodeNumber: 1,
+        title: "Full Movie",
+        youtubeId: "uYPbbksJxIg",
+        duration: "180 phút",
+        quality: "4K",
+      },
+    ],
+    createdAt: new Date("2024-01-20"),
+  },
+  {
+    id: "movie3",
+    title: "Quỷ Quyệt: Cửa Đỏ Vô Định",
+    posterUrl:
+      "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+    description:
+      "Josh Lambert đối mặt với quá khứ đen tối khi anh bước vào The Further để giải cứu con trai.",
+    price: 12,
+    status: "public",
+    category: "Kinh dị",
+    country: "Mỹ",
+    year: 2023,
+    tags: ["mới"],
+    views: 9870,
+    rating: 7.5,
+    episodes: [
+      {
+        episodeNumber: 1,
+        title: "Full Movie",
+        youtubeId: "FbCN7JrDhkY",
+        duration: "107 phút",
+        quality: "Full HD",
+      },
+    ],
+    createdAt: new Date("2024-02-01"),
+  },
+  {
+    id: "movie4",
+    title: "Hành Tinh Cát: Phần 2",
+    posterUrl:
+      "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg",
+    description:
+      "Paul Atreides hợp tác với Chani và người Fremen để trả thù những kẻ đã hủy hoại gia đình anh.",
+    price: 25,
+    status: "public",
+    category: "Khoa học viễn tưởng",
+    country: "Mỹ",
+    year: 2024,
+    tags: ["hot", "đề cử", "mới"],
+    views: 45230,
+    rating: 9.5,
+    episodes: [
+      {
+        episodeNumber: 1,
+        title: "Full Movie",
+        youtubeId: "Way9Dexny3w",
+        duration: "166 phút",
+        quality: "4K",
+      },
+    ],
+    createdAt: new Date("2024-02-28"),
+  },
+  {
+    id: "movie5",
+    title: "Kungfu Panda 4",
+    posterUrl:
+      "https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg",
+    description:
+      "Po phải đào tạo một Chiến binh Rồng mới trong khi đối mặt với mối đe dọa từ phù thủy Chameleon.",
+    price: 10,
+    status: "public",
+    category: "Hoạt hình",
+    country: "Mỹ",
+    year: 2024,
+    tags: ["mới", "gia đình"],
+    views: 18760,
+    rating: 8.2,
+    episodes: [
+      {
+        episodeNumber: 1,
+        title: "Full Movie",
+        youtubeId: "_inKs4eeHiI",
+        duration: "94 phút",
+        quality: "Full HD",
+      },
+    ],
+    createdAt: new Date("2024-03-08"),
+  },
+  {
+    id: "movie6",
+    title: "Squid Game: Trò Chơi Con Mực",
+    posterUrl:
+      "https://image.tmdb.org/t/p/w500/dDlEmu3EZ0Pgg93K2SVNLCjCSvE.jpg",
+    description:
+      "Hàng trăm người chơi thiếu tiền chấp nhận lời mời tham gia các trò chơi trẻ em với giải thưởng khổng lồ.",
+    price: 8,
+    status: "public",
+    category: "Giật gân",
+    country: "Hàn Quốc",
+    year: 2021,
+    tags: ["hot", "đề cử"],
+    views: 89450,
+    rating: 9.0,
+    episodes: [
+      {
+        episodeNumber: 1,
+        title: "Tập 1: Đèn xanh, đèn đỏ",
+        youtubeId: "oqxAJKy0ii4",
+        duration: "60 phút",
+        quality: "Full HD",
+      },
+      {
+        episodeNumber: 2,
+        title: "Tập 2: Địa ngục",
+        youtubeId: "oqxAJKy0ii4",
+        duration: "62 phút",
+        quality: "Full HD",
+      },
+      {
+        episodeNumber: 3,
+        title: "Tập 3: Người giữ ô",
+        youtubeId: "oqxAJKy0ii4",
+        duration: "55 phút",
+        quality: "Full HD",
+      },
+    ],
+    createdAt: new Date("2023-09-17"),
+  },
+  {
+    id: "movie7",
+    title: "Mai",
+    posterUrl: "/images/Mai.jpg",
+    description:
+      "Câu chuyện về Mai - một cô gái massage với quá khứ bí ẩn và hành trình tìm kiếm tình yêu đích thực.",
+    price: 10,
+    status: "public",
+    category: "Tình cảm",
+    country: "Việt Nam",
+    year: 2024,
+    tags: ["hot", "mới"],
+    views: 125680,
+    rating: 8.7,
+    episodes: [
+      {
+        episodeNumber: 1,
+        title: "Full Movie",
+        youtubeId: "Ql8Gg3kAyYE",
+        duration: "131 phút",
+        quality: "Full HD",
+      },
+    ],
+    createdAt: new Date("2024-02-10"),
+  },
+  {
+    id: "movie8",
+    title: "Godzilla x Kong: Đế Chế Mới",
+    posterUrl:
+      "https://image.tmdb.org/t/p/w500/z1p34vh7dEOnLDmyCrlUVLuoDzd.jpg",
+    description:
+      "Hai titan huyền thoại hợp sức chống lại mối đe dọa chưa từng có từ thế giới ngầm.",
+    price: 18,
+    status: "public",
+    category: "Hành động",
+    country: "Mỹ",
+    year: 2024,
+    tags: ["hot", "mới"],
+    views: 67890,
+    rating: 8.4,
+    episodes: [
+      {
+        episodeNumber: 1,
+        title: "Full Movie",
+        youtubeId: "lV1OOlGwExM",
+        duration: "115 phút",
+        quality: "4K",
+      },
+    ],
+    createdAt: new Date("2024-03-29"),
+  },
+];
+
+// ============================================
+// INITIALIZATION
+// ============================================
+// ✅ Đổi thành hàm gắn vào window để loader.js gọi được
+window.startMovieChainApp = async () => {
+  console.log("🎬 MovieChain - HTML đã tải xong. Bắt đầu chạy Logic...");
+
+  // Khởi tạo Firebase
+  const firebaseInitialized = initializeFirebase();
+
+  if (firebaseInitialized) {
+    // Lắng nghe trạng thái đăng nhập
+    auth.onAuthStateChanged(handleAuthStateChange);
+  }
+
+  // Load dữ liệu ban đầu (sử dụng sample data nếu Firebase chưa config)
+  await loadInitialData();
+
+  // Khởi tạo UI
+  initializeUI();
+
+  // Khởi tạo rating stars
+  initializeRatingStars();
+
+  // Load theme từ localStorage
+  loadTheme();
+
+  // Navbar scroll effect
+  initNavbarScroll();
+
+  console.log("✅ Ứng dụng đã sẵn sàng!");
+};
+
+// ============================================
+// AUTHENTICATION HANDLERS
+// ============================================
+
+/**
+ * Xử lý khi trạng thái đăng nhập thay đổi (Đã sửa lỗi Avatar & updateProfile)
+ */
+async function handleAuthStateChange(user) {
+  // Bước 1: Gán user gốc từ Auth
+  currentUser = user;
+
+  if (user) {
+    // ============================================================
+    // 1. LẤY DỮ LIỆU TỪ FIRESTORE & KIỂM TRA VIP
+    // ============================================================
+    if (db) {
+      try {
+        // Lần 1: Lấy dữ liệu thô lên để kiểm tra
+        const userDoc = await db.collection("users").doc(user.uid).get();
+
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+
+          // 👇 A. GỌI HÀM KIỂM TRA HẾT HẠN NGAY TẠI ĐÂY 👇
+          // Nếu hết hạn, hàm này sẽ âm thầm sửa DB thành Free
+          await checkAndDowngradeVip(user, userData);
+
+          // 👇 B. LẤY LẠI DỮ LIỆU MỚI NHẤT (QUAN TRỌNG) 👇
+          // Phải lấy lại lần nữa để đảm bảo biến 'freshData' chứa trạng thái Free (nếu vừa bị hạ cấp)
+          const freshDoc = await db.collection("users").doc(user.uid).get();
+          const freshData = freshDoc.data();
+
+          // 🛡️ Kiểm tra khóa tài khoản (Dùng dữ liệu mới)
+          if (freshData.isActive === false) {
+            await auth.signOut();
+            alert("⛔ TÀI KHOẢN CỦA BẠN ĐÃ BỊ KHÓA!");
+            window.location.reload();
+            return;
+          }
+
+          // 👇 C. GÁN DỮ LIỆU MỚI VÀO CURRENT USER 👇
+          currentUser.favorites = freshData.favorites || [];
+          currentUser.role = freshData.role || "user";
+          currentUser.isActive = freshData.isActive;
+
+          currentUser.purchasedMovies = freshData.purchasedMovies || [];
+          // Gán trạng thái VIP (Lúc này nếu hết hạn thì freshData.isVip đã là false)
+          currentUser.isVip = freshData.isVip;
+          // 👉 THÊM DÒNG NÀY ĐỂ LẤY NGÀY HẾT HẠN:
+          currentUser.vipExpiresAt = userData.vipExpiresAt;
+          if (freshData.avatar) {
+            currentUser.photoURL = freshData.avatar;
+          }
+
+          isAdmin = freshData.role === "admin";
+        }
+      } catch (error) {
+        console.error("Lỗi lấy dữ liệu user:", error);
+      }
+    }
+    // ============================================================
+
+    console.log("✅ Đã đăng nhập:", user.email);
+
+    // 2. Cập nhật giao diện (Avatar, Viền vàng, Tên...)
+    updateAuthUI(true);
+
+    // 3. Cập nhật lần đăng nhập cuối
+    createOrUpdateUserDoc(user);
+
+    // 4. Load dữ liệu admin nếu cần
+    if (isAdmin) {
+      loadAdminData();
+    }
+
+    // 5. Vẽ lại danh sách phim
+    renderFeaturedMovies();
+    renderNewMovies();
+    renderAllMovies();
+
+    // Cập nhật trang chi tiết nếu đang xem
+    if (currentMovieId) {
+      const detailLikeBtn = document.querySelector(
+        `.btn-like-${currentMovieId}`,
+      );
+      if (detailLikeBtn) viewMovieDetail(currentMovieId);
+      checkAndUpdateVideoAccess();
+    }
+  } else {
+    // --- CHƯA ĐĂNG NHẬP ---
+    console.log("❌ Chưa đăng nhập");
+    currentUser = null;
+    isAdmin = false;
+    updateAuthUI(false);
+
+    renderFeaturedMovies();
+    renderNewMovies();
+    renderAllMovies();
+  }
+}
+/**
+ * Kiểm tra xem user có phải Admin không
+ */
+async function checkAdminRole(user) {
+  // Kiểm tra bằng email
+  if (user.email === ADMIN_EMAIL) {
+    return true;
+  }
+
+  // Kiểm tra bằng UID
+  if (ADMIN_UID && user.uid === ADMIN_UID) {
+    return true;
+  }
+
+  // Kiểm tra trong Firestore
+  try {
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    if (userDoc.exists && userDoc.data().role === "admin") {
+      return true;
+    }
+  } catch (error) {
+    console.error("Lỗi kiểm tra admin role:", error);
+  }
+
+  return false;
+}
+
+/**
+ * Tạo hoặc cập nhật user document trong Firestore
+ */
+async function createOrUpdateUserDoc(user) {
+  if (!db) return;
+
+  try {
+    const userRef = db.collection("users").doc(user.uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      // Tạo mới user document
+      await userRef.set({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || user.email.split("@")[0],
+        avatar: user.photoURL || "",
+        role: user.email === ADMIN_EMAIL ? "admin" : "user",
+        isActive: true,
+        purchasedMovies: [],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log("✅ Đã tạo user document mới");
+    } else {
+      // Cập nhật lastLogin
+      await userRef.update({
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    console.error("❌ Lỗi tạo/cập nhật user doc:", error);
+  }
+}
+
+/**
+ * Cập nhật UI theo trạng thái đăng nhập (Đã thêm logic hiển thị VIP)
+ */
+function updateAuthUI(isLoggedIn) {
+  // Lấy các phần tử giao diện
+  const loginBtn = document.getElementById("loginBtn");
+  const userMenuTrigger = document.getElementById("userMenuTrigger");
+  const userAvatarSmall = document.getElementById("userAvatarSmall");
+
+  const dropdownAvatar = document.getElementById("dropdownAvatar");
+  const dropdownName = document.getElementById("dropdownName");
+
+  // 👇 Lấy thêm phần tử hiển thị chữ "Free/VIP" 👇
+  const roleBadge = document.querySelector(".dropdown-role");
+
+  const adminNavLink = document.getElementById("adminNavLink");
+  const commentForm = document.getElementById("commentForm");
+
+  if (isLoggedIn && currentUser) {
+    // 1. Ẩn nút đăng nhập, hiện Avatar
+    if (loginBtn) loginBtn.classList.add("hidden");
+    if (userMenuTrigger) userMenuTrigger.classList.remove("hidden");
+
+    // 2. Lấy link ảnh
+    const avatarUrl =
+      currentUser.photoURL ||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || "User")}&background=random`;
+
+    // 3. Cập nhật ảnh và tên
+    if (userAvatarSmall) userAvatarSmall.src = avatarUrl;
+    if (dropdownAvatar) dropdownAvatar.src = avatarUrl;
+    if (dropdownName)
+      dropdownName.textContent = currentUser.displayName || "User";
+
+    // ============================================================
+    // 👇 LOGIC MỚI: XỬ LÝ GIAO DIỆN VIP 👇
+    // ============================================================
+    const isVip = currentUser.isVip === true;
+
+    // A. Xử lý Viền Avatar
+    if (isVip) {
+      if (userAvatarSmall) userAvatarSmall.classList.add("vip-border");
+      if (dropdownAvatar) dropdownAvatar.classList.add("vip-border");
+    } else {
+      if (userAvatarSmall) userAvatarSmall.classList.remove("vip-border");
+      if (dropdownAvatar) dropdownAvatar.classList.remove("vip-border");
+    }
+
+    // B. Xử lý chữ Free -> VIP kèm Thời hạn
+    if (roleBadge) {
+      if (isVip) {
+        // --- TÍNH TOÁN THỜI HẠN ---
+        let durationText = "";
+
+        if (currentUser.vipExpiresAt) {
+          // Có ngày hết hạn -> Tính số ngày còn lại
+          // Kiểm tra xem vipExpiresAt là Firestore Timestamp hay Date object
+          const expiryDate = currentUser.vipExpiresAt.toDate
+            ? currentUser.vipExpiresAt.toDate()
+            : new Date(currentUser.vipExpiresAt);
+          const now = new Date();
+          const diffTime = expiryDate - now;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          // Nếu còn ngày thì hiện số, hết thì hiện 0
+          const daysLeft = diffDays > 0 ? diffDays : 0;
+          durationText = `<span style="font-size: 9px; margin-left: 4px; opacity: 0.9;">(${daysLeft} ngày)</span>`;
+        } else {
+          // Không có ngày hết hạn -> Vĩnh viễn
+          durationText = `<span style="font-size: 10px; margin-left: 4px;">♾️</span>`;
+        }
+
+        // Hiển thị ra HTML
+        roleBadge.innerHTML = `<i class="fas fa-crown"></i> VIP ${durationText}`;
+        roleBadge.classList.add("vip-badge");
+        roleBadge.classList.remove("dropdown-role");
+        roleBadge.classList.add("dropdown-role");
+      } else {
+        // Tài khoản thường
+        if (isAdmin) {
+          roleBadge.textContent = "Admin";
+          roleBadge.classList.remove("vip-badge");
+        } else {
+          roleBadge.textContent = "Free";
+          roleBadge.classList.remove("vip-badge");
+        }
+      }
+    }
+    // ============================================================
+
+    // 4. Hiện link Admin nếu là admin
+    if (isAdmin && adminNavLink) adminNavLink.classList.remove("hidden");
+
+    // 5. Hiện form bình luận
+    if (commentForm) commentForm.style.display = "block";
+  } else {
+    // --- CHƯA ĐĂNG NHẬP ---
+    if (loginBtn) loginBtn.classList.remove("hidden");
+    if (userMenuTrigger) userMenuTrigger.classList.add("hidden");
+
+    // Reset viền khi đăng xuất
+    if (userAvatarSmall) userAvatarSmall.classList.remove("vip-border");
+
+    if (adminNavLink) adminNavLink.classList.add("hidden");
+    if (commentForm) commentForm.style.display = "none";
+  }
+}
+
+// 👇 THÊM 2 HÀM NÀY XUỐNG DƯỚI HÀM updateAuthUI ĐỂ ĐIỀU KHIỂN MENU 👇
+
+/**
+ * Bật/tắt Menu User (Đã sửa lỗi xung đột click)
+ */
+function toggleUserDropdown(event) {
+  // 1. Chặn sự kiện click lan ra ngoài (QUAN TRỌNG NHẤT)
+  if (event) {
+    event.stopPropagation();
+  }
+
+  const dropdown = document.getElementById("userDropdown");
+  if (dropdown) {
+    dropdown.classList.toggle("active");
+  }
+}
+
+/**
+ * Đóng menu khi click ra ngoài
+ */
+document.addEventListener("click", function (event) {
+  const dropdown = document.getElementById("userDropdown");
+  const trigger = document.getElementById("userMenuTrigger");
+
+  // Nếu menu đang mở
+  if (dropdown && dropdown.classList.contains("active")) {
+    // Và cái click đó KHÔNG nằm trong menu, cũng KHÔNG nằm trong nút Avatar
+    if (!dropdown.contains(event.target) && !trigger.contains(event.target)) {
+      dropdown.classList.remove("active");
+    }
+  }
+});
+/**
+ * Xử lý đăng nhập
+ */
+async function handleLogin(event) {
+  event.preventDefault();
+
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+
+  if (!auth) {
+    showNotification(
+      "Firebase chưa được cấu hình. Vui lòng kiểm tra firebase-config.js",
+      "error",
+    );
+    return;
+  }
+
+  try {
+    showLoading(true, "Đang đăng nhập...");
+
+    // 1. Đăng nhập vào Firebase Auth
+    const userCredential = await auth.signInWithEmailAndPassword(
+      email,
+      password,
+    );
+    const user = userCredential.user;
+
+    // 👇 2. THÊM ĐOẠN KIỂM TRA BỊ XÓA NGAY TẠI ĐÂY 👇
+    const userDoc = await db.collection("users").doc(user.uid).get();
+
+    if (userDoc.exists && userDoc.data().isDeleted === true) {
+      // Nếu bị xóa -> Đăng xuất ngay lập tức
+      await auth.signOut();
+      throw new Error("account-deleted"); // Ném lỗi tự tạo
+    }
+    showNotification("Đăng nhập thành công!", "success");
+    closeModal("authModal");
+
+    // Reset form
+    document.getElementById("loginForm").reset();
+  } catch (error) {
+    console.error("Lỗi đăng nhập:", error);
+    let errorMessage = "Đăng nhập thất bại!";
+
+    // 👇 XỬ LÝ LỖI TÀI KHOẢN BỊ XÓA 👇
+    if (error.message === "account-deleted") {
+      errorMessage =
+        "❌ Tài khoản này đã bị Admin xóa vĩnh viễn! Vui lòng đăng ký tài khoản mới.";
+    }
+    // Các lỗi cũ của Firebase
+    else
+      switch (error.code) {
+        case "auth/user-not-found":
+          errorMessage = "Email không tồn tại trong hệ thống";
+          break;
+        case "auth/wrong-password":
+          errorMessage = "Mật khẩu không chính xác";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "Email không hợp lệ";
+          break;
+        case "auth/too-many-requests":
+          errorMessage = "Quá nhiều lần thử. Vui lòng thử lại sau";
+          break;
+      }
+
+    showNotification(errorMessage, "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Xử lý đăng ký
+ */
+async function handleRegister(event) {
+  event.preventDefault();
+
+  const name = document.getElementById("registerName").value;
+  const email = document.getElementById("registerEmail").value;
+  const password = document.getElementById("registerPassword").value;
+  const confirmPassword = document.getElementById(
+    "registerConfirmPassword",
+  ).value;
+  const avatarUrl =
+    document.getElementById("registerAvatar").value ||
+    "https://ui-avatars.com/api/?name=" +
+      encodeURIComponent(name) +
+      "&background=random";
+  // Validate
+  if (password !== confirmPassword) {
+    showNotification("Mật khẩu xác nhận không khớp!", "error");
+    return;
+  }
+
+  if (password.length < 6) {
+    showNotification("Mật khẩu phải có ít nhất 6 ký tự!", "error");
+    return;
+  }
+
+  if (!auth) {
+    showNotification(
+      "Firebase chưa được cấu hình. Vui lòng kiểm tra firebase-config.js",
+      "error",
+    );
+    return;
+  }
+
+  try {
+    showLoading(true, "Đang tạo tài khoản...");
+
+    // Tạo tài khoản
+    const userCredential = await auth.createUserWithEmailAndPassword(
+      email,
+      password,
+    );
+
+    // Cập nhật display name
+    await userCredential.user.updateProfile({
+      displayName: name,
+      photoURL: avatarUrl, // Lưu link ảnh vào Firebase Auth
+    });
+
+    showNotification(
+      "Đăng ký thành công! Chào mừng bạn đến với MovieChain!",
+      "success",
+    );
+    closeModal("authModal");
+
+    // Reset form
+    document.getElementById("registerForm").reset();
+  } catch (error) {
+    console.error("Lỗi đăng ký:", error);
+    let errorMessage = "Đăng ký thất bại!";
+
+    switch (error.code) {
+      case "auth/email-already-in-use":
+        errorMessage =
+          "Email này đã được đăng ký (hoặc tài khoản cũ đã bị xóa). Vui lòng dùng Email khác!";
+        break;
+      case "auth/invalid-email":
+        errorMessage = "Email không hợp lệ";
+        break;
+      case "auth/weak-password":
+        errorMessage = "Mật khẩu quá yếu";
+        break;
+    }
+
+    showNotification(errorMessage, "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Xử lý đăng xuất
+ */
+async function handleLogout() {
+  if (!auth) return;
+
+  try {
+    await auth.signOut();
+
+    // 👇 THÊM ĐOẠN NÀY ĐỂ ĐÓNG MENU & RESET GIAO DIỆN 👇
+    const dropdown = document.getElementById("userDropdown");
+    if (dropdown) dropdown.classList.remove("active"); // Đóng menu ngay lập tức
+
+    // Đảm bảo nút Đăng nhập hiện lại ngay (phòng hờ updateAuthUI chạy chậm)
+    const loginBtn = document.getElementById("loginBtn");
+    const userMenuTrigger = document.getElementById("userMenuTrigger");
+    if (loginBtn) loginBtn.classList.remove("hidden");
+    if (userMenuTrigger) userMenuTrigger.classList.add("hidden");
+    // 👆 HẾT PHẦN THÊM 👆
+
+    showNotification("Đã đăng xuất!", "info");
+    showPage("home");
+  } catch (error) {
+    console.error("Lỗi đăng xuất:", error);
+    showNotification("Lỗi khi đăng xuất!", "error");
+  }
+}
+
+// ============================================
+// DATA LOADING
+// ============================================
+
+/**
+ * Load dữ liệu ban đầu
+ */
+async function loadInitialData() {
+  try {
+    // Load categories
+    await loadCategories();
+
+    // Load countries
+    await loadCountries();
+
+    // Load movies
+    await loadMovies();
+
+    // Populate filter dropdowns
+    populateFilters();
+  } catch (error) {
+    console.error("Lỗi load dữ liệu:", error);
+  }
+}
+
+/**
+ * Load danh sách thể loại
+ */
+async function loadCategories() {
+  try {
+    if (db) {
+      const snapshot = await db.collection("categories").get();
+      if (!snapshot.empty) {
+        allCategories = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+      } else {
+        // Sử dụng sample data và tạo trong Firestore
+        allCategories = SAMPLE_CATEGORIES;
+        await initializeSampleCategories();
+      }
+    } else {
+      allCategories = SAMPLE_CATEGORIES;
+    }
+  } catch (error) {
+    console.error("Lỗi load categories:", error);
+    allCategories = SAMPLE_CATEGORIES;
+  }
+}
+
+/**
+ * Load danh sách quốc gia
+ */
+async function loadCountries() {
+  try {
+    if (db) {
+      const snapshot = await db.collection("countries").get();
+      if (!snapshot.empty) {
+        allCountries = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+      } else {
+        allCountries = SAMPLE_COUNTRIES;
+        await initializeSampleCountries();
+      }
+    } else {
+      allCountries = SAMPLE_COUNTRIES;
+    }
+  } catch (error) {
+    console.error("Lỗi load countries:", error);
+    allCountries = SAMPLE_COUNTRIES;
+  }
+}
+
+/**
+ * Load danh sách phim
+ */
+async function loadMovies() {
+  try {
+    if (db) {
+      const snapshot = await db
+        .collection("movies")
+        .where("status", "==", "public")
+        .orderBy("createdAt", "desc")
+        .get();
+
+      if (!snapshot.empty) {
+        allMovies = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      } else {
+        allMovies = SAMPLE_MOVIES;
+        await initializeSampleMovies();
+      }
+    } else {
+      allMovies = SAMPLE_MOVIES;
+    }
+
+    // Render movies
+    renderFeaturedMovies();
+    renderNewMovies();
+    renderAllMovies();
+  } catch (error) {
+    console.error("Lỗi load movies:", error);
+    allMovies = SAMPLE_MOVIES;
+    renderFeaturedMovies();
+    renderNewMovies();
+    renderAllMovies();
+  }
+}
+
+/**
+ * Khởi tạo sample categories trong Firestore
+ */
+async function initializeSampleCategories() {
+  if (!db) return;
+
+  try {
+    const batch = db.batch();
+    SAMPLE_CATEGORIES.forEach((cat) => {
+      const ref = db.collection("categories").doc(cat.id);
+      batch.set(ref, cat);
+    });
+    await batch.commit();
+    console.log("✅ Đã khởi tạo sample categories");
+  } catch (error) {
+    console.error("Lỗi khởi tạo categories:", error);
+  }
+}
+
+/**
+ * Khởi tạo sample countries trong Firestore
+ */
+async function initializeSampleCountries() {
+  if (!db) return;
+
+  try {
+    const batch = db.batch();
+    SAMPLE_COUNTRIES.forEach((country) => {
+      const ref = db.collection("countries").doc(country.id);
+      batch.set(ref, country);
+    });
+    await batch.commit();
+    console.log("✅ Đã khởi tạo sample countries");
+  } catch (error) {
+    console.error("Lỗi khởi tạo countries:", error);
+  }
+}
+
+/**
+ * Khởi tạo sample movies trong Firestore
+ */
+async function initializeSampleMovies() {
+  if (!db) return;
+
+  try {
+    const batch = db.batch();
+    SAMPLE_MOVIES.forEach((movie) => {
+      const ref = db.collection("movies").doc(movie.id);
+      batch.set(ref, {
+        ...movie,
+        createdAt: firebase.firestore.Timestamp.fromDate(movie.createdAt),
+      });
+    });
+    await batch.commit();
+    console.log("✅ Đã khởi tạo sample movies");
+  } catch (error) {
+    console.error("Lỗi khởi tạo movies:", error);
+  }
+}
+
+// ============================================
+// MOVIE RENDERING
+// ============================================
+
+/**
+ * Render phim nổi bật
+ */
+function renderFeaturedMovies() {
+  const container = document.getElementById("featuredMovies");
+  if (!container) return;
+
+  // Lấy 4 phim có rating cao nhất
+  const featured = [...allMovies]
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+    .slice(0, 4);
+
+  container.innerHTML = featured
+    .map((movie) => createMovieCard(movie))
+    .join("");
+}
+
+/**
+ * Render phim mới
+ */
+function renderNewMovies() {
+  const container = document.getElementById("newMovies");
+  if (!container) return;
+
+  // Lấy 8 phim mới nhất
+  const newMovies = [...allMovies]
+    .sort((a, b) => {
+      const dateA = a.createdAt?.toDate
+        ? a.createdAt.toDate()
+        : new Date(a.createdAt);
+      const dateB = b.createdAt?.toDate
+        ? b.createdAt.toDate()
+        : new Date(b.createdAt);
+      return dateB - dateA;
+    })
+    .slice(0, 8);
+
+  container.innerHTML = newMovies
+    .map((movie) => createMovieCard(movie))
+    .join("");
+}
+
+/**
+ * Render tất cả phim
+ */
+function renderAllMovies(movies = null) {
+  const container = document.getElementById("allMovies");
+  if (!container) return;
+
+  const moviesToRender = movies || allMovies;
+
+  if (moviesToRender.length === 0) {
+    container.innerHTML =
+      '<p class="text-center text-muted">Không có phim nào</p>';
+    return;
+  }
+
+  container.innerHTML = moviesToRender
+    .map((movie) => createMovieCard(movie))
+    .join("");
+}
+
+/**
+ * Tạo HTML cho movie card (Phiên bản Netflix Pro - Nút to & Rõ chữ)
+ * Tạo HTML cho movie card (Đã tích hợp nút Thích thông minh)
+ */
+function createMovieCard(movie) {
+  // 1. Tạo Tags (Hot, Mới...)
+  const tagsHtml = (movie.tags || [])
+    .map((tag) => {
+      let tagClass = "";
+      if (tag === "hot") tagClass = "hot";
+      else if (tag === "mới") tagClass = "new";
+      return `<span class="tag ${tagClass}">${tag}</span>`;
+    })
+    .join("");
+
+  // 2. Tạo nhãn Phần/Mùa
+  const partHtml = movie.part
+    ? `<span style="background: var(--accent-primary); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; text-transform: uppercase; vertical-align: middle;">${movie.part}</span>`
+    : "";
+
+  // 👇 3. LOGIC KIỂM TRA ĐÃ THÍCH HAY CHƯA (MỚI THÊM) 👇
+  // Kiểm tra xem người dùng đã đăng nhập chưa và phim có trong danh sách yêu thích không
+  let isLiked = false;
+  if (
+    typeof currentUser !== "undefined" &&
+    currentUser &&
+    currentUser.favorites
+  ) {
+    isLiked = currentUser.favorites.includes(movie.id);
+  }
+
+  // Thiết lập giao diện cho nút Like dựa trên trạng thái
+  const likeBtnStyle = isLiked
+    ? "color: #e50914; border-color: #e50914;" // Đỏ (Đã thích)
+    : "color: #fff; border-color: rgba(255, 255, 255, 0.2);"; // Trắng (Chưa thích)
+
+  const likeIcon = isLiked ? "fas fa-heart" : "far fa-heart"; // Icon đặc hoặc rỗng
+  const likeText = isLiked ? "Đã thích" : "Thích";
+  const likeClass = isLiked ? "liked" : "";
+  // 👆 HẾT PHẦN LOGIC MỚI 👆
+
+  return `
+    <div class="movie-card-wrapper">
+        <div class="card movie-card-static">
+            <div class="card-image">
+                <img src="${movie.posterUrl}" alt="${movie.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                <div class="card-overlay">
+                    <button class="btn btn-primary"><i class="fas fa-play"></i></button>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <h4 class="card-title" title="${movie.title}">
+                    ${movie.title} ${partHtml}
+                </h4>
+                <div class="card-meta">
+                    <span>${movie.year || "N/A"}</span>
+                    <span class="card-rating"><i class="fas fa-star"></i> ${movie.rating || 0}</span>
+                </div>
+                <div class="card-price">
+                    <i class="fas fa-coins"></i> ${movie.price} CRO
+                </div>
+            </div>
+        </div>
+
+        <div class="movie-card-popup" onclick="viewMovieDetail('${movie.id}')">
+            <div class="popup-image">
+                <img src="${movie.posterUrl}" alt="${movie.title}">
+                <div class="popup-play-overlay">
+                   <i class="fas fa-play-circle"></i>
+                </div>
+            </div>
+            
+            <div class="popup-info">
+                <h4 class="popup-title">${movie.title} ${partHtml}</h4>
+
+                <div class="popup-meta">
+                    <span class="match-score">98% Phù hợp</span>
+                    <span class="age-badge">T16</span>
+                    <span>${movie.year}</span>
+                    <span class="quality-badge">HD</span>
+                </div>
+
+                <div class="popup-actions-row">
+                    <button class="btn-netflix-primary" title="Xem ngay">
+                        <i class="fas fa-play"></i> Xem ngay
+                    </button>
+                    
+                    <button class="btn-netflix-secondary ${likeClass} btn-like-${movie.id}" 
+                            title="Thích" 
+                            style="${likeBtnStyle}"
+                            onclick="event.stopPropagation(); toggleFavorite('${movie.id}')">
+                        <i class="${likeIcon}"></i> ${likeText}
+                    </button>
+                    <button class="btn-netflix-secondary" title="Chi tiết">
+                        <i class="fas fa-info-circle"></i> Chi tiết
+                    </button>
+                </div>
+                <div class="popup-genres">
+                    <span>${movie.category}</span>
+                    <span class="dot">•</span>
+                    <span>${movie.country}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+  `;
+}
+
+// ============================================
+// MOVIE DETAIL
+// ============================================
+
+/**
+ * Xem chi tiết phim
+ */
+/**
+ * Xem chi tiết phim (Đã nâng cấp: Tự động nhớ tập đang xem dở)
+ */
+async function viewMovieDetail(movieId) {
+  currentMovieId = movieId;
+  // Mặc định là tập đầu tiên (0)
+  currentEpisode = 0;
+
+  // 1. Tìm thông tin phim
+  let movie = allMovies.find((m) => m.id === movieId);
+
+  // Nếu không có trong cache thì tìm trong Firestore
+  if (!movie && db) {
+    try {
+      const doc = await db.collection("movies").doc(movieId).get();
+      if (doc.exists) {
+        movie = { id: doc.id, ...doc.data() };
+      }
+    } catch (error) {
+      console.error("Lỗi load movie detail:", error);
+    }
+  }
+
+  if (!movie) {
+    showNotification("Không tìm thấy phim!", "error");
+    return;
+  }
+
+  // 👇 2. LOGIC MỚI: KHÔI PHỤC LỊCH SỬ XEM (QUAN TRỌNG) 👇
+  if (currentUser && db) {
+    try {
+      const historyDoc = await db
+        .collection("users")
+        .doc(currentUser.uid)
+        .collection("history")
+        .doc(movieId)
+        .get();
+
+      if (historyDoc.exists) {
+        const data = historyDoc.data();
+        // Nếu có dữ liệu tập cũ -> Gán lại cho currentEpisode
+        if (data.lastEpisode !== undefined) {
+          currentEpisode = data.lastEpisode;
+          console.log(
+            `🔄 Đã khôi phục: Bạn đang xem tập ${currentEpisode + 1}`,
+          );
+        }
+      }
+
+      // Cập nhật lại thời gian "Vừa mới xem" lên đầu danh sách
+      saveWatchHistory(movieId, currentEpisode);
+    } catch (error) {
+      console.error("Lỗi khôi phục lịch sử:", error);
+    }
+  }
+  // 👆 HẾT PHẦN SỬA 👆
+
+  // 3. Cập nhật lượt xem
+  updateMovieViews(movieId);
+
+  // 4. Điền thông tin vào giao diện (Giữ nguyên code cũ)
+  document.getElementById("detailPoster").src = movie.posterUrl;
+  document.getElementById("detailTitle").textContent = movie.title;
+  document.getElementById("detailYear").textContent = movie.year || "N/A";
+  document.getElementById("detailCountry").textContent = movie.country || "N/A";
+  document.getElementById("detailCategory").textContent =
+    movie.category || "N/A";
+  document.getElementById("detailViews").textContent = formatNumber(
+    movie.views || 0,
+  );
+  document.getElementById("detailRating").textContent = movie.rating || 0;
+  document.getElementById("detailDescription").textContent =
+    movie.description || "Chưa có mô tả";
+  document.getElementById("detailPrice").textContent = movie.price || 0;
+
+  // Render tags
+  const tagsContainer = document.getElementById("detailTags");
+  tagsContainer.innerHTML = (movie.tags || [])
+    .map((tag) => {
+      let tagClass = "";
+      if (tag === "hot") tagClass = "hot";
+      else if (tag === "mới") tagClass = "new";
+      return `<span class="tag ${tagClass}">${tag}</span>`;
+    })
+    .join("");
+
+  // 5. Render danh sách tập (Quan trọng: Nó sẽ dùng currentEpisode để highlight tập đang xem)
+  renderEpisodes(movie.episodes || []);
+
+  // 6. Kiểm tra quyền xem và tải Video
+  await checkAndUpdateVideoAccess();
+
+  // 7. Tải bình luận
+  loadComments(movieId);
+
+  // 8. Chuyển trang
+  showPage("movieDetail");
+}
+
+/**
+ * Render danh sách tập phim
+ */
+function renderEpisodes(episodes) {
+  const container = document.getElementById("episodesList");
+  const section = document.getElementById("episodesSection");
+
+  if (!episodes || episodes.length <= 1) {
+    section.classList.add("hidden");
+    return;
+  }
+
+  section.classList.remove("hidden");
+
+  container.innerHTML = episodes
+    .map(
+      (ep, index) => `
+        <div class="episode-item ${index === currentEpisode ? "active" : ""}" 
+             onclick="selectEpisode(${index})">
+            <div class="episode-number">Tập ${ep.episodeNumber}</div>
+            <div class="episode-title">${ep.title || ""}</div>
+            <small class="text-muted">${ep.duration || ""} • ${ep.quality || "HD"}</small>
+        </div>
+    `,
+    )
+    .join("");
+}
+
+/**
+ * Chọn tập phim
+ */
+function selectEpisode(index) {
+  currentEpisode = index;
+
+  // Update active state
+  document.querySelectorAll(".episode-item").forEach((el, i) => {
+    el.classList.toggle("active", i === index);
+  });
+  // 👇 THÊM DÒNG NÀY: Lưu lịch sử xem ngay khi chọn tập 👇
+  if (currentMovieId) {
+    saveWatchHistory(currentMovieId, index);
+  }
+  // Update video if unlocked
+  checkAndUpdateVideoAccess();
+}
+
+/**
+ * Kiểm tra và cập nhật quyền xem video
+ */
+async function checkAndUpdateVideoAccess() {
+  const videoLocked = document.getElementById("videoLocked");
+  const videoPlayer = document.getElementById("videoPlayer");
+  const buyTicketBtn = document.getElementById("buyTicketBtn");
+
+  let hasAccess = false;
+
+  // Admin luôn có quyền xem
+  if (isAdmin) {
+    hasAccess = true;
+  }
+  // 👇 2. THÊM ĐOẠN NÀY: VIP luôn được xem 👇
+  else if (currentUser && currentUser.isVip === true) {
+    hasAccess = true;
+
+    // Đổi nút mua vé thành nút thông báo VIP
+    if (buyTicketBtn) {
+      buyTicketBtn.innerHTML = '<i class="fas fa-crown"></i> Đặc quyền VIP';
+      buyTicketBtn.classList.add("btn-vip-action"); // Thêm class màu vàng
+      buyTicketBtn.style.background =
+        "linear-gradient(45deg, #fcd535, #ff9900)";
+      buyTicketBtn.style.color = "#000";
+      buyTicketBtn.style.border = "none";
+      buyTicketBtn.disabled = true; // Không cho bấm mua nữa
+    }
+  } else if (currentUser && currentMovieId) {
+    // Kiểm tra đã mua chưa
+    hasAccess = await checkMoviePurchased(currentMovieId);
+  }
+
+  if (hasAccess) {
+    // Mở khóa giao diện (Code cũ)
+    videoLocked.classList.add("hidden");
+    videoPlayer.classList.remove("hidden");
+    buyTicketBtn.innerHTML = '<i class="fas fa-check"></i> Đã mua vé';
+    buyTicketBtn.disabled = true;
+    buyTicketBtn.classList.remove("btn-primary");
+    buyTicketBtn.classList.add("btn-success");
+
+    // 👇 ĐOẠN CODE XỬ LÝ LINK THÔNG MINH (SỬA Ở ĐÂY) 👇
+    const movie = allMovies.find((m) => m.id === currentMovieId);
+    if (movie && movie.episodes && movie.episodes[currentEpisode]) {
+      let videoId = movie.episodes[currentEpisode].youtubeId; // Lấy cái chuỗi bạn nhập vào
+      let embedUrl = "";
+
+      // 1. Kiểm tra nếu là OK.RU (Ví dụ nhập: 123456789 hoặc link ok.ru/video/123...)
+      if (videoId.includes("ok.ru")) {
+        // Tự động chuyển link thường thành link Embed
+        // Ví dụ: https://ok.ru/video/12345 -> https://ok.ru/videoembed/12345
+        const id = videoId.split("/").pop(); // Lấy số cuối cùng
+        embedUrl = `https://ok.ru/videoembed/${id}`;
+      }
+      // 2. Kiểm tra nếu là Google Drive (ID dài > 25 ký tự)
+      else if (videoId.length > 25) {
+        embedUrl = `https://drive.google.com/file/d/${videoId}/preview`;
+      }
+      // 3. Mặc định coi như là YouTube (ID ngắn 11 ký tự)
+      else {
+        embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`;
+      }
+
+      // Gán link đã xử lý vào Player
+      videoPlayer.src = embedUrl;
+    }
+  } else {
+    // Khóa video
+    videoLocked.classList.remove("hidden");
+    videoPlayer.classList.add("hidden");
+    videoPlayer.src = "";
+    buyTicketBtn.innerHTML = '<i class="fas fa-ticket-alt"></i> Mua Vé Ngay';
+    buyTicketBtn.disabled = false;
+    buyTicketBtn.classList.add("btn-primary");
+    buyTicketBtn.classList.remove("btn-success");
+  }
+}
+
+/**
+ * Cập nhật lượt xem
+ */
+async function updateMovieViews(movieId) {
+  if (!db) return;
+
+  try {
+    await db
+      .collection("movies")
+      .doc(movieId)
+      .update({
+        views: firebase.firestore.FieldValue.increment(1),
+      });
+  } catch (error) {
+    console.error("Lỗi cập nhật views:", error);
+  }
+}
+
+// ============================================
+// PAYMENT / BUY TICKET
+// ============================================
+
+/**
+ * Mua vé xem phim
+ */
+async function buyTicket() {
+  if (!currentUser) {
+    showNotification("Vui lòng đăng nhập để mua vé!", "warning");
+    openAuthModal();
+    return;
+  }
+
+  const movie = allMovies.find((m) => m.id === currentMovieId);
+  if (!movie) {
+    showNotification("Không tìm thấy thông tin phim!", "error");
+    return;
+  }
+
+  // Kiểm tra đã mua chưa
+  const alreadyPurchased = await checkMoviePurchased(currentMovieId);
+  if (alreadyPurchased) {
+    showNotification("Bạn đã mua vé phim này rồi!", "info");
+    checkAndUpdateVideoAccess();
+    return;
+  }
+
+  // Thực hiện thanh toán
+  const txHash = await payWithCRO(movie.price, currentMovieId, movie.title);
+
+  if (txHash) {
+    // Thanh toán thành công - mở khóa video
+    await checkAndUpdateVideoAccess();
+  }
+}
+
+// ============================================
+// COMMENTS
+// ============================================
+
+/**
+ * Load bình luận
+ */
+async function loadComments(movieId) {
+  const container = document.getElementById("commentsList");
+
+  try {
+    let comments = [];
+
+    if (db) {
+      const snapshot = await db
+        .collection("comments")
+        .where("movieId", "==", movieId)
+        .orderBy("createdAt", "desc")
+        .limit(50)
+        .get();
+
+      comments = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    }
+
+    if (comments.length === 0) {
+      container.innerHTML =
+        '<p class="text-center text-muted">Chưa có bình luận nào. Hãy là người đầu tiên!</p>';
+      return;
+    }
+
+    container.innerHTML = comments
+      .map((comment) => createCommentHtml(comment))
+      .join("");
+  } catch (error) {
+    console.error("Lỗi load comments:", error);
+    container.innerHTML =
+      '<p class="text-center text-muted">Không thể tải bình luận</p>';
+  }
+}
+
+/**
+ * Tạo HTML cho comment
+ */
+function createCommentHtml(comment) {
+  const initial = (comment.userName || "U")[0].toUpperCase();
+  const time = comment.createdAt?.toDate
+    ? formatTimeAgo(comment.createdAt.toDate())
+    : "Vừa xong";
+
+  const deleteBtn =
+    isAdmin || (currentUser && currentUser.uid === comment.userId)
+      ? `<button class="btn btn-sm btn-danger" onclick="deleteComment('${comment.id}')">
+               <i class="fas fa-trash"></i>
+           </button>`
+      : "";
+
+  return `
+        <div class="comment-item" id="comment-${comment.id}">
+            <div class="comment-avatar">${initial}</div>
+            <div class="comment-content">
+                <div class="comment-header">
+                    <span class="comment-author">${comment.userName || "Ẩn danh"}</span>
+                    <span class="comment-rating">
+                        <i class="fas fa-star"></i> ${comment.rating || 0}/10
+                    </span>
+                </div>
+                <p class="comment-text">${escapeHtml(comment.content)}</p>
+                <div class="comment-time">${time}</div>
+                <div class="comment-actions">${deleteBtn}</div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Gửi bình luận
+ */
+async function submitComment() {
+  if (!currentUser) {
+    showNotification("Vui lòng đăng nhập để bình luận!", "warning");
+    openAuthModal();
+    return;
+  }
+
+  const content = document.getElementById("commentContent").value.trim();
+
+  if (!content) {
+    showNotification("Vui lòng nhập nội dung bình luận!", "warning");
+    return;
+  }
+
+  if (selectedRating === 0) {
+    showNotification("Vui lòng chọn đánh giá!", "warning");
+    return;
+  }
+
+  if (!db) {
+    showNotification("Firebase chưa được cấu hình!", "error");
+    return;
+  }
+
+  try {
+    showLoading(true, "Đang gửi bình luận...");
+
+    await db.collection("comments").add({
+      movieId: currentMovieId,
+      userId: currentUser.uid,
+      userName: currentUser.displayName || currentUser.email.split("@")[0],
+      userAvatar: currentUser.photoURL || "",
+      content: content,
+      rating: selectedRating,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Reset form
+    document.getElementById("commentContent").value = "";
+    selectedRating = 0;
+    updateRatingStars(0);
+    document.getElementById("ratingValue").textContent = "0/10";
+
+    // Reload comments
+    await loadComments(currentMovieId);
+
+    // Cập nhật rating trung bình của phim
+    await updateMovieRating(currentMovieId);
+
+    showNotification("Đã gửi bình luận!", "success");
+  } catch (error) {
+    console.error("Lỗi gửi comment:", error);
+    showNotification("Không thể gửi bình luận!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Xóa bình luận
+ */
+async function deleteComment(commentId) {
+  if (!confirm("Bạn có chắc muốn xóa bình luận này?")) return;
+
+  if (!db) return;
+
+  try {
+    await db.collection("comments").doc(commentId).delete();
+
+    // Remove from DOM
+    const commentEl = document.getElementById(`comment-${commentId}`);
+    if (commentEl) {
+      commentEl.remove();
+    }
+
+    showNotification("Đã xóa bình luận!", "success");
+  } catch (error) {
+    console.error("Lỗi xóa comment:", error);
+    showNotification("Không thể xóa bình luận!", "error");
+  }
+}
+
+/**
+ * Cập nhật rating trung bình của phim
+ */
+async function updateMovieRating(movieId) {
+  if (!db) return;
+
+  try {
+    const snapshot = await db
+      .collection("comments")
+      .where("movieId", "==", movieId)
+      .get();
+
+    if (snapshot.empty) return;
+
+    const ratings = snapshot.docs.map((doc) => doc.data().rating || 0);
+    const avgRating = (
+      ratings.reduce((a, b) => a + b, 0) / ratings.length
+    ).toFixed(1);
+
+    await db
+      .collection("movies")
+      .doc(movieId)
+      .update({
+        rating: parseFloat(avgRating),
+      });
+  } catch (error) {
+    console.error("Lỗi cập nhật rating:", error);
+  }
+}
+
+// ============================================
+// ADMIN FUNCTIONS
+// ============================================
+
+/**
+ * Load dữ liệu cho Admin
+ */
+async function loadAdminData() {
+  if (!isAdmin) return;
+
+  try {
+    // Load stats
+    await loadAdminStats();
+
+    // Load movies for admin
+    await loadAdminMovies();
+
+    // Load users
+    await loadAdminUsers();
+
+    // Load comments
+    await loadAdminComments();
+
+    // Load transactions
+    await loadAdminTransactions();
+
+    // Populate movie select for episodes
+    //populateMovieSelect();
+
+    // Load categories and countries tables
+    renderAdminCategories();
+    renderAdminCountries();
+  } catch (error) {
+    console.error("Lỗi load admin data:", error);
+  }
+}
+
+/**
+ * Load thống kê Admin
+ */
+async function loadAdminStats() {
+  try {
+    // Tổng số phim
+    document.getElementById("statTotalMovies").textContent = allMovies.length;
+
+    // Tổng lượt xem
+    const totalViews = allMovies.reduce((sum, m) => sum + (m.views || 0), 0);
+    document.getElementById("statTotalViews").textContent =
+      formatNumber(totalViews);
+
+    // Doanh thu ước tính
+    let totalRevenue = 0;
+    if (db) {
+      const txSnapshot = await db
+        .collection("transactions")
+        .where("status", "==", "completed")
+        .get();
+      totalRevenue = txSnapshot.docs.reduce(
+        (sum, doc) => sum + (doc.data().amount || 0),
+        0,
+      );
+    }
+    document.getElementById("statTotalRevenue").textContent =
+      `${formatNumber(totalRevenue)} CRO`;
+
+    // Tổng users
+    let totalUsers = 0;
+    if (db) {
+      const usersSnapshot = await db.collection("users").get();
+      totalUsers = usersSnapshot.size;
+    }
+    document.getElementById("statTotalUsers").textContent =
+      formatNumber(totalUsers);
+
+    // Recent movies
+    renderRecentMovies();
+  } catch (error) {
+    console.error("Lỗi load stats:", error);
+  }
+}
+
+/**
+ * Render phim gần đây trong dashboard
+ */
+function renderRecentMovies() {
+  const tbody = document.getElementById("recentMoviesTable");
+
+  const recent = [...allMovies]
+    .sort((a, b) => {
+      const dateA = a.createdAt?.toDate
+        ? a.createdAt.toDate()
+        : new Date(a.createdAt);
+      const dateB = b.createdAt?.toDate
+        ? b.createdAt.toDate()
+        : new Date(b.createdAt);
+      return dateB - dateA;
+    })
+    .slice(0, 5);
+
+  tbody.innerHTML = recent
+    .map((movie) => {
+      const date = movie.createdAt?.toDate
+        ? movie.createdAt.toDate()
+        : new Date(movie.createdAt);
+      return `
+            <tr>
+                <td><img src="${movie.posterUrl}" alt="${movie.title}" onerror="this.src='https://via.placeholder.com/50x75'"></td>
+                <td>${movie.title}</td>
+                <td>${movie.price} CRO</td>
+                <td><span class="status-badge ${movie.status}">${getStatusText(movie.status)}</span></td>
+                <td>${formatDate(date)}</td>
+            </tr>
+        `;
+    })
+    .join("");
+}
+
+/**
+ * Load danh sách phim cho Admin
+ */
+async function loadAdminMovies() {
+  const tbody = document.getElementById("adminMoviesTable");
+
+  try {
+    let movies = [];
+
+    // 1. Lấy TẤT CẢ phim từ Firestore (Mới nhất lên đầu)
+    if (db) {
+      const snapshot = await db
+        .collection("movies")
+        .orderBy("createdAt", "desc")
+        .get();
+      movies = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    } else {
+      movies = allMovies; // Dữ liệu mẫu nếu chưa có DB
+    }
+
+    // 2. Render Bảng Quản lý Phim Chính
+    tbody.innerHTML = movies
+      .map(
+        (movie) => `
+            <tr>
+                <td><img src="${movie.posterUrl}" alt="${movie.title}" onerror="this.src='https://via.placeholder.com/50x75'"></td>
+                <td>${movie.title}</td>
+                <td>${movie.category || "N/A"}</td>
+                <td>${movie.price}</td>
+                <td>${formatNumber(movie.views || 0)}</td>
+                <td><span class="status-badge ${movie.status}">${getStatusText(movie.status)}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-secondary" onclick="editMovie('${movie.id}')" title="Sửa">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteMovie('${movie.id}')" title="Xóa">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `,
+      )
+      .join("");
+
+    // =======================================================
+    // 👇 ĐOẠN CODE MỚI THÊM ĐỂ FIX LỖI CỦA BẠN 👇
+    // =======================================================
+
+    // 3. Cập nhật ngay Menu chọn phim (Tab Quản lý Tập)
+    const select = document.getElementById("selectMovieForEpisodes");
+    if (select) {
+      select.innerHTML =
+        '<option value="">-- Chọn phim --</option>' +
+        movies
+          .map((m) => `<option value="${m.id}">${m.title}</option>`)
+          .join("");
+    }
+
+    // 4. Cập nhật ngay Bảng "Phim mới thêm gần đây" (Dashboard)
+    const recentTbody = document.getElementById("recentMoviesTable");
+    if (recentTbody) {
+      const recent = movies.slice(0, 5); // Lấy 5 phim mới nhất
+      recentTbody.innerHTML = recent
+        .map((movie) => {
+          const date = movie.createdAt?.toDate
+            ? movie.createdAt.toDate()
+            : new Date(movie.createdAt);
+          return `
+                <tr>
+                    <td><img src="${movie.posterUrl}" alt="${movie.title}" onerror="this.src='https://via.placeholder.com/50x75'"></td>
+                    <td>${movie.title}</td>
+                    <td>${movie.price} CRO</td>
+                    <td><span class="status-badge ${movie.status}">${getStatusText(movie.status)}</span></td>
+                    <td>${formatDate(date)}</td>
+                </tr>
+             `;
+        })
+        .join("");
+    }
+
+    // 5. Cập nhật Thống kê Tổng số phim (Dashboard)
+    const statTotal = document.getElementById("statTotalMovies");
+    if (statTotal) statTotal.textContent = movies.length;
+
+    // =======================================================
+  } catch (error) {
+    console.error("Lỗi load admin movies:", error);
+  }
+}
+
+/**
+ * Load danh sách users cho Admin
+ */
+/**
+ * Load danh sách users cho Admin (Đã thêm cột VIP & Nút kích hoạt)
+ */
+/**
+ * Load danh sách users cho Admin (Đã sửa: Hiện ảnh Avatar thật)
+ */
+async function loadAdminUsers() {
+  const tbody = document.getElementById("adminUsersTable");
+  if (!db) return;
+
+  try {
+    const snapshot = await db
+      .collection("users")
+      .orderBy("createdAt", "desc")
+      .get();
+    const users = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    tbody.innerHTML = users
+      .map((user) => {
+        const date = user.createdAt?.toDate
+          ? formatDate(user.createdAt.toDate())
+          : "N/A";
+        const initial = (user.displayName ||
+          user.email ||
+          "U")[0].toUpperCase();
+
+        // Avatar Logic
+        let avatarHtml =
+          user.avatar && user.avatar.startsWith("http")
+            ? `<img src="${user.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">`
+            : `<div class="comment-avatar" style="width:40px;height:40px;font-size:14px;">${initial}</div>`;
+
+        // 👇 LOGIC TÍNH THỜI HẠN VIP 👇
+        const isVip = user.isVip === true;
+        let expiryText = "-";
+
+        if (isVip) {
+          if (user.vipExpiresAt) {
+            // TRƯỜNG HỢP CÓ THỜI HẠN
+            const expiryDate = user.vipExpiresAt.toDate();
+            const now = new Date();
+            const diffTime = expiryDate - now;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 0) {
+              expiryText = `<span style="color: #00d4ff; font-weight:bold;">Còn ${diffDays} ngày</span>`;
+            } else {
+              expiryText = `<span style="color: #ff4444; font-weight:bold;">Đã hết hạn</span>`;
+            }
+          } else {
+            // TRƯỜNG HỢP VĨNH VIỄN (vipExpiresAt là null)
+            expiryText = `<span class="tag" style="background: linear-gradient(45deg, #00d4ff, #00ff88); color: #000; font-weight:800;">♾️ VĨNH VIỄN</span>`;
+          }
+        }
+        // 👆 HẾT LOGIC TÍNH HẠN 👆
+
+        const vipBadge = isVip
+          ? `<span class="status-badge vip"><i class="fas fa-crown"></i> VIP</span>`
+          : `<span class="status-badge free">Free</span>`;
+        const vipBtnClass = isVip ? "btn-secondary" : "btn-vip-action";
+        const vipIcon = isVip ? "fa-ban" : "fa-crown";
+
+        return `
+            <tr>
+                <td>${avatarHtml}</td>
+                <td>${user.email}</td>
+                <td>${user.displayName || "N/A"}</td>
+                <td><span class="status-badge ${user.role === "admin" ? "public" : ""}">${user.role || "user"}</span></td>
+                <td><span class="status-badge ${user.isActive ? "active" : "blocked"}">${user.isActive ? "Hoạt động" : "Bị khóa"}</span></td>
+                <td>${vipBadge}</td>
+                
+                <td style="font-size: 13px;">${expiryText}</td>
+                
+                <td>${date}</td>
+                <td>
+                    <button class="btn btn-sm ${vipBtnClass}" onclick="toggleUserVip('${user.id}', ${!isVip})">
+                        <i class="fas ${vipIcon}"></i>
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="openUserRoleModal('${user.id}', '${user.email}', '${user.role}')"><i class="fas fa-user-cog"></i></button>
+                    <button class="btn btn-sm ${user.isActive ? "btn-danger" : "btn-success"}" onclick="toggleUserStatus('${user.id}', ${!user.isActive})"><i class="fas fa-${user.isActive ? "lock" : "unlock"}"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}', '${user.email}')" title="Xóa vĩnh viễn">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    </td>
+            </tr>
+        `;
+      })
+      .join("");
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// 👇 HÀM MỚI: CẤP VIP CÓ THỜI HẠN 👇
+// 👇 HÀM CẤP VIP (ĐÃ CÓ TÙY CHỌN VĨNH VIỄN) 👇
+async function toggleUserVip(userId, setVip) {
+  if (!db) return;
+
+  let expiryDate = null; // Mặc định là null (Vĩnh viễn hoặc Hủy)
+  let days = 0;
+  let message = "";
+
+  if (setVip) {
+    // Hướng dẫn Admin nhập -1 để set vĩnh viễn
+    const input = prompt(
+      "Nhập số ngày VIP (Ví dụ: 30).\n👉 Nhập -1 để cấp VĨNH VIỄN.",
+      "30",
+    );
+
+    if (input === null) return; // Nếu bấm hủy
+
+    days = parseInt(input);
+
+    if (isNaN(days)) {
+      alert("Vui lòng nhập số!");
+      return;
+    }
+
+    if (days === -1) {
+      // TRƯỜNG HỢP VĨNH VIỄN
+      expiryDate = null; // Không có ngày hết hạn
+      message = "Đã cấp VIP VĨNH VIỄN! ♾️";
+    } else if (days > 0) {
+      // TRƯỜNG HỢP CÓ THỜI HẠN
+      const now = new Date();
+      expiryDate = new Date(now.setDate(now.getDate() + days));
+      message = `Đã cấp VIP ${days} ngày!`;
+    } else {
+      alert("Số ngày không hợp lệ!");
+      return;
+    }
+  } else {
+    // HỦY VIP
+    if (!confirm(`Bạn có chắc muốn HỦY VIP của người dùng này?`)) return;
+    message = "Đã hủy VIP thành công!";
+  }
+
+  try {
+    showLoading(true, "Đang cập nhật...");
+
+    // Cập nhật vào Firestore
+    await db
+      .collection("users")
+      .doc(userId)
+      .update({
+        isVip: setVip,
+        vipSince: setVip
+          ? firebase.firestore.FieldValue.serverTimestamp()
+          : null,
+        vipExpiresAt: expiryDate, // Lưu ngày hết hạn (hoặc null nếu vĩnh viễn)
+      });
+
+    showNotification(message, "success");
+    await loadAdminUsers();
+  } catch (error) {
+    console.error("Lỗi cập nhật VIP:", error);
+    showNotification("Lỗi cập nhật!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Load bình luận cho Admin
+ */
+async function loadAdminComments() {
+  const tbody = document.getElementById("adminCommentsTable");
+
+  if (!db) {
+    tbody.innerHTML =
+      '<tr><td colspan="6" class="text-center">Firebase chưa được cấu hình</td></tr>';
+    return;
+  }
+
+  try {
+    const snapshot = await db
+      .collection("comments")
+      .orderBy("createdAt", "desc")
+      .limit(100)
+      .get();
+
+    const comments = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    tbody.innerHTML = comments
+      .map((comment) => {
+        const movie = allMovies.find((m) => m.id === comment.movieId);
+        const time = comment.createdAt?.toDate
+          ? formatTimeAgo(comment.createdAt.toDate())
+          : "N/A";
+
+        return `
+                <tr>
+                    <td>${comment.userName || "Ẩn danh"}</td>
+                    <td>${movie?.title || comment.movieId}</td>
+                    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(comment.content)}</td>
+                    <td><span class="card-rating"><i class="fas fa-star"></i> ${comment.rating}/10</span></td>
+                    <td>${time}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteComment('${comment.id}')" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+      })
+      .join("");
+  } catch (error) {
+    console.error("Lỗi load comments:", error);
+  }
+}
+
+/**
+ * Load giao dịch cho Admin
+ */
+async function loadAdminTransactions() {
+  const tbody = document.getElementById("adminTransactionsTable");
+
+  if (!db) {
+    tbody.innerHTML =
+      '<tr><td colspan="6" class="text-center">Firebase chưa được cấu hình</td></tr>';
+    return;
+  }
+
+  try {
+    const snapshot = await db
+      .collection("transactions")
+      .orderBy("createdAt", "desc")
+      .limit(100)
+      .get();
+
+    if (snapshot.empty) {
+      tbody.innerHTML =
+        '<tr><td colspan="6" class="text-center">Chưa có giao dịch nào</td></tr>';
+      return;
+    }
+
+    const transactions = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    tbody.innerHTML = transactions
+      .map((tx) => {
+        const movie = allMovies.find((m) => m.id === tx.movieId);
+        const time = tx.createdAt?.toDate
+          ? formatDate(tx.createdAt.toDate())
+          : "N/A";
+
+        return `
+                <tr>
+                    <td>
+                        <a href="${CURRENT_NETWORK.blockExplorerUrls[0]}/tx/${tx.txHash}" target="_blank" class="text-info">
+                            ${tx.txHash.substring(0, 10)}...
+                        </a>
+                    </td>
+                    <td>${tx.userId.substring(0, 8)}...</td>
+                    <td>${movie?.title || tx.movieId}</td>
+                    <td>${tx.amount} CRO</td>
+                    <td><span class="status-badge ${tx.status}">${tx.status}</span></td>
+                    <td>${time}</td>
+                </tr>
+            `;
+      })
+      .join("");
+  } catch (error) {
+    console.error("Lỗi load transactions:", error);
+  }
+}
+
+// ============================================
+// ADMIN CRUD - MOVIES
+// ============================================
+
+/**
+ * Mở modal thêm/sửa phim
+ */
+function openMovieModal(movieId = null) {
+  const modal = document.getElementById("movieModal");
+  const title = document.getElementById("movieModalTitle");
+  const form = document.getElementById("movieForm");
+
+  // Populate category and country selects
+  const categorySelect = document.getElementById("movieCategory");
+  const countrySelect = document.getElementById("movieCountry");
+
+  categorySelect.innerHTML =
+    '<option value="">Chọn thể loại</option>' +
+    allCategories
+      .map((c) => `<option value="${c.name}">${c.name}</option>`)
+      .join("");
+
+  countrySelect.innerHTML =
+    '<option value="">Chọn quốc gia</option>' +
+    allCountries
+      .map((c) => `<option value="${c.name}">${c.name}</option>`)
+      .join("");
+
+  if (movieId) {
+    // Edit mode
+    title.textContent = "Sửa Phim";
+    const movie = allMovies.find((m) => m.id === movieId);
+
+    if (movie) {
+      document.getElementById("movieId").value = movieId;
+      document.getElementById("movieTitle").value = movie.title;
+      document.getElementById("moviePart").value = movie.part || "";
+      document.getElementById("moviePoster").value = movie.posterUrl;
+      document.getElementById("movieCategory").value = movie.category || "";
+      document.getElementById("movieCountry").value = movie.country || "";
+      document.getElementById("movieYear").value = movie.year || "";
+      document.getElementById("moviePrice").value = movie.price || 0;
+      document.getElementById("movieDescription").value =
+        movie.description || "";
+      document.getElementById("movieType").value = movie.type || "series"; // Mặc định là phim bộ nếu chưa có
+      document.getElementById("movieTags").value = (movie.tags || []).join(
+        ", ",
+      );
+      document.getElementById("movieStatus").value = movie.status || "public";
+    }
+  } else {
+    // Add mode
+    title.textContent = "Thêm Phim Mới";
+    form.reset();
+    document.getElementById("movieId").value = "";
+    document.getElementById("movieYear").value = new Date().getFullYear();
+    document.getElementById("movieType").value = "series"; // Mặc định khi thêm mới
+    document.getElementById("moviePart").value = "";
+  }
+
+  openModal("movieModal");
+}
+
+/**
+ * Xử lý submit form phim
+ */
+async function handleMovieSubmit(event) {
+  event.preventDefault();
+
+  if (!db) {
+    showNotification("Firebase chưa được cấu hình!", "error");
+    return;
+  }
+
+  const movieId = document.getElementById("movieId").value;
+  const movieData = {
+    title: document.getElementById("movieTitle").value,
+    posterUrl: document.getElementById("moviePoster").value,
+    category: document.getElementById("movieCategory").value,
+    country: document.getElementById("movieCountry").value,
+    year: parseInt(document.getElementById("movieYear").value),
+    price: parseFloat(document.getElementById("moviePrice").value),
+    description: document.getElementById("movieDescription").value,
+    type: document.getElementById("movieType").value,
+    part: document.getElementById("moviePart").value.trim(),
+    tags: document
+      .getElementById("movieTags")
+      .value.split(",")
+      .map((t) => t.trim())
+      .filter((t) => t),
+    status: document.getElementById("movieStatus").value,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  try {
+    showLoading(true, "Đang lưu...");
+
+    if (movieId) {
+      // Update
+      await db.collection("movies").doc(movieId).update(movieData);
+      showNotification("Đã cập nhật phim!", "success");
+    } else {
+      // Create
+      movieData.views = 0;
+      movieData.rating = 0;
+      movieData.episodes = [];
+      movieData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+
+      await db.collection("movies").add(movieData);
+      showNotification("Đã thêm phim mới!", "success");
+    }
+
+    closeModal("movieModal");
+
+    // Reload data
+    await loadMovies();
+    await loadAdminMovies();
+  } catch (error) {
+    console.error("Lỗi lưu phim:", error);
+    showNotification("Không thể lưu phim!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Sửa phim
+ */
+function editMovie(movieId) {
+  openMovieModal(movieId);
+}
+
+/**
+ * Xóa phim
+ */
+async function deleteMovie(movieId) {
+  if (
+    !confirm("Bạn có chắc muốn xóa phim này? Hành động này không thể hoàn tác!")
+  )
+    return;
+
+  if (!db) return;
+
+  try {
+    showLoading(true, "Đang xóa...");
+
+    await db.collection("movies").doc(movieId).delete();
+
+    showNotification("Đã xóa phim!", "success");
+
+    // Reload data
+    await loadMovies();
+    await loadAdminMovies();
+  } catch (error) {
+    console.error("Lỗi xóa phim:", error);
+    showNotification("Không thể xóa phim!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ============================================
+// ADMIN CRUD - EPISODES
+// ============================================
+
+let selectedMovieForEpisodes = null;
+
+/**
+ * Populate movie select cho quản lý tập
+ */
+function populateMovieSelect() {
+  const select = document.getElementById("selectMovieForEpisodes");
+  select.innerHTML =
+    '<option value="">-- Chọn phim --</option>' +
+    allMovies
+      .map((m) => `<option value="${m.id}">${m.title}</option>`)
+      .join("");
+}
+
+/**
+ * Load tập phim cho phim đã chọn
+ */
+async function loadEpisodesForMovie() {
+  const movieId = document.getElementById("selectMovieForEpisodes").value;
+  const management = document.getElementById("episodesManagement");
+  const tbody = document.getElementById("adminEpisodesTable");
+
+  if (!movieId) {
+    management.classList.add("hidden");
+    return;
+  }
+
+  selectedMovieForEpisodes = movieId;
+  management.classList.remove("hidden");
+
+  const movie = allMovies.find((m) => m.id === movieId);
+  const episodes = movie?.episodes || [];
+
+  if (episodes.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="6" class="text-center">Chưa có tập nào</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = episodes
+    .map(
+      (ep, index) => `
+        <tr>
+            <td>${ep.episodeNumber}</td>
+            <td>${ep.title || "N/A"}</td>
+            <td>${ep.youtubeId}</td>
+            <td>${ep.duration || "N/A"}</td>
+            <td>${ep.quality || "HD"}</td>
+            <td>
+                <button class="btn btn-sm btn-secondary" onclick="editEpisode(${index})" title="Sửa">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteEpisode(${index})" title="Xóa">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `,
+    )
+    .join("");
+}
+
+/**
+ * Mở modal thêm/sửa tập (Đã nâng cấp cho Phim Lẻ)
+ */
+function openEpisodeModal(index = null) {
+  const title = document.getElementById("episodeModalTitle");
+  const form = document.getElementById("episodeForm");
+  const epNumGroup = document.getElementById("episodeNumberGroup"); // Lấy cái khung nhập số tập
+
+  // Lấy thông tin phim đang chọn
+  const movie = allMovies.find((m) => m.id === selectedMovieForEpisodes);
+  const isSingle = movie && movie.type === "single"; // Kiểm tra xem có phải phim lẻ không
+
+  // XỬ LÝ ẨN/HIỆN Ô NHẬP SỐ TẬP
+  if (isSingle) {
+    epNumGroup.style.display = "none"; // Nếu là phim lẻ -> Ẩn đi
+  } else {
+    epNumGroup.style.display = "block"; // Nếu là phim bộ -> Hiện lên
+  }
+
+  if (index !== null) {
+    // --- CHẾ ĐỘ SỬA (EDIT) ---
+    title.textContent = isSingle ? "Cập Nhật Link Phim" : "Sửa Tập Phim";
+    const episode = movie?.episodes?.[index];
+
+    if (episode) {
+      document.getElementById("episodeIndex").value = index;
+      document.getElementById("episodeNumber").value = episode.episodeNumber;
+      document.getElementById("episodeTitle").value = episode.title || "";
+      document.getElementById("episodeYoutubeId").value = episode.youtubeId;
+      document.getElementById("episodeDuration").value = episode.duration || "";
+      document.getElementById("episodeQuality").value = episode.quality || "HD";
+    }
+  } else {
+    // --- CHẾ ĐỘ THÊM MỚI (ADD) ---
+    title.textContent = isSingle ? "Cập Nhật Link Phim" : "Thêm Tập Mới";
+    form.reset();
+    document.getElementById("episodeIndex").value = "";
+
+    if (isSingle) {
+      // Nếu là phim lẻ: Tự điền Tập 1 và Tiêu đề mặc định
+      document.getElementById("episodeNumber").value = 1;
+      document.getElementById("episodeTitle").value = "Full Movie";
+    } else {
+      // Nếu là phim bộ: Tự tính tập tiếp theo
+      const nextEp = (movie?.episodes?.length || 0) + 1;
+      document.getElementById("episodeNumber").value = nextEp;
+      document.getElementById("episodeTitle").value = "";
+    }
+  }
+
+  openModal("episodeModal");
+}
+
+/**
+ * Xử lý submit form tập phim
+ */
+async function handleEpisodeSubmit(event) {
+  event.preventDefault();
+
+  if (!db || !selectedMovieForEpisodes) return;
+
+  const index = document.getElementById("episodeIndex").value;
+  const episodeData = {
+    episodeNumber: parseInt(document.getElementById("episodeNumber").value),
+    title: document.getElementById("episodeTitle").value,
+    youtubeId: document.getElementById("episodeYoutubeId").value,
+    duration: document.getElementById("episodeDuration").value,
+    quality: document.getElementById("episodeQuality").value,
+  };
+
+  try {
+    showLoading(true, "Đang lưu...");
+
+    const movieRef = db.collection("movies").doc(selectedMovieForEpisodes);
+    const movieDoc = await movieRef.get();
+    let episodes = movieDoc.data()?.episodes || [];
+
+    if (index !== "") {
+      // Update
+      episodes[parseInt(index)] = episodeData;
+    } else {
+      // Add
+      episodes.push(episodeData);
+    }
+
+    // Sort by episode number
+    episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
+
+    await movieRef.update({ episodes });
+
+    showNotification("Đã lưu tập phim!", "success");
+    closeModal("episodeModal");
+
+    // Reload
+    await loadMovies();
+    loadEpisodesForMovie();
+  } catch (error) {
+    console.error("Lỗi lưu episode:", error);
+    showNotification("Không thể lưu tập phim!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Sửa tập phim
+ */
+function editEpisode(index) {
+  openEpisodeModal(index);
+}
+
+/**
+ * Xóa tập phim
+ */
+async function deleteEpisode(index) {
+  if (!confirm("Bạn có chắc muốn xóa tập này?")) return;
+
+  if (!db || !selectedMovieForEpisodes) return;
+
+  try {
+    showLoading(true, "Đang xóa...");
+
+    const movieRef = db.collection("movies").doc(selectedMovieForEpisodes);
+    const movieDoc = await movieRef.get();
+    let episodes = movieDoc.data()?.episodes || [];
+
+    episodes.splice(index, 1);
+
+    await movieRef.update({ episodes });
+
+    showNotification("Đã xóa tập phim!", "success");
+
+    // Reload
+    await loadMovies();
+    loadEpisodesForMovie();
+  } catch (error) {
+    console.error("Lỗi xóa episode:", error);
+    showNotification("Không thể xóa tập phim!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ============================================
+// ADMIN CRUD - CATEGORIES
+// ============================================
+
+/**
+ * Render bảng thể loại
+ */
+function renderAdminCategories() {
+  const tbody = document.getElementById("adminCategoriesTable");
+
+  tbody.innerHTML = allCategories
+    .map((cat) => {
+      const movieCount = allMovies.filter(
+        (m) => m.category === cat.name,
+      ).length;
+      return `
+            <tr>
+                <td>${cat.id}</td>
+                <td>${cat.name}</td>
+                <td>${cat.slug}</td>
+                <td>${movieCount}</td>
+                <td>
+                    <button class="btn btn-sm btn-secondary" onclick="editCategory('${cat.id}')" title="Sửa">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')" title="Xóa">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    })
+    .join("");
+}
+
+/**
+ * Mở modal thể loại
+ */
+function openCategoryModal(categoryId = null) {
+  const form = document.getElementById("categoryForm");
+
+  if (categoryId) {
+    const cat = allCategories.find((c) => c.id === categoryId);
+    if (cat) {
+      document.getElementById("categoryId").value = categoryId;
+      document.getElementById("categoryName").value = cat.name;
+      document.getElementById("categorySlug").value = cat.slug;
+    }
+  } else {
+    form.reset();
+    document.getElementById("categoryId").value = "";
+  }
+
+  openModal("categoryModal");
+}
+
+/**
+ * Xử lý submit form thể loại
+ */
+async function handleCategorySubmit(event) {
+  event.preventDefault();
+
+  const categoryId = document.getElementById("categoryId").value;
+  const name = document.getElementById("categoryName").value;
+  let slug = document.getElementById("categorySlug").value;
+
+  if (!slug) {
+    slug = createSlug(name);
+  }
+
+  const categoryData = { name, slug };
+
+  try {
+    showLoading(true, "Đang lưu...");
+
+    if (db) {
+      if (categoryId) {
+        await db.collection("categories").doc(categoryId).update(categoryData);
+      } else {
+        const newId = createSlug(name);
+        await db
+          .collection("categories")
+          .doc(newId)
+          .set({ id: newId, ...categoryData });
+      }
+    }
+
+    showNotification("Đã lưu thể loại!", "success");
+    closeModal("categoryModal");
+
+    await loadCategories();
+    renderAdminCategories();
+    populateFilters();
+  } catch (error) {
+    console.error("Lỗi lưu category:", error);
+    showNotification("Không thể lưu thể loại!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Sửa thể loại
+ */
+function editCategory(categoryId) {
+  openCategoryModal(categoryId);
+}
+
+/**
+ * Xóa thể loại
+ */
+async function deleteCategory(categoryId) {
+  if (!confirm("Bạn có chắc muốn xóa thể loại này?")) return;
+
+  try {
+    if (db) {
+      await db.collection("categories").doc(categoryId).delete();
+    }
+
+    showNotification("Đã xóa thể loại!", "success");
+
+    await loadCategories();
+    renderAdminCategories();
+    populateFilters();
+  } catch (error) {
+    console.error("Lỗi xóa category:", error);
+    showNotification("Không thể xóa thể loại!", "error");
+  }
+}
+
+// ============================================
+// ADMIN CRUD - COUNTRIES
+// ============================================
+
+/**
+ * Render bảng quốc gia
+ */
+function renderAdminCountries() {
+  const tbody = document.getElementById("adminCountriesTable");
+
+  tbody.innerHTML = allCountries
+    .map((country) => {
+      const movieCount = allMovies.filter(
+        (m) => m.country === country.name,
+      ).length;
+      return `
+            <tr>
+                <td>${country.id}</td>
+                <td>${country.name}</td>
+                <td>${country.code}</td>
+                <td>${movieCount}</td>
+                <td>
+                    <button class="btn btn-sm btn-secondary" onclick="editCountry('${country.id}')" title="Sửa">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCountry('${country.id}')" title="Xóa">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    })
+    .join("");
+}
+
+/**
+ * Mở modal quốc gia
+ */
+function openCountryModal(countryId = null) {
+  const form = document.getElementById("countryForm");
+
+  if (countryId) {
+    const country = allCountries.find((c) => c.id === countryId);
+    if (country) {
+      document.getElementById("countryId").value = countryId;
+      document.getElementById("countryName").value = country.name;
+      document.getElementById("countryCode").value = country.code;
+    }
+  } else {
+    form.reset();
+    document.getElementById("countryId").value = "";
+  }
+
+  openModal("countryModal");
+}
+
+/**
+ * Xử lý submit form quốc gia
+ */
+async function handleCountrySubmit(event) {
+  event.preventDefault();
+
+  const countryId = document.getElementById("countryId").value;
+  const name = document.getElementById("countryName").value;
+  const code = document.getElementById("countryCode").value.toUpperCase();
+
+  const countryData = { name, code };
+
+  try {
+    showLoading(true, "Đang lưu...");
+
+    if (db) {
+      if (countryId) {
+        await db.collection("countries").doc(countryId).update(countryData);
+      } else {
+        const newId = code.toLowerCase();
+        await db
+          .collection("countries")
+          .doc(newId)
+          .set({ id: newId, ...countryData });
+      }
+    }
+
+    showNotification("Đã lưu quốc gia!", "success");
+    closeModal("countryModal");
+
+    await loadCountries();
+    renderAdminCountries();
+    populateFilters();
+  } catch (error) {
+    console.error("Lỗi lưu country:", error);
+    showNotification("Không thể lưu quốc gia!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Sửa quốc gia
+ */
+function editCountry(countryId) {
+  openCountryModal(countryId);
+}
+
+/**
+ * Xóa quốc gia
+ */
+async function deleteCountry(countryId) {
+  if (!confirm("Bạn có chắc muốn xóa quốc gia này?")) return;
+
+  try {
+    if (db) {
+      await db.collection("countries").doc(countryId).delete();
+    }
+
+    showNotification("Đã xóa quốc gia!", "success");
+
+    await loadCountries();
+    renderAdminCountries();
+    populateFilters();
+  } catch (error) {
+    console.error("Lỗi xóa country:", error);
+    showNotification("Không thể xóa quốc gia!", "error");
+  }
+}
+
+// ============================================
+// ADMIN - USER MANAGEMENT
+// ============================================
+
+/**
+ * Mở modal phân quyền user
+ */
+function openUserRoleModal(userId, email, currentRole) {
+  editingUserId = userId;
+  document.getElementById("userRoleEmail").textContent = `Email: ${email}`;
+  document.getElementById("userRoleSelect").value = currentRole || "user";
+  openModal("userRoleModal");
+}
+
+/**
+ * Cập nhật role user
+ */
+async function updateUserRole() {
+  if (!editingUserId || !db) return;
+
+  const newRole = document.getElementById("userRoleSelect").value;
+
+  try {
+    showLoading(true, "Đang cập nhật...");
+
+    await db.collection("users").doc(editingUserId).update({
+      role: newRole,
+    });
+
+    showNotification("Đã cập nhật quyền người dùng!", "success");
+    closeModal("userRoleModal");
+
+    await loadAdminUsers();
+  } catch (error) {
+    console.error("Lỗi cập nhật role:", error);
+    showNotification("Không thể cập nhật quyền!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Khóa/mở khóa user
+ */
+async function toggleUserStatus(userId, newStatus) {
+  if (!db) return;
+
+  const action = newStatus ? "mở khóa" : "khóa";
+  if (!confirm(`Bạn có chắc muốn ${action} tài khoản này?`)) return;
+
+  try {
+    showLoading(true, "Đang cập nhật...");
+
+    await db.collection("users").doc(userId).update({
+      isActive: newStatus,
+    });
+
+    showNotification(`Đã ${action} tài khoản!`, "success");
+
+    await loadAdminUsers();
+  } catch (error) {
+    console.error("Lỗi toggle user status:", error);
+    showNotification("Không thể cập nhật trạng thái!", "error");
+  } finally {
+    showLoading(false);
+  }
+}
+/**
+ * Xóa tài khoản người dùng vĩnh viễn
+ */
+async function deleteUser(userId, userEmail) {
+  // 1. Xác nhận hành động (Vì xóa là mất luôn)
+  const confirmMsg = `⚠️ CẢNH BÁO NGUY HIỂM!\n\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản: ${userEmail}?\n\nHành động này sẽ xóa toàn bộ dữ liệu của người dùng này khỏi hệ thống và KHÔNG THỂ khôi phục.`;
+
+  if (!confirm(confirmMsg)) return; // Nếu bấm Hủy thì dừng
+
+  if (!db) return;
+
+  try {
+    showLoading(true, "Đang xóa tài khoản...");
+
+    // ✅ CODE MỚI: Chỉ đánh dấu là đã xóa (Soft Delete)
+    // Để hệ thống còn nhận diện được là "thằng này đã bị xóa" mà chặn lại
+    await db.collection("users").doc(userId).update({
+      isDeleted: true, // Cờ đánh dấu đã xóa
+      isActive: false, // Khóa luôn cho chắc
+      deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    showNotification("Đã xóa tài khoản thành công!", "success");
+
+    // Tải lại bảng
+    await loadAdminUsers();
+    await loadAdminStats();
+  } catch (error) {
+    console.error("Lỗi xóa user:", error);
+    showNotification("Lỗi: " + error.message, "error");
+  } finally {
+    showLoading(false);
+  }
+}
+// ============================================
+// UI FUNCTIONS
+// ============================================
+
+/**
+ * Khởi tạo UI
+ */
+function initializeUI() {
+  // Close modals when clicking outside
+  document.querySelectorAll(".modal-overlay").forEach((overlay) => {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        overlay.classList.remove("active");
+      }
+    });
+  });
+
+  // Close modals with Escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      document.querySelectorAll(".modal-overlay.active").forEach((modal) => {
+        modal.classList.remove("active");
+      });
+    }
+  });
+}
+
+/**
+ * Khởi tạo rating stars
+ */
+function initializeRatingStars() {
+  const container = document.getElementById("ratingStars");
+  if (!container) return;
+
+  container.innerHTML = "";
+  for (let i = 1; i <= 10; i++) {
+    const star = document.createElement("i");
+    star.className = "fas fa-star";
+    star.dataset.rating = i;
+    star.addEventListener("click", () => setRating(i));
+    star.addEventListener("mouseenter", () => highlightStars(i));
+    star.addEventListener("mouseleave", () => highlightStars(selectedRating));
+    container.appendChild(star);
+  }
+}
+
+/**
+ * Set rating
+ */
+function setRating(rating) {
+  selectedRating = rating;
+  updateRatingStars(rating);
+  document.getElementById("ratingValue").textContent = `${rating}/10`;
+}
+
+/**
+ * Highlight stars on hover
+ */
+function highlightStars(rating) {
+  const stars = document.querySelectorAll("#ratingStars i");
+  stars.forEach((star, index) => {
+    star.classList.toggle("active", index < rating);
+  });
+}
+
+/**
+ * Update rating stars display
+ */
+function updateRatingStars(rating) {
+  highlightStars(rating);
+}
+
+/**
+ * Navbar scroll effect
+ */
+function initNavbarScroll() {
+  const navbar = document.getElementById("navbar");
+
+  window.addEventListener("scroll", () => {
+    if (window.scrollY > 50) {
+      navbar.classList.add("scrolled");
+    } else {
+      navbar.classList.remove("scrolled");
+    }
+  });
+}
+
+/**
+ * Toggle mobile menu
+ */
+function toggleMobileMenu() {
+  const menu = document.getElementById("navMenu");
+  menu.classList.toggle("active");
+}
+
+/**
+ * Toggle admin sidebar on mobile
+ */
+function toggleAdminSidebar() {
+  const sidebar = document.getElementById("adminSidebar");
+  sidebar.classList.toggle("active");
+}
+
+// ============================================
+// THEME
+// ============================================
+
+/**
+ * Load theme từ localStorage
+ */
+function loadTheme() {
+  const savedTheme = localStorage.getItem("theme") || "dark";
+  document.documentElement.setAttribute("data-theme", savedTheme);
+  updateThemeIcon(savedTheme);
+}
+
+/**
+ * Toggle theme
+ */
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute("data-theme");
+  const newTheme = currentTheme === "dark" ? "light" : "dark";
+
+  document.documentElement.setAttribute("data-theme", newTheme);
+  localStorage.setItem("theme", newTheme);
+  updateThemeIcon(newTheme);
+}
+
+/**
+ * Update theme icon
+ */
+function updateThemeIcon(theme) {
+  const icon = document.getElementById("themeIcon");
+  if (icon) {
+    icon.className = theme === "dark" ? "fas fa-moon" : "fas fa-sun";
+  }
+}
+
+// ============================================
+// PAGE NAVIGATION
+// ============================================
+
+/**
+ * Show page
+ */
+function showPage(pageName) {
+  // Hide all pages
+  document.querySelectorAll(".page").forEach((page) => {
+    page.classList.remove("active");
+  });
+
+  // 👇 THÊM ĐOẠN NÀY ĐỂ ẨN/HIỆN NÚT 3 GẠCH 👇
+  const sidebarBtn = document.getElementById("sidebarToggleBtn");
+  if (sidebarBtn) {
+    if (pageName === "admin") {
+      sidebarBtn.style.display = "block"; // Vào Admin thì hiện
+    } else {
+      sidebarBtn.style.display = "none"; // Ra trang khác thì ẩn
+    }
+  }
+
+  // Show target page
+  const targetPage = document.getElementById(`${pageName}Page`);
+  if (targetPage) {
+    targetPage.classList.add("active");
+  }
+
+  // Update nav links
+  document.querySelectorAll(".nav-link").forEach((link) => {
+    link.classList.remove("active");
+    if (link.dataset.page === pageName) {
+      link.classList.add("active");
+    }
+  });
+
+  // Hide/show footer
+  const footer = document.getElementById("footer");
+  if (pageName === "admin") {
+    footer.style.display = "none";
+  } else {
+    footer.style.display = "block";
+  }
+
+  // Close mobile menu
+  document.getElementById("navMenu").classList.remove("active");
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+
+  // Load admin data if needed
+  if (pageName === "admin" && isAdmin) {
+    loadAdminData();
+  }
+}
+
+/**
+ * Show admin panel
+ */
+function showAdminPanel(panelName) {
+  // Hide all panels
+  document.querySelectorAll(".admin-panel").forEach((panel) => {
+    panel.classList.remove("active");
+  });
+
+  // Show target panel
+  const targetPanel = document.getElementById(`${panelName}Panel`);
+  if (targetPanel) {
+    targetPanel.classList.add("active");
+  }
+
+  // Update nav items
+  document.querySelectorAll(".admin-nav-item").forEach((item) => {
+    item.classList.remove("active");
+    if (item.dataset.panel === panelName) {
+      item.classList.add("active");
+    }
+  });
+}
+
+// ============================================
+// MODALS
+// ============================================
+
+/**
+ * Open modal
+ */
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add("active");
+  }
+}
+
+/**
+ * Close modal
+ */
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove("active");
+  }
+}
+
+/**
+ * Open auth modal
+ */
+function openAuthModal() {
+  openModal("authModal");
+}
+
+/**
+ * Switch auth tab
+ */
+/**
+ * Chuyển đổi giữa các tab Auth (Login / Register / Forgot)
+ */
+function switchAuthTab(tab) {
+  // Ẩn tất cả các form trước
+  document.querySelectorAll(".auth-form").forEach((form) => {
+    form.classList.remove("active");
+  });
+
+  // Xử lý giao diện Tab trên đầu (Login/Register)
+  const tabsContainer = document.querySelector(".auth-tabs");
+
+  if (tab === "forgot") {
+    // Nếu là quên mật khẩu -> Ẩn luôn cái thanh chọn Login/Register cho đẹp
+    tabsContainer.style.display = "none";
+    document.getElementById("forgotForm").classList.add("active");
+  } else {
+    // Nếu là Login hoặc Register -> Hiện lại thanh tab
+    tabsContainer.style.display = "flex";
+    document.getElementById(`${tab}Form`).classList.add("active");
+
+    // Highlight cái tab đang chọn
+    document.querySelectorAll(".auth-tab").forEach((t) => {
+      t.classList.toggle("active", t.dataset.tab === tab);
+    });
+  }
+}
+
+// ============================================
+// SEARCH & FILTER
+// ============================================
+
+/**
+ * Populate filter dropdowns
+ */
+function populateFilters() {
+  // Categories
+  const categoryFilter = document.getElementById("filterCategory");
+  if (categoryFilter) {
+    categoryFilter.innerHTML =
+      '<option value="">Tất cả thể loại</option>' +
+      allCategories
+        .map((c) => `<option value="${c.name}">${c.name}</option>`)
+        .join("");
+  }
+
+  // Countries
+  const countryFilter = document.getElementById("filterCountry");
+  if (countryFilter) {
+    countryFilter.innerHTML =
+      '<option value="">Tất cả quốc gia</option>' +
+      allCountries
+        .map((c) => `<option value="${c.name}">${c.name}</option>`)
+        .join("");
+  }
+
+  // Years
+  const yearFilter = document.getElementById("filterYear");
+  if (yearFilter) {
+    const years = [...new Set(allMovies.map((m) => m.year))].sort(
+      (a, b) => b - a,
+    );
+    yearFilter.innerHTML =
+      '<option value="">Tất cả năm</option>' +
+      years.map((y) => `<option value="${y}">${y}</option>`).join("");
+  }
+}
+
+/**
+ * Search movies
+ */
+function searchMovies() {
+  const query = document.getElementById("searchMovies").value.toLowerCase();
+  filterMovies(query);
+}
+
+/**
+ * Filter movies
+ */
+function filterMovies(searchQuery = null) {
+  const query =
+    searchQuery !== null
+      ? searchQuery
+      : document.getElementById("searchMovies")?.value.toLowerCase() || "";
+  const category = document.getElementById("filterCategory")?.value || "";
+  const country = document.getElementById("filterCountry")?.value || "";
+  const year = document.getElementById("filterYear")?.value || "";
+
+  let filtered = allMovies.filter((movie) => {
+    const matchQuery = !query || movie.title.toLowerCase().includes(query);
+    const matchCategory = !category || movie.category === category;
+    const matchCountry = !country || movie.country === country;
+    const matchYear = !year || movie.year == year;
+
+    return matchQuery && matchCategory && matchCountry && matchYear;
+  });
+
+  renderAllMovies(filtered);
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+/**
+ * Show notification
+ */
+function showNotification(message, type = "info") {
+  const container = document.getElementById("notificationContainer");
+
+  const icons = {
+    success: "fa-check-circle",
+    error: "fa-times-circle",
+    warning: "fa-exclamation-triangle",
+    info: "fa-info-circle",
+  };
+
+  const notification = document.createElement("div");
+  notification.className = `notification ${type}`;
+  notification.innerHTML = `
+        <i class="fas ${icons[type]}"></i>
+        <div class="notification-content">${message}</div>
+        <button class="notification-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+
+  container.appendChild(notification);
+
+  // Auto remove after 5 seconds
+  setTimeout(() => {
+    notification.style.animation = "slideIn 0.3s ease reverse";
+    setTimeout(() => notification.remove(), 300);
+  }, 5000);
+}
+
+// ============================================
+// LOADING
+// ============================================
+
+/**
+ * Show/hide loading overlay
+ */
+function showLoading(show, text = "Đang xử lý...") {
+  const overlay = document.getElementById("loadingOverlay");
+  const loadingText = document.getElementById("loadingText");
+
+  if (show) {
+    loadingText.textContent = text;
+    overlay.classList.add("active");
+  } else {
+    overlay.classList.remove("active");
+  }
+}
+
+/**
+ * Show payment loading
+ */
+function showPaymentLoading(show) {
+  showLoading(show, "Đang xử lý thanh toán...");
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+/**
+ * Format number with commas
+ */
+function formatNumber(num) {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/**
+ * Format date
+ */
+function formatDate(date) {
+  if (!date) return "N/A";
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+/**
+ * Format time ago
+ */
+function formatTimeAgo(date) {
+  const now = new Date();
+  const diff = now - date;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 30) return formatDate(date);
+  if (days > 0) return `${days} ngày trước`;
+  if (hours > 0) return `${hours} giờ trước`;
+  if (minutes > 0) return `${minutes} phút trước`;
+  return "Vừa xong";
+}
+
+/**
+ * Get status text
+ */
+function getStatusText(status) {
+  const texts = {
+    public: "Công khai",
+    hidden: "Ẩn",
+    pending: "Chờ duyệt",
+    completed: "Hoàn thành",
+    failed: "Thất bại",
+  };
+  return texts[status] || status;
+}
+
+/**
+ * Create slug from text
+ */
+function createSlug(text) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+/**
+ * Escape HTML
+ */
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ============================================
+// CATEGORIES PAGE
+// ============================================
+
+/**
+ * Render categories page
+ */
+function renderCategoriesPage() {
+  const container = document.getElementById("categoriesList");
+  if (!container) return;
+
+  container.innerHTML = allCategories
+    .map((cat) => {
+      const movieCount = allMovies.filter(
+        (m) => m.category === cat.name,
+      ).length;
+      const randomMovie = allMovies.find((m) => m.category === cat.name);
+      const bgImage =
+        randomMovie?.posterUrl || "https://via.placeholder.com/300x200";
+
+      return `
+            <div class="card" onclick="filterByCategory('${cat.name}')" style="cursor:pointer;">
+                <div class="card-image" style="padding-top: 60%;">
+                    <img src="${bgImage}" alt="${cat.name}" loading="lazy">
+                    <div class="card-overlay" style="opacity:1; background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.3));">
+                        <div style="text-align:center; width:100%;">
+                            <h3 style="margin:0;">${cat.name}</h3>
+                            <p class="text-muted">${movieCount} phim</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    })
+    .join("");
+}
+
+/**
+ * Filter by category
+ */
+function filterByCategory(category) {
+  showPage("movies");
+  document.getElementById("filterCategory").value = category;
+  filterMovies();
+}
+
+// Load categories page when showing
+const originalShowPage = showPage;
+showPage = function (pageName) {
+  originalShowPage(pageName);
+  if (pageName === "categories") {
+    renderCategoriesPage();
+  }
+};
+
+console.log("✅ App.js loaded successfully!");
+
+// Hàm bật tắt Sidebar
+function toggleSidebar() {
+  const sidebar = document.getElementById("adminSidebar");
+  const content = document.querySelector(".admin-content");
+
+  // Thêm hoặc bỏ class 'collapsed' và 'expanded'
+  sidebar.classList.toggle("collapsed");
+  content.classList.toggle("expanded");
+}
+
+// ============================================
+// PROFILE FUNCTIONS (THÊM VÀO CUỐI FILE)
+// ============================================
+// ============================================
+// PROFILE FUNCTIONS (PHIÊN BẢN NÂNG CẤP: ĐỔI TÊN + AVATAR)
+// ============================================
+
+// 1. Mở Modal và điền dữ liệu cũ vào ô nhập
+function openProfileModal() {
+  if (!currentUser) return;
+
+  // Hiển thị ảnh và tên hiện tại (Text tĩnh)
+  document.getElementById("profileCurrentAvatar").src =
+    currentUser.photoURL || "https://via.placeholder.com/100";
+  document.getElementById("profileDisplayName").textContent =
+    currentUser.displayName;
+  document.getElementById("profileEmail").textContent = currentUser.email;
+
+  // 👇 ĐIỀN DỮ LIỆU CŨ VÀO Ô NHẬP (INPUT) ĐỂ SỬA 👇
+  document.getElementById("profileNameInput").value =
+    currentUser.displayName || ""; // Điền tên cũ
+  document.getElementById("profileNewAvatar").value =
+    currentUser.photoURL || ""; // Điền link ảnh cũ
+
+  openModal("profileModal");
+}
+
+// 2. Lưu thay đổi (Cập nhật cả Tên và Avatar)
+async function updateUserProfile() {
+  const newName = document.getElementById("profileNameInput").value.trim();
+  const newAvatar = document.getElementById("profileNewAvatar").value.trim();
+
+  // Kiểm tra dữ liệu
+  if (!newName) {
+    showNotification("Tên không được để trống!", "warning");
+    return;
+  }
+
+  try {
+    showLoading(true, "Đang cập nhật hồ sơ...");
+
+    // 1. Cập nhật Firebase Auth (Dữ liệu đăng nhập)
+    await currentUser.updateProfile({
+      displayName: newName,
+      photoURL: newAvatar,
+    });
+
+    // 2. Cập nhật Firestore (Dữ liệu người dùng trong database)
+    if (db) {
+      await db.collection("users").doc(currentUser.uid).update({
+        displayName: newName,
+        avatar: newAvatar,
+      });
+    }
+
+    showNotification("Cập nhật hồ sơ thành công!", "success");
+    closeModal("profileModal");
+
+    // 3. Cập nhật giao diện ngay lập tức (Không cần F5)
+    updateAuthUI(true);
+  } catch (error) {
+    console.error("Lỗi cập nhật profile:", error);
+    showNotification("Lỗi: " + error.message, "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * Xử lý gửi email quên mật khẩu
+ */
+async function handleForgotPassword(event) {
+  event.preventDefault();
+
+  const email = document.getElementById("forgotEmail").value.trim();
+
+  if (!email) {
+    showNotification("Vui lòng nhập email!", "warning");
+    return;
+  }
+
+  try {
+    showLoading(true, "Đang gửi email...");
+
+    // Gọi hàm của Firebase
+    await auth.sendPasswordResetEmail(email);
+
+    // Thông báo thành công
+    alert(
+      "✅ Đã gửi email khôi phục!\n\nVui lòng kiểm tra hộp thư (cả mục Spam) và làm theo hướng dẫn trong email để đặt lại mật khẩu.",
+    );
+
+    // Quay về trang đăng nhập
+    switchAuthTab("login");
+  } catch (error) {
+    console.error("Lỗi quên mật khẩu:", error);
+    let msg = "Gửi thất bại!";
+
+    if (error.code === "auth/user-not-found") {
+      msg = "Email này chưa được đăng ký!";
+    } else if (error.code === "auth/invalid-email") {
+      msg = "Email không hợp lệ!";
+    }
+
+    showNotification(msg, "error");
+  } finally {
+    showLoading(false);
+  }
+}
+
+/**
+ * ==========================================
+ * TÌM KIẾM PHIM TRONG TAB QUẢN LÝ TẬP
+ * ==========================================
+ */
+function filterEpisodeMovies() {
+  // 1. Lấy từ khóa đang gõ
+  const query = document
+    .getElementById("episodeMovieSearch")
+    .value.toLowerCase();
+  const select = document.getElementById("selectMovieForEpisodes");
+
+  // Giữ lại giá trị đang chọn (nếu có) để không bị mất khi lọc
+  const currentVal = select.value;
+
+  // 2. Lọc danh sách phim từ biến toàn cục allMovies
+  // (Nếu không gõ gì thì lấy hết, gõ thì lọc theo tên)
+  const filteredMovies = allMovies.filter(
+    (m) => !query || m.title.toLowerCase().includes(query),
+  );
+
+  // 3. Tạo lại HTML cho Dropdown
+  let html = '<option value="">-- Chọn phim --</option>';
+
+  if (filteredMovies.length === 0) {
+    html += "<option disabled>Không tìm thấy phim nào</option>";
+  } else {
+    html += filteredMovies
+      .map((m) => `<option value="${m.id}">${m.title}</option>`)
+      .join("");
+  }
+
+  // 4. Cập nhật giao diện
+  select.innerHTML = html;
+
+  // 5. Cố gắng khôi phục lựa chọn cũ nếu nó vẫn nằm trong kết quả lọc
+  select.value = currentVal;
+
+  // Nếu phim đang chọn bị lọc mất -> Ẩn bảng tập phim đi cho đỡ rối
+  if (!select.value) {
+    document.getElementById("episodesManagement").classList.add("hidden");
+  }
+}
+/**
+ * Lọc phim theo Loại (Lẻ / Bộ)
+ */
+function filterByMovieType(type) {
+  // 1. Chuyển sang trang danh sách phim
+  showPage("movies");
+
+  // 2. Cập nhật tiêu đề cho ngầu
+  const titleMap = {
+    single: "Danh sách Phim Lẻ",
+    series: "Danh sách Phim Bộ",
+  };
+  document.querySelector("#moviesPage .section-title").textContent =
+    titleMap[type] || "Tất cả Phim";
+
+  // 3. Lọc danh sách
+  const filtered = allMovies.filter((m) => m.type === type);
+
+  // 4. Hiển thị ra màn hình
+  renderAllMovies(filtered);
+
+  // 5. Active menu (optional)
+  // Nếu bạn muốn làm nút menu sáng lên thì cần thêm code xử lý class active ở đây
+}
+// ============================================
+// LOGIC YÊU THÍCH & LỊCH SỬ (USER LIBRARY)
+// ============================================
+/**
+ * Hàm xóa phim khỏi danh sách Yêu thích (Dành riêng cho Modal)
+ */
+async function removeFavoriteFromModal(movieId, btnElement) {
+  // 1. Gọi hàm toggle cũ để xử lý logic xóa trong Database
+  await toggleFavorite(movieId);
+
+  // 2. Xử lý giao diện: Tìm cái thẻ chứa nút bấm và xóa nó đi
+  const card = btnElement.closest(".card");
+
+  if (card) {
+    // Tạo hiệu ứng mờ dần và thu nhỏ
+    card.style.transition = "all 0.3s ease";
+    card.style.opacity = "0";
+    card.style.transform = "scale(0.8)";
+
+    // Đợi 0.3s cho hiệu ứng chạy xong rồi mới xóa hẳn khỏi HTML
+    setTimeout(() => {
+      card.remove();
+
+      // Kiểm tra nếu xóa hết sạch phim thì hiện thông báo trống
+      const container = document.getElementById("libraryList");
+      if (container && container.children.length === 0) {
+        container.innerHTML =
+          '<p class="text-center text-muted">Bạn chưa thích phim nào.</p>';
+      }
+    }, 300);
+  }
+}
+/**
+ * 1. Xử lý Thích/Bỏ thích phim
+ */
+async function toggleFavorite(movieId) {
+  if (!currentUser) {
+    showNotification("Vui lòng đăng nhập để lưu phim!", "warning");
+    openAuthModal();
+    return;
+  }
+
+  // Kiểm tra xem phim đã có trong danh sách chưa (dùng mảng favorites trong currentUser)
+  // Lưu ý: Cần đảm bảo currentUser.favorites luôn là mảng
+  const favorites = currentUser.favorites || [];
+  const isLiked = favorites.includes(movieId);
+
+  // Tìm nút Like trong DOM để đổi giao diện ngay lập tức (cho mượt)
+  const likeBtn = document.querySelector(`.btn-like-${movieId}`);
+
+  try {
+    let newFavorites;
+    if (isLiked) {
+      // Nếu đã thích -> Xóa khỏi danh sách
+      newFavorites = favorites.filter((id) => id !== movieId);
+      showNotification("Đã xóa khỏi Yêu thích", "info");
+      if (likeBtn) {
+        likeBtn.innerHTML = '<i class="far fa-heart"></i> Thích';
+        likeBtn.classList.remove("liked");
+        likeBtn.style.color = "#fff";
+        likeBtn.style.borderColor = "rgba(255, 255, 255, 0.2)";
+      }
+    } else {
+      // Chưa thích -> Thêm vào danh sách
+      newFavorites = [...favorites, movieId];
+      showNotification("Đã thêm vào Yêu thích ❤️", "success");
+      if (likeBtn) {
+        likeBtn.innerHTML = '<i class="fas fa-heart"></i> Đã thích';
+        likeBtn.classList.add("liked");
+        likeBtn.style.color = "#e50914"; // Màu đỏ
+        likeBtn.style.borderColor = "#e50914";
+      }
+    }
+
+    // Cập nhật Local State
+    currentUser.favorites = newFavorites;
+
+    // Cập nhật Firestore
+    if (db) {
+      await db.collection("users").doc(currentUser.uid).update({
+        favorites: newFavorites,
+      });
+    }
+  } catch (error) {
+    console.error("Lỗi cập nhật yêu thích:", error);
+  }
+}
+
+/**
+ * 2. Lưu lịch sử xem (Gọi hàm này khi bấm Xem phim hoặc chọn Tập)
+ */
+async function saveWatchHistory(movieId, episodeIndex) {
+  if (!currentUser || !db) return;
+  try {
+    await db
+      .collection("users")
+      .doc(currentUser.uid)
+      .collection("history")
+      .doc(movieId)
+      .set(
+        {
+          movieId: movieId,
+          lastEpisode: episodeIndex,
+          // Dùng serverTimestamp để sắp xếp phim nào mới xem lên đầu
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          lastWatchedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+    console.log(`✅ Đã lưu: Phim ${movieId} - Tập ${episodeIndex + 1}`);
+  } catch (error) {
+    console.error("Lỗi lưu lịch sử:", error);
+  }
+}
+
+/**
+ * 3. Tải danh sách phim (Yêu thích hoặc Lịch sử) và hiển thị ra Modal
+ */
+// Thay thế hàm openLibraryModal cũ bằng hàm này
+async function openLibraryModal(type) {
+  if (!currentUser) return;
+
+  const modalTitle = document.getElementById("libraryModalTitle");
+  const container = document.getElementById("libraryList");
+  container.innerHTML = '<div class="loading-spinner"></div>';
+
+  openModal("libraryModal");
+
+  let moviesToList = [];
+
+  try {
+    if (type === "favorites") {
+      modalTitle.textContent = "Phim Yêu Thích ❤️";
+      const favIds = currentUser.favorites || [];
+      moviesToList = allMovies.filter((m) => favIds.includes(m.id));
+    } else if (type === "history") {
+      modalTitle.textContent = "Lịch Sử Đã Xem 🕒";
+      if (db) {
+        const snapshot = await db
+          .collection("users")
+          .doc(currentUser.uid)
+          .collection("history")
+          .orderBy("lastWatchedAt", "desc")
+          .get();
+
+        const historyData = snapshot.docs.map((doc) => doc.data());
+        moviesToList = historyData
+          .map((h) => {
+            const movie = allMovies.find((m) => m.id === h.movieId);
+            return movie ? { ...movie, _lastEpisode: h.lastEpisode } : null;
+          })
+          .filter((m) => m !== null);
+      }
+    }
+
+    // --- RENDER GIAO DIỆN ---
+    if (moviesToList.length === 0) {
+      container.innerHTML =
+        '<p class="text-center text-muted">Danh sách trống.</p>';
+    } else {
+      container.innerHTML = moviesToList
+        .map((movie) => {
+          // 👇 CODE MỚI: Tạo nút Xóa nếu đang ở tab Yêu thích 👇
+          const removeBtn =
+            type === "favorites"
+              ? `<button class="btn-remove-fav" 
+                       onclick="event.stopPropagation(); removeFavoriteFromModal('${movie.id}', this)" 
+                       title="Bỏ yêu thích">
+                 <i class="fas fa-times"></i>
+               </button>`
+              : "";
+          // 👆
+
+          // Tag lịch sử xem
+          const historyTag =
+            type === "history" && movie._lastEpisode !== undefined
+              ? `<div style="font-size:12px; color:#fcd535; margin-top:5px;">
+                   <i class="fas fa-history"></i> Đã xem đến Tập ${movie._lastEpisode + 1}
+                 </div>`
+              : "";
+
+          return `
+                <div class="card" onclick="viewMovieDetail('${movie.id}')">
+                    <div class="card-image">
+                        ${removeBtn}
+                        
+                        <img src="${movie.posterUrl}" loading="lazy">
+                        <div class="card-overlay">
+                            <button class="btn btn-primary"><i class="fas fa-play"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="card-title">${movie.title}</h4>
+                        ${historyTag}
+                    </div>
+                </div>`;
+        })
+        .join("");
+    }
+  } catch (error) {
+    console.error("Lỗi tải thư viện:", error);
+    container.innerHTML = '<p class="text-error">Có lỗi xảy ra.</p>';
+  }
+}
+/**
+ * Kiểm tra xem VIP còn hạn không. Nếu hết hạn -> Hạ xuống Free
+ */
+async function checkAndDowngradeVip(user, userData) {
+  if (!userData.isVip || !userData.vipExpiresAt) return; // Không phải VIP hoặc VIP trọn đời cũ thì bỏ qua
+
+  const expiryDate = userData.vipExpiresAt.toDate();
+  const now = new Date();
+
+  // Nếu Ngày hết hạn nhỏ hơn Ngày hiện tại -> Đã hết hạn
+  if (expiryDate < now) {
+    console.log("⚠️ VIP đã hết hạn! Đang hạ cấp tài khoản...");
+
+    try {
+      // 1. Cập nhật Firestore về Free
+      await db.collection("users").doc(user.uid).update({
+        isVip: false,
+        vipExpiresAt: null,
+      });
+
+      // 2. Cập nhật biến cục bộ để giao diện đổi ngay lập tức
+      currentUser.isVip = false;
+
+      // 3. Thông báo cho người dùng biết
+      showNotification(
+        "Gói VIP của bạn đã hết hạn. Vui lòng gia hạn để tiếp tục xem.",
+        "warning",
+      );
+    } catch (error) {
+      console.error("Lỗi tự động hạ cấp VIP:", error);
+    }
+  }
+}
