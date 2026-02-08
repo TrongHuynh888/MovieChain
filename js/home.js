@@ -64,13 +64,16 @@ function renderAllMovies(movies = null) {
  * Tạo HTML cho movie card (Phiên bản Netflix Pro - Nút to & Rõ chữ)
  * Tạo HTML cho movie card (Đã tích hợp nút Thích thông minh)
  */
+/* ============================================================
+   HÀM TẠO THẺ PHIM (ĐÃ FIX MOBILE TOUCH & GIỮ NGUYÊN TÍNH NĂNG CŨ)
+   ============================================================ */
 function createMovieCard(movie) {
   // 1. Logic xử lý nhãn Phần/Mùa (Giữ nguyên)
   const partHtml = movie.part
     ? `<span style="background: var(--accent-primary); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; text-transform: uppercase; vertical-align: middle;">${movie.part}</span>`
     : "";
 
-  // 2. Logic kiểm tra yêu thích
+  // 2. Logic kiểm tra yêu thích (Giữ nguyên)
   let isLiked = false;
   if (
     typeof currentUser !== "undefined" &&
@@ -80,12 +83,12 @@ function createMovieCard(movie) {
     isLiked = currentUser.favorites.includes(movie.id);
   }
 
-  // Style cho nút thích
+  // Style cho nút thích (Giữ nguyên)
   const likeStyle = isLiked ? "color: #e50914; border-color: #e50914;" : "";
   const likeIcon = isLiked ? "fas fa-heart" : "far fa-heart";
   const likeClass = isLiked ? "liked" : "";
 
-  // 3. XỬ LÝ DỮ LIỆU THẬT (REAL DATA)
+  // 3. XỬ LÝ DỮ LIỆU THẬT (Giữ nguyên)
   const matchScore = movie.rating
     ? Math.round(movie.rating * 10)
     : Math.floor(Math.random() * (99 - 85 + 1) + 85);
@@ -99,8 +102,9 @@ function createMovieCard(movie) {
     "https://placehold.co/300x450/2a2a3a/FFFFFF?text=NO+POSTER";
 
   return `
-    <div class="movie-card-wrapper">
-        <div class="card movie-card-static">
+    <div class="movie-card-wrapper" id="movie-wrapper-${movie.id}">
+        
+        <div class="card movie-card-static" onclick="handleMovieClick(event, '${movie.id}')">
             <div class="card-image">
                 <img src="${movie.posterUrl}" 
                      alt="${movie.title}" 
@@ -119,6 +123,12 @@ function createMovieCard(movie) {
         </div>
 
         <div class="movie-popup-nfx" onclick="viewMovieDetail('${movie.id}')">
+            
+            <button class="mobile-close-popup" onclick="event.stopPropagation(); closeAllPopups()" 
+                    style="display:none; position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.3); color:#fff; width:28px; height:28px; border-radius:50%; z-index:20; align-items:center; justify-content:center;">
+                <i class="fas fa-times" style="font-size:14px;"></i>
+            </button>
+
             <div class="popup-header-img">
                 <img src="${movie.posterUrl}" 
                      alt="${movie.title}"
@@ -161,6 +171,54 @@ function createMovieCard(movie) {
     </div>
   `;
 }
+
+/* ============================================================
+   👇 CÁC HÀM HỖ TRỢ CLICK TRÊN MOBILE (Dán thêm vào cuối file home.js)
+   ============================================================ */
+
+function handleMovieClick(event, movieId) {
+  // Nếu là màn hình PC (> 768px) -> Vào thẳng trang chi tiết
+  if (window.innerWidth > 768) {
+    viewMovieDetail(movieId);
+    return;
+  }
+
+  // Nếu là Mobile:
+  event.stopPropagation(); // Ngăn click lan ra ngoài
+
+  // 1. Đóng popup khác đang mở
+  closeAllPopups();
+
+  // 2. Mở popup của phim này
+  const wrapper = document.getElementById(`movie-wrapper-${movieId}`);
+  if (wrapper) {
+    wrapper.classList.add("active-mobile"); // Kích hoạt CSS hiển thị
+
+    // Hiện nút đóng
+    const closeBtn = wrapper.querySelector(".mobile-close-popup");
+    if (closeBtn) closeBtn.style.display = "flex";
+  }
+}
+
+function closeAllPopups() {
+  document.querySelectorAll(".movie-card-wrapper").forEach((el) => {
+    el.classList.remove("active-mobile");
+    const closeBtn = el.querySelector(".mobile-close-popup");
+    if (closeBtn) closeBtn.style.display = "none";
+  });
+}
+
+// Tự động đóng popup khi bấm ra ngoài vùng đen (trên Mobile)
+document.addEventListener("click", function (event) {
+  if (window.innerWidth <= 768) {
+    if (
+      !event.target.closest(".movie-popup-nfx") &&
+      !event.target.closest(".movie-card-static")
+    ) {
+      closeAllPopups();
+    }
+  }
+});
 /**
  * Search movies
  */

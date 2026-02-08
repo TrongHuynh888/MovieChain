@@ -1,8 +1,8 @@
 /* ============================================
-   RESPONSIVE.CSS - FINAL FIX (MOBILE & TABLET)
+   RESPONSIVE.CSS - FINAL (FIX MENU & POPUP MOBILE)
    ============================================ */
 
-/* 1. TABLET (iPad - Dọc) */
+/* 1. TABLET (iPad) */
 @media (max-width: 1024px) {
   .nav-container,
   .section,
@@ -10,8 +10,6 @@
     padding-left: 20px !important;
     padding-right: 20px !important;
   }
-
-  /* Admin Tablet */
   .admin-sidebar {
     width: 80px;
   }
@@ -21,8 +19,6 @@
   .admin-content {
     margin-left: 80px;
   }
-
-  /* Footer Tablet */
   .footer-content {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 30px;
@@ -41,108 +37,85 @@
     --font-xl: 18px;
   }
 
-  /* --- A. FIX LỖI BANNER QUÁ DÀI --- */
-  .hero {
-    min-height: auto !important; /* Bỏ chiều cao tối thiểu cũ */
-    height: auto !important;
-    padding: 110px 15px 60px !important; /* Căn chỉnh lại khoảng cách trên dưới */
-  }
-  .hero-title {
-    font-size: 28px !important;
-    margin-bottom: 10px !important;
-  }
-  .hero-subtitle {
-    font-size: 14px !important;
-    margin-bottom: 20px !important;
-  }
-
-  /* --- B. HEADER & MENU --- */
+  /* --- A. HEADER GỌN GÀNG (FIX LỖI ĐÈ) --- */
   .nav-container {
     padding: 10px 15px !important;
-    gap: 8px;
+    gap: 10px;
     justify-content: space-between;
+    align-items: center;
+    height: 60px;
+    position: relative;
+    z-index: 2000;
   }
 
-  /* Logo nhỏ lại */
   .nav-logo {
     font-size: 16px !important;
   }
   .nav-logo i {
     font-size: 20px !important;
   }
-
-  /* Khu vực chứa nút bên phải */
   .nav-actions {
     gap: 8px !important;
+    display: flex;
+    align-items: center;
   }
 
-  /* Thu gọn nút "KẾT NỐI VÍ" thành hình tròn */
+  /* Nút Ví & Avatar nhỏ lại */
   .wallet-btn,
   #connectWalletBtn {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     padding: 0 !important;
     border-radius: 50% !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0 !important; /* Ẩn chữ */
+    font-size: 0 !important;
   }
-  .wallet-btn i,
-  #connectWalletBtn i {
+  .wallet-btn i {
     font-size: 14px !important;
     margin: 0 !important;
   }
   .wallet-btn span {
     display: none !important;
   }
-
-  /* Avatar User nhỏ lại */
   .nav-user-avatar {
     width: 32px;
     height: 32px;
   }
 
-  /* --- C. FIX LỖI MẤT NÚT ĐÓNG MENU (QUAN TRỌNG) --- */
-  /* Biến nút menu thành nút NỔI (Luôn nằm đè lên mọi thứ) */
+  /* NÚT 3 GẠCH (MENU) - Đặt relative để nằm đúng hàng */
   .mobile-menu-toggle {
     display: flex !important;
     align-items: center;
     justify-content: center;
-
-    position: fixed; /* Cố định vị trí trên màn hình */
-    top: 12px; /* Cách đỉnh 12px */
-    right: 15px; /* Cách phải 15px */
-    z-index: 10001; /* Cao hơn cả menu (5000) */
-
-    width: 40px;
-    height: 40px;
-    background: rgba(0, 0, 0, 0.6); /* Nền tối mờ để dễ nhìn */
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: none;
     color: #fff;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    font-size: 20px;
+    position: relative; /* KHÔNG DÙNG FIXED NỮA */
+    z-index: 2001;
   }
 
-  /* Menu trượt ra */
+  /* MENU TRƯỢT */
   .nav-menu {
     display: flex !important;
     flex-direction: column;
     justify-content: flex-start;
-    padding-top: 80px; /* Chừa chỗ cho header */
+    padding-top: 20px;
     position: fixed;
-    top: 0;
+    top: 60px;
     right: 0;
-    width: 280px;
-    height: 100vh;
-    background: var(--bg-secondary);
-    border-left: 1px solid var(--border-color);
-    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.9);
+    width: 100%;
+    height: calc(100vh - 60px);
+    background: var(--bg-primary);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s ease;
     visibility: hidden;
-    z-index: 5000;
+    z-index: 1999;
   }
   .nav-menu.active {
     transform: translateX(0);
@@ -151,68 +124,60 @@
   .nav-link {
     width: 100%;
     padding: 15px 20px;
-    border-radius: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 
-  /* --- D. CÁC THÀNH PHẦN KHÁC --- */
+  /* --- B. LƯỚI PHIM --- */
   .movie-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    grid-template-columns: repeat(2, 1fr) !important; /* 2 cột */
     gap: 10px;
   }
-  .section {
-    padding: 30px 15px !important;
-  }
-
-  .footer-content {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 15px;
-    padding: 0 15px;
-  }
-  .footer-section:first-child {
-    grid-column: span 2;
-    text-align: center;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 15px;
-    margin-bottom: 10px;
-  }
-  .footer-section.stats-box {
-    grid-column: span 2;
-    margin-top: 10px;
-  }
-
-  /* Popup Netflix trên Mobile: Tắt hover, chuyển sang click hoặc ẩn bớt */
-  .movie-card-wrapper:hover .movie-popup-nfx {
-    display: none !important;
-  } /* Tắt popup rắc rối trên mobile */
-
-  /* Admin & Modal */
-  .admin-sidebar {
-    left: -100%;
-    width: 260px;
-    z-index: 6000;
-    transition: left 0.3s ease;
-  }
-  .admin-sidebar.active {
-    left: 0;
-  }
-  .admin-content {
-    margin-left: 0;
-    padding: 15px;
-  }
-  #adminSidebarOverlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 4999;
-    display: none;
+  .hero {
+    min-height: auto !important;
+    padding: 100px 15px 40px !important;
   }
   .modal {
-    max-width: 100%;
+    width: 100% !important;
     height: 100vh;
-    max-height: 100vh;
     border-radius: 0;
     margin: 0;
-    width: 100% !important;
+    max-width: none;
+  }
+
+  /* --- C. XỬ LÝ POPUP TRÊN MOBILE (QUAN TRỌNG) --- */
+
+  /* Mặc định ẩn popup (để không bị hover lung tung) */
+  .movie-card-wrapper:hover .movie-popup-nfx {
+    display: none;
+  }
+
+  /* KHI ĐƯỢC KÍCH HOẠT BẰNG JS (Class .active-mobile) */
+  .movie-card-wrapper.active-mobile .movie-popup-nfx {
+    display: block !important;
+    opacity: 1;
+    visibility: visible;
+    position: fixed; /* Hiện giữa màn hình như Modal */
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) scale(1) !important;
+    width: 90% !important;
+    max-width: 350px;
+    height: auto !important;
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 10000;
+    box-shadow: 0 0 0 100vh rgba(0, 0, 0, 0.8); /* Làm tối nền xung quanh */
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes popIn {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -40%) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
   }
 }
