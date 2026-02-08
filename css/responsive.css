@@ -181,3 +181,137 @@
     }
   }
 }
+/* ============================================
+   MOBILE MOVIE PREVIEW (NETFLIX STYLE)
+   ============================================ */
+.mobile-preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end; /* Hiện từ dưới lên */
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+.mobile-preview-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-preview-card {
+  width: 100%;
+  max-width: 500px;
+  background: #181818;
+  border-radius: 16px 16px 0 0; /* Bo tròn góc trên */
+  overflow: hidden;
+  position: relative;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
+  padding-bottom: 20px;
+}
+.mobile-preview-overlay.active .mobile-preview-card {
+  transform: translateY(0);
+}
+
+.mobile-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  z-index: 10;
+  font-size: 16px;
+}
+
+.mobile-preview-img {
+  width: 100%;
+  height: 200px;
+  position: relative;
+}
+.mobile-preview-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mobile-preview-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #181818 0%, transparent 100%);
+}
+
+.mobile-preview-body {
+  padding: 15px 20px;
+}
+.mobile-preview-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  font-family: "Montserrat", sans-serif;
+}
+.mobile-preview-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: #bcbcbc;
+  margin-bottom: 10px;
+  align-items: center;
+}
+.mobile-preview-meta .match {
+  color: #46d369;
+  font-weight: 700;
+}
+.mobile-preview-meta .age {
+  border: 1px solid #bcbcbc;
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.mobile-preview-desc {
+  font-size: 13px;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.btn-mobile-play {
+  width: 100%;
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 12px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.mobile-preview-actions .mobile-action-group {
+  display: flex;
+  gap: 40px;
+  justify-content: flex-start;
+}
+.btn-mobile-icon {
+  background: none;
+  border: none;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #bcbcbc;
+}
+.btn-mobile-icon i {
+  font-size: 20px;
+  color: #fff;
+}
