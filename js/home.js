@@ -67,13 +67,15 @@ function renderAllMovies(movies = null) {
 /* ============================================================
    HÀM TẠO THẺ PHIM (ĐÃ FIX MOBILE TOUCH & GIỮ NGUYÊN TÍNH NĂNG CŨ)
    ============================================================ */
+/* ============================================================
+   1. HÀM TẠO THẺ PHIM (Cập nhật để hỗ trợ Mobile chuẩn)
+   ============================================================ */
 function createMovieCard(movie) {
-  // 1. Logic xử lý nhãn Phần/Mùa (Giữ nguyên)
+  // Logic xử lý dữ liệu (giữ nguyên)
   const partHtml = movie.part
     ? `<span style="background: var(--accent-primary); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; text-transform: uppercase; vertical-align: middle;">${movie.part}</span>`
     : "";
 
-  // 2. Logic kiểm tra yêu thích (Giữ nguyên)
   let isLiked = false;
   if (
     typeof currentUser !== "undefined" &&
@@ -82,34 +84,20 @@ function createMovieCard(movie) {
   ) {
     isLiked = currentUser.favorites.includes(movie.id);
   }
-
-  // Style cho nút thích (Giữ nguyên)
-  const likeStyle = isLiked ? "color: #e50914; border-color: #e50914;" : "";
+  const likeStyle = isLiked
+    ? "color: #e50914; border-color: #e50914;"
+    : "color: #fff; border-color: rgba(255, 255, 255, 0.2);";
   const likeIcon = isLiked ? "fas fa-heart" : "far fa-heart";
   const likeClass = isLiked ? "liked" : "";
-
-  // 3. XỬ LÝ DỮ LIỆU THẬT (Giữ nguyên)
-  const matchScore = movie.rating
-    ? Math.round(movie.rating * 10)
-    : Math.floor(Math.random() * (99 - 85 + 1) + 85);
-
-  const quality = movie.quality || "HD";
-  const ageLimit = movie.ageLimit || "T13";
-  const duration = movie.duration || "90 phút";
-
-  // Link ảnh mặc định (Dark Theme)
   const fallbackImage =
     "https://placehold.co/300x450/2a2a3a/FFFFFF?text=NO+POSTER";
+  const matchScore = movie.rating ? Math.round(movie.rating * 10) : 95;
 
   return `
     <div class="movie-card-wrapper" id="movie-wrapper-${movie.id}">
-        
         <div class="card movie-card-static" onclick="handleMovieClick(event, '${movie.id}')">
             <div class="card-image">
-                <img src="${movie.posterUrl}" 
-                     alt="${movie.title}" 
-                     loading="lazy" 
-                     onerror="this.onerror=null; this.src='${fallbackImage}';">
+                <img src="${movie.posterUrl}" alt="${movie.title}" loading="lazy" onerror="this.src='${fallbackImage}';">
             </div>
             <div class="card-body">
                 <h4 class="card-title">${movie.title}</h4>
@@ -123,44 +111,28 @@ function createMovieCard(movie) {
         </div>
 
         <div class="movie-popup-nfx" onclick="viewMovieDetail('${movie.id}')">
-            
-            <button class="mobile-close-popup" onclick="event.stopPropagation(); closeAllPopups()" 
-                    style="display:none; position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.3); color:#fff; width:28px; height:28px; border-radius:50%; z-index:20; align-items:center; justify-content:center;">
-                <i class="fas fa-times" style="font-size:14px;"></i>
-            </button>
-
             <div class="popup-header-img">
-                <img src="${movie.posterUrl}" 
-                     alt="${movie.title}"
-                     onerror="this.onerror=null; this.src='${fallbackImage}';">
+                <img src="${movie.posterUrl}" onerror="this.onerror=null; this.src='${fallbackImage}';">
             </div>
             <div class="popup-body">
                 <div class="popup-actions">
                     <button class="btn-popup-play" onclick="event.stopPropagation(); viewMovieDetail('${movie.id}')">
                         <i class="fas fa-play"></i> Xem ngay
                     </button>
-                    
-                    <button class="btn-popup-icon ${likeClass} btn-like-${movie.id}" 
-                            title="Thích" 
-                            style="${likeStyle}"
-                            onclick="event.stopPropagation(); toggleFavorite('${movie.id}')">
+                    <button class="btn-popup-icon ${likeClass} btn-like-${movie.id}" style="${likeStyle}" onclick="event.stopPropagation(); toggleFavorite('${movie.id}')">
                         <i class="${likeIcon}"></i>
                     </button>
-                    
-                    <button class="btn-popup-icon ml-auto" title="Chi tiết" onclick="event.stopPropagation(); viewMovieDetail('${movie.id}')">
+                    <button class="btn-popup-icon ml-auto" onclick="event.stopPropagation(); viewMovieDetail('${movie.id}')">
                         <i class="fas fa-chevron-down"></i>
                     </button>
                 </div>
-
                 <h3 class="popup-title-new">${movie.title} ${partHtml}</h3>
-                
                 <div class="popup-meta-row">
                     <span class="meta-match">${matchScore}% Phù hợp</span>
-                    <span class="meta-age">${ageLimit}</span>
-                    <span>${duration}</span>
-                    <span class="meta-quality">${quality}</span>
+                    <span class="meta-age">${movie.ageLimit || "T13"}</span>
+                    <span>${movie.duration || "90p"}</span>
+                    <span class="meta-quality">${movie.quality || "HD"}</span>
                 </div>
-
                 <div class="popup-genres-row">
                     <span>${movie.category || "Phim mới"}</span>
                     <span class="dot">•</span>
@@ -173,41 +145,102 @@ function createMovieCard(movie) {
 }
 
 /* ============================================================
-   👇 CÁC HÀM HỖ TRỢ CLICK TRÊN MOBILE (Dán thêm vào cuối file home.js)
+   2. HÀM XỬ LÝ CLICK THÔNG MINH (Dán vào cuối file home.js)
    ============================================================ */
 
 function handleMovieClick(event, movieId) {
-  // Nếu là màn hình PC (> 768px) -> Vào thẳng trang chi tiết
+  // A. Nếu là PC (> 768px): Vào thẳng trang chi tiết
   if (window.innerWidth > 768) {
     viewMovieDetail(movieId);
     return;
   }
 
-  // Nếu là Mobile:
-  event.stopPropagation(); // Ngăn click lan ra ngoài
+  // B. Nếu là Mobile: Dừng sự kiện click để không xung đột
+  event.stopPropagation();
 
-  // 1. Đóng popup khác đang mở
-  closeAllPopups();
+  // Lấy thông tin phim
+  const movie = allMovies.find((m) => m.id === movieId);
+  if (!movie) return;
 
-  // 2. Mở popup của phim này
-  const wrapper = document.getElementById(`movie-wrapper-${movieId}`);
-  if (wrapper) {
-    wrapper.classList.add("active-mobile"); // Kích hoạt CSS hiển thị
+  // Mở bảng thông tin Mobile (Global Modal)
+  openMobilePreview(movie);
+}
 
-    // Hiện nút đóng
-    const closeBtn = wrapper.querySelector(".mobile-close-popup");
-    if (closeBtn) closeBtn.style.display = "flex";
+function openMobilePreview(movie) {
+  // Xóa bảng cũ nếu có
+  const oldPopup = document.getElementById("mobile-preview-modal");
+  if (oldPopup) oldPopup.remove();
+
+  // Chuẩn bị dữ liệu Like
+  let isLiked = false;
+  if (
+    typeof currentUser !== "undefined" &&
+    currentUser &&
+    currentUser.favorites
+  ) {
+    isLiked = currentUser.favorites.includes(movie.id);
+  }
+  const likeIcon = isLiked ? "fas fa-heart" : "far fa-heart";
+  const likeColor = isLiked ? "#e50914" : "#fff";
+
+  // HTML cho Bảng thông tin Mobile (Nằm đè lên toàn màn hình)
+  const html = `
+        <div id="mobile-preview-modal" class="mobile-preview-overlay" onclick="closeMobilePreview()">
+            <div class="mobile-preview-box" onclick="event.stopPropagation()">
+                <button class="mobile-close-btn" onclick="closeMobilePreview()">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <div class="mobile-img-container">
+                    <img src="${movie.posterUrl}" onerror="this.src='https://placehold.co/300x450?text=No+Image'">
+                    <div class="mobile-play-btn" onclick="viewMovieDetail('${movie.id}'); closeMobilePreview()">
+                        <i class="fas fa-play"></i>
+                    </div>
+                </div>
+
+                <div class="mobile-info-body">
+                    <h3 class="mobile-title">${movie.title}</h3>
+                    <div class="mobile-meta">
+                        <span style="color:#46d369; font-weight:bold;">98% Phù hợp</span>
+                        <span style="border:1px solid #777; padding:0 4px; border-radius:2px">${movie.ageLimit || "T13"}</span>
+                        <span>${movie.year || "2026"}</span>
+                        <span style="border:1px solid #777; padding:0 4px; border-radius:2px">HD</span>
+                    </div>
+                    
+                    <div class="mobile-actions-row">
+                        <button class="btn-mobile-main" onclick="viewMovieDetail('${movie.id}'); closeMobilePreview()">
+                            <i class="fas fa-play"></i> Xem Ngay
+                        </button>
+                        
+                        <button class="btn-mobile-circle btn-like-${movie.id}" onclick="toggleFavorite('${movie.id}')" style="color: ${likeColor}; border-color: ${isLiked ? "#e50914" : "#555"}">
+                            <i class="${likeIcon}"></i>
+                        </button>
+                    </div>
+
+                    <div class="mobile-genres">
+                        ${movie.category} • ${movie.country}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+  document.body.insertAdjacentHTML("beforeend", html);
+
+  // Animation hiện lên
+  setTimeout(() => {
+    const modal = document.getElementById("mobile-preview-modal");
+    if (modal) modal.classList.add("active");
+  }, 10);
+}
+
+function closeMobilePreview() {
+  const modal = document.getElementById("mobile-preview-modal");
+  if (modal) {
+    modal.classList.remove("active");
+    setTimeout(() => modal.remove(), 300);
   }
 }
-
-function closeAllPopups() {
-  document.querySelectorAll(".movie-card-wrapper").forEach((el) => {
-    el.classList.remove("active-mobile");
-    const closeBtn = el.querySelector(".mobile-close-popup");
-    if (closeBtn) closeBtn.style.display = "none";
-  });
-}
-
 // Tự động đóng popup khi bấm ra ngoài vùng đen (trên Mobile)
 document.addEventListener("click", function (event) {
   if (window.innerWidth <= 768) {

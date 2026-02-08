@@ -247,53 +247,44 @@ function switchAuthTab(tabName) {
 /* ============================================================
    HÀM TOGGLE SIDEBAR (ĐÃ FIX: ĐỒNG BỘ OVERLAY & MENU)
    ============================================================ */
+/* Dán đè hàm này vào js/utils.js */
 function toggleSidebar() {
   const sidebar = document.querySelector(".admin-sidebar");
-  const content = document.querySelector(".admin-content");
   const overlayId = "adminSidebarOverlay";
 
-  // Nếu không tìm thấy sidebar thì dừng ngay để tránh lỗi null
   if (!sidebar) return;
 
-  // 1. XỬ LÝ CHO MOBILE (Màn hình <= 768px)
+  // 1. Logic cho Mobile
   if (window.innerWidth <= 768) {
-    // Toggle class 'active' (Mở/Đóng)
+    // Toggle trạng thái mở/đóng
     sidebar.classList.toggle("active");
 
-    // Kiểm tra xem sau khi toggle thì menu đang MỞ hay ĐÓNG?
+    // Kiểm tra xem nó vừa mở hay vừa đóng?
     const isOpen = sidebar.classList.contains("active");
 
-    // Tìm hoặc tạo Overlay
+    // Xử lý lớp phủ đen (Overlay)
     let overlay = document.getElementById(overlayId);
-
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.id = overlayId;
-      // Z-index 2999 để nằm dưới Sidebar (thường Sidebar là 3000+)
       overlay.style.cssText =
-        "position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2999; display:none; cursor:pointer;";
+        "position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:5999; display:none; cursor:pointer;";
 
-      // QUAN TRỌNG: Sự kiện click vào vùng đen -> BẮT BUỘC ĐÓNG
+      // QUAN TRỌNG: Bấm vào đen -> BẮT BUỘC ĐÓNG
       overlay.onclick = function () {
-        sidebar.classList.remove("active");
-        overlay.style.display = "none";
+        sidebar.classList.remove("active"); // Gỡ class active
+        overlay.style.display = "none"; // Ẩn overlay
       };
-
       document.body.appendChild(overlay);
     }
 
-    // Đồng bộ hiển thị Overlay với trạng thái Menu
-    // Nếu Menu mở -> Hiện Overlay. Nếu Menu đóng -> Ẩn Overlay.
+    // Đồng bộ hiển thị: Menu mở thì hiện Overlay, Menu đóng thì ẩn
     overlay.style.display = isOpen ? "block" : "none";
   } else {
-    // 2. XỬ LÝ CHO DESKTOP (> 768px)
-    // Thu nhỏ / Phóng to menu
+    // 2. Logic cho Desktop (Thu nhỏ menu)
     sidebar.classList.toggle("collapsed");
-
-    // Đẩy nội dung chính sang phải/trái tương ứng
-    if (content) {
-      content.classList.toggle("expanded");
-    }
+    const content = document.querySelector(".admin-content");
+    if (content) content.classList.toggle("expanded");
   }
 }
 // ============================================
