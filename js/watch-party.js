@@ -21,7 +21,7 @@ let isMicEnabled = false; // Mặc định là TẮT MIC (false)
 let globalAudioContext = null; // Singleton AudioContext
 
 // QUẢN LÝ ÂM THANH
-let isDeafened = true; // // Mặc định là TẮT LOA (true)
+let isDeafened = false; // // Mặc định là TẮT LOA (true)
 let localMutedPeers = new Set(); // Danh sách ID những người mình tắt tiếng riêng lẻ
 
 // ==========================================
@@ -571,7 +571,7 @@ function toggleDeafen() {
     }
   }
 
-  // 2. Tìm tất cả audio
+  // 2. Tìm tất cả audio và xử lý
   const allAudios = document.querySelectorAll("#audioContainer audio");
   allAudios.forEach((audio) => {
     const peerId = audio.id.replace("audio-", "");
@@ -584,13 +584,14 @@ function toggleDeafen() {
         audio.muted = true;
       } else {
         audio.muted = false;
-        audio.play().catch((e) => console.warn("Lỗi resume audio:", e)); // Quan trọng!
+        // 👇 QUAN TRỌNG: Gọi play() lại để đánh thức luồng âm thanh
+        audio.play().catch((e) => console.warn("Lỗi resume audio:", e));
       }
     }
   });
 
   showNotification(
-    isDeafened ? "Đã tắt âm thanh phòng" : "Đã bật âm thanh phòng",
+    isDeafened ? "Đã tắt âm thanh phòng 🔇" : "Đã bật âm thanh phòng 🔊",
     "info",
   );
 }
@@ -760,17 +761,40 @@ function monitorAudioLevel(stream, peerId) {
 function addAudioStream(audio, stream, peerId) {
   audio.srcObject = stream;
   audio.id = "audio-" + peerId;
-  audio.autoplay = true; // Đảm bảo autoplay
+
+  // 👇 FIX QUAN TRỌNG CHO MOBILE & CHROME 👇
+  audio.autoplay = true;
+  audio.playsInline = true; // Bắt buộc cho iOS/Android để không bị fullscreen
+  audio.controls = false; // Ẩn control mặc định
+
+  // Kích hoạt phân tích âm thanh (để avatar nháy)
   monitorAudioLevel(stream, peerId);
-  // 👆 Giúp avatar người khác sáng lên khi họ nói
-  // Sự kiện khi stream sẵn sàng
+
+  // Xử lý sự kiện khi audio sẵn sàng
   audio.addEventListener("loadedmetadata", () => {
-    // Kiểm tra trạng thái hiện tại để quyết định có Mute không
+    // Nếu đang bật chế độ "Tắt Loa" hoặc đã mute riêng người này
     if (isDeafened || localMutedPeers.has(peerId)) {
       audio.muted = true;
     } else {
       audio.muted = false;
-      audio.play().catch((e) => console.log("Cần tương tác để phát audio"));
+      // Cố gắng phát âm thanh
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.warn("Autoplay bị chặn, cần tương tác người dùng:", error);
+          // Nếu bị chặn, hiện thông báo nhỏ nhắc người dùng
+          showNotification("Chạm vào màn hình để nghe tiếng 🔊", "info");
+
+          // Thêm sự kiện chạm bất kỳ đâu để "mở khóa" âm thanh
+          const resumeAudio = () => {
+            audio.play();
+            document.removeEventListener("click", resumeAudio);
+            document.removeEventListener("touchstart", resumeAudio);
+          };
+          document.addEventListener("click", resumeAudio);
+          document.addEventListener("touchstart", resumeAudio);
+        });
+      }
     }
   });
 
@@ -778,10 +802,14 @@ function addAudioStream(audio, stream, peerId) {
   if (!container) {
     container = document.createElement("div");
     container.id = "audioContainer";
-    // 👇 FIX: Dùng position absolute thay vì display:none để tránh bị trình duyệt chặn tiếng
+    // 👇 Dùng opacity 0 + pointer-events none thay vì ẩn hẳn
+    // Một số trình duyệt sẽ tắt tiếng nếu element bị display:none hoặc nằm quá xa
     container.style.position = "absolute";
-    container.style.top = "-9999px";
-    container.style.left = "-9999px";
+    container.style.opacity = "0";
+    container.style.pointerEvents = "none";
+    container.style.height = "1px";
+    container.style.width = "1px";
+    container.style.overflow = "hidden";
     document.body.appendChild(container);
   }
 
