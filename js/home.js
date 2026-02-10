@@ -149,37 +149,37 @@ function createMovieCard(movie) {
    ============================================================ */
 
 /* --- HÀM ĐÃ SỬA LỖI TRÙNG ID --- */
+/* --- DÁN ĐÈ VÀO js/home.js --- */
+
 function handleMovieClick(event, movieId) {
   // 1. PC: Chuyển trang luôn
-  if (window.innerWidth > 768) {
+  if (window.innerWidth > 1366) {
     viewMovieDetail(movieId);
     return;
   }
 
   // 2. MOBILE:
-  // Nếu đang bấm vào các nút bên trong popup (Play, Like) thì giữ nguyên để nút đó chạy
+  // Nếu bấm vào nút bên trong popup (Play, Like) thì giữ nguyên
   if (event.target.closest(".movie-popup-nfx")) {
     return;
   }
 
-  // --- SỬA LỖI TẠI ĐÂY ---
+  // 👇 FIX: Dùng getElementById để chắc chắn lấy đúng thẻ wrapper theo ID
+  const currentWrapper = document.getElementById(`movie-wrapper-${movieId}`);
+  if (!currentWrapper) return;
 
-  // Lấy chính xác cái thẻ mà bạn đang chạm tay vào (không tìm theo ID nữa)
-  const currentWrapper = event.currentTarget;
-
-  // Kiểm tra xem thẻ này đang mở hay đóng?
+  // Kiểm tra xem nó đang mở hay đóng
   const isAlreadyOpen = currentWrapper.classList.contains("active-mobile");
 
-  // Bước 1: Đóng tất cả các popup khác lại cho gọn màn hình
+  // Đóng tất cả popup khác
   closeAllPopups();
 
-  // Bước 2: Nếu thẻ vừa bấm chưa mở -> Thì mở nó ra
-  // (Nếu nó đang mở rồi thì ở Bước 1 ta đã đóng nó, coi như thao tác tắt đi)
+  // Nếu chưa mở thì mở ra (Nếu đang mở rồi thì ở trên đã đóng lại -> Tắt)
   if (!isAlreadyOpen) {
     currentWrapper.classList.add("active-mobile");
   }
 
-  // Ngăn sự kiện lan ra ngoài
+  // Ngăn click lan ra ngoài
   event.stopPropagation();
 }
 function closeAllPopups() {
@@ -190,7 +190,7 @@ function closeAllPopups() {
 
 // Bấm ra ngoài khoảng trống thì đóng hết
 document.addEventListener("click", function (event) {
-  if (window.innerWidth <= 768) {
+  if (window.innerWidth <= 1366) {
     // Nếu không bấm vào bất kỳ card nào
     if (!event.target.closest(".movie-card-wrapper")) {
       closeAllPopups();

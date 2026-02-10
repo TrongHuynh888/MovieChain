@@ -240,7 +240,8 @@ async function handleCreateRoom(e) {
     const roomRef = await db.collection("watchRooms").add({
       name: name,
       hostId: currentUser.uid,
-      hostName: currentUser.displayName,
+      hostName:
+        currentUser.displayName || currentUser.email.split("@")[0] || "User",
       movieId: movieId,
       movieTitle: movie.title,
       episodeIndex: parseInt(epIndex),
@@ -341,7 +342,11 @@ async function joinRoom(roomId, type, passwordInput = null) {
     });
 
     await setupMemberAndChat(roomId, roomRef);
-    initVoiceChat();
+    try {
+      initVoiceChat();
+    } catch (err) {
+      console.warn("Không thể khởi động Voice Chat:", err);
+    }
   } catch (error) {
     console.error(error);
     showLoading(false);
@@ -354,7 +359,8 @@ async function setupMemberAndChat(roomId, roomRef) {
     .collection("members")
     .doc(currentUser.uid)
     .set({
-      name: currentUser.displayName,
+      name:
+        currentUser.displayName || currentUser.email.split("@")[0] || "User",
       avatar: currentUser.photoURL || "",
       joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
       isChatBanned: false,
@@ -600,11 +606,17 @@ function initVoiceChat() {
 }
 
 function startPeerConnection() {
+  // 👇 FIX: Luôn hiện nút điều khiển (Loa/Mic) ngay từ đầu để người dùng thấy
+  addMicButtonToUI();
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    console.warn("Trình duyệt không hỗ trợ Voice Chat (getUserMedia missing)");
+    return;
+  }
   navigator.mediaDevices
     .getUserMedia({ audio: true, video: false })
     .then((stream) => {
       myStream = stream;
-      addMicButtonToUI();
       // SỬA ĐOẠN NÀY: Ép Mic tắt ngay khi vừa lấy quyền xong
       isMicEnabled = false;
       if (myStream.getAudioTracks().length > 0) {
@@ -629,6 +641,18 @@ function startPeerConnection() {
     })
     .catch((err) => {
       console.error("Mic Error:", err);
+      // 👇 FIX: Thêm thông báo lỗi cho người dùng khi không lấy được Mic
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError"
+      ) {
+        showNotification(
+          "Bạn đã từ chối quyền Micro. Vui lòng kiểm tra cài đặt của trình duyệt.",
+          "error",
+        );
+      } else {
+        showNotification("Không thể truy cập Micro. Lỗi: " + err.name, "error");
+      }
     });
 }
 
@@ -781,6 +805,16 @@ function toggleMyMic() {
         showNotification("Host đã khóa Mic của bạn!", "error");
         return;
       }
+
+      // 👇 FIX: Kiểm tra nếu chưa có quyền Mic thì báo lỗi
+      if (!myStream) {
+        showNotification(
+          "Không tìm thấy Micro hoặc bạn chưa cấp quyền!",
+          "error",
+        );
+        return;
+      }
+
       isMicEnabled = !isMicEnabled;
       if (myStream) myStream.getAudioTracks()[0].enabled = isMicEnabled;
       updateMicUI(isMicEnabled);

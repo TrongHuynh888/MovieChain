@@ -1118,10 +1118,16 @@ async function loadAdminComments() {
         const movie = allMovies.find((m) => m.id === comment.movieId);
         const movieName = movie ? movie.title : `ID: ${comment.movieId}`;
 
+        const initial = (comment.userName || "U")[0].toUpperCase();
+        const avatarHtml =
+          comment.userAvatar && comment.userAvatar.startsWith("http")
+            ? `<img src="${comment.userAvatar}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; margin-right: 8px;" onerror="this.src='https://ui-avatars.com/api/?name=${initial}&background=random'">`
+            : `<div style="display:inline-block; width:30px; height:30px; line-height:30px; text-align:center; background:#666; color:#fff; border-radius:50%; margin-right:8px; font-size:12px; font-weight:bold;">${initial}</div>`;
+
         // 👇 QUAN TRỌNG: Thêm id="row-comment-${doc.id}" vào thẻ tr
         return `
             <tr id="row-comment-${doc.id}">
-                <td>${escapeHtml(comment.userName || "Ẩn danh")}</td>
+                <td style="display:flex; align-items:center;">${avatarHtml} ${escapeHtml(comment.userName || "Ẩn danh")}</td>
                 <td>${escapeHtml(movieName)}</td>
                 <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     ${escapeHtml(comment.content)}
