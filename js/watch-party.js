@@ -18,6 +18,7 @@ let myPeer = null;
 let myStream = null;
 let peers = {};
 let isMicEnabled = false; // Mặc định là TẮT MIC (false)
+let globalAudioContext = null; // Singleton AudioContext
 
 // QUẢN LÝ ÂM THANH
 let isDeafened = true; // // Mặc định là TẮT LOA (true)
@@ -625,7 +626,17 @@ function startPeerConnection() {
       updateMicUI(false); // Cập nhật icon Mic thành màu đỏ
       monitorAudioLevel(stream, currentUser.uid);
       // 👆 Giúp avatar của chính bạn cũng sáng lên khi bạn nói
-      myPeer = new Peer(currentUser.uid);
+
+      // 👇 FIX: Thêm cấu hình STUN Server để kết nối xuyên mạng (NAT)
+      myPeer = new Peer(currentUser.uid, {
+        config: {
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:global.stun.twilio.com:3478" },
+          ],
+        },
+      });
+
       myPeer.on("open", (id) => {
         connectToAllPeers();
       });
@@ -637,6 +648,11 @@ function startPeerConnection() {
         call.on("stream", (userAudioStream) =>
           addAudioStream(audio, userAudioStream, callerId),
         );
+      });
+
+      // 👇 FIX: Bắt lỗi kết nối Peer
+      myPeer.on("error", (err) => {
+        console.warn("PeerJS Error:", err);
       });
     })
     .catch((err) => {
@@ -677,9 +693,15 @@ function connectToAllPeers() {
 // 👇 HÀM MỚI: Phân tích âm lượng để tạo hiệu ứng nói 👇
 function monitorAudioLevel(stream, peerId) {
   try {
-    const audioContext = new (
-      window.AudioContext || window.webkitAudioContext
-    )();
+    // 👇 FIX: Dùng Singleton AudioContext để tránh lỗi giới hạn (max 6 context)
+    if (!globalAudioContext) {
+      globalAudioContext = new (
+        window.AudioContext || window.webkitAudioContext
+      )();
+    }
+    if (globalAudioContext.state === "suspended") globalAudioContext.resume();
+
+    const audioContext = globalAudioContext;
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
 
@@ -750,7 +772,10 @@ function addAudioStream(audio, stream, peerId) {
   if (!container) {
     container = document.createElement("div");
     container.id = "audioContainer";
-    container.style.display = "none";
+    // 👇 FIX: Dùng position absolute thay vì display:none để tránh bị trình duyệt chặn tiếng
+    container.style.position = "absolute";
+    container.style.top = "-9999px";
+    container.style.left = "-9999px";
     document.body.appendChild(container);
   }
 
