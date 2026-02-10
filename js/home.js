@@ -148,48 +148,54 @@ function createMovieCard(movie) {
    2. HÀM XỬ LÝ CLICK THÔNG MINH (Dán vào cuối file home.js)
    ============================================================ */
 
+/* --- HÀM ĐÃ SỬA LỖI TRÙNG ID --- */
 function handleMovieClick(event, movieId) {
-    // 1. PC: Chuyển trang luôn
-    if (window.innerWidth > 768) {
-        viewMovieDetail(movieId);
-        return;
-    }
+  // 1. PC: Chuyển trang luôn
+  if (window.innerWidth > 768) {
+    viewMovieDetail(movieId);
+    return;
+  }
 
-    // 2. MOBILE:
-    // Nếu đang bấm vào bên trong popup (nút play, like) thì không làm gì (để nút đó tự xử lý)
-    if (event.target.closest('.movie-popup-nfx')) {
-        return;
-    }
+  // 2. MOBILE:
+  // Nếu đang bấm vào các nút bên trong popup (Play, Like) thì giữ nguyên để nút đó chạy
+  if (event.target.closest(".movie-popup-nfx")) {
+    return;
+  }
 
-    // Đóng tất cả popup khác
-    closeAllPopups();
+  // --- SỬA LỖI TẠI ĐÂY ---
 
-    // Mở popup của phim này
-    const wrapper = document.getElementById(`movie-wrapper-${movieId}`);
-    if (wrapper) {
-        // Nếu nó đang mở rồi thì đóng lại (Toggle)
-        if (wrapper.classList.contains('active-mobile')) {
-            wrapper.classList.remove('active-mobile');
-        } else {
-            wrapper.classList.add('active-mobile');
-        }
-    }
+  // Lấy chính xác cái thẻ mà bạn đang chạm tay vào (không tìm theo ID nữa)
+  const currentWrapper = event.currentTarget;
+
+  // Kiểm tra xem thẻ này đang mở hay đóng?
+  const isAlreadyOpen = currentWrapper.classList.contains("active-mobile");
+
+  // Bước 1: Đóng tất cả các popup khác lại cho gọn màn hình
+  closeAllPopups();
+
+  // Bước 2: Nếu thẻ vừa bấm chưa mở -> Thì mở nó ra
+  // (Nếu nó đang mở rồi thì ở Bước 1 ta đã đóng nó, coi như thao tác tắt đi)
+  if (!isAlreadyOpen) {
+    currentWrapper.classList.add("active-mobile");
+  }
+
+  // Ngăn sự kiện lan ra ngoài
+  event.stopPropagation();
 }
-
 function closeAllPopups() {
-    document.querySelectorAll('.movie-card-wrapper').forEach(el => {
-        el.classList.remove('active-mobile');
-    });
+  document.querySelectorAll(".movie-card-wrapper").forEach((el) => {
+    el.classList.remove("active-mobile");
+  });
 }
 
 // Bấm ra ngoài khoảng trống thì đóng hết
-document.addEventListener('click', function(event) {
-    if (window.innerWidth <= 768) {
-        // Nếu không bấm vào bất kỳ card nào
-        if (!event.target.closest('.movie-card-wrapper')) {
-            closeAllPopups();
-        }
+document.addEventListener("click", function (event) {
+  if (window.innerWidth <= 768) {
+    // Nếu không bấm vào bất kỳ card nào
+    if (!event.target.closest(".movie-card-wrapper")) {
+      closeAllPopups();
     }
+  }
 });
 
 /**
