@@ -320,8 +320,9 @@ async function joinRoom(roomId, type, passwordInput = null) {
   }
 }
 
+// 👇 Tìm và thay thế toàn bộ hàm setupMemberAndChat cũ bằng hàm này
 async function setupMemberAndChat(roomId, roomRef) {
-  // 1. Vào phòng (Tạo data thành viên)
+  // 1. Thêm bản thân vào danh sách thành viên
   await roomRef
     .collection("members")
     .doc(currentUser.uid)
@@ -338,57 +339,85 @@ async function setupMemberAndChat(roomId, roomRef) {
     memberCount: firebase.firestore.FieldValue.increment(1),
   });
 
-  // Biến lưu trạng thái cũ để so sánh (để hiện thông báo)
-  let oldChatBanStatus = false;
+  // Biến lưu trạng thái cũ để so sánh (tránh thông báo lặp lại)
+  let wasChatBanned = false;
 
-  // 2. Lắng nghe thay đổi (Realtime)
+  // 2. Lắng nghe thay đổi của phòng
   membersUnsubscribe = roomRef.collection("members").onSnapshot((snapshot) => {
-    // Cập nhật số người
+    // Cập nhật số lượng
     const countEl = document.getElementById("memberCount");
     if (countEl) countEl.textContent = snapshot.size;
 
-    // Vẽ lại danh sách
+    // Vẽ lại danh sách thành viên
     renderMembersList(snapshot);
 
-    // --- KIỂM TRA BẢN THÂN ---
+    // --- KIỂM TRA TRẠNG THÁI CỦA MÌNH ---
     const myDoc = snapshot.docs.find((d) => d.id === currentUser.uid);
 
-    // A. LOGIC KICK (QUAN TRỌNG): Nếu không tìm thấy mình trong danh sách -> Bị Kick
+    // A. LOGIC KICK (Đã hoạt động tốt)
     if (!myDoc && currentRoomId) {
       console.warn("🚫 Phát hiện bị Kick khỏi phòng!");
-      leaveRoom(true); // Gọi hàm thoát (true = bị kick)
-
-      // Hiện thông báo to
+      leaveRoom(true);
       alert("⚠️ BẠN ĐÃ BỊ MỜI RA KHỎI PHÒNG!");
       return;
     }
 
-    // B. LOGIC THÔNG BÁO CẤM/MỞ
+    // B. LOGIC CẤM CHAT & MIC (FIX MỚI)
     if (myDoc) {
       const myData = myDoc.data();
+      const chatInput = document.getElementById("chatInput");
+      const chatBtn = document.querySelector("#chatForm button"); // Nút gửi
 
-      // 1. Check Cấm Chat (Nếu trạng thái thay đổi thì báo)
-      if (myData.isChatBanned !== oldChatBanStatus) {
-        if (myData.isChatBanned) {
+      // --- XỬ LÝ CẤM CHAT ---
+      if (myData.isChatBanned) {
+        // Nếu mới bị cấm lần đầu thì hiện thông báo
+        if (!wasChatBanned) {
           showNotification("⛔ QUẢN TRỊ VIÊN ĐÃ CẤM BẠN CHAT!", "error");
-        } else {
-          showNotification("✅ Bạn đã được mở Chat.", "success");
+          wasChatBanned = true;
         }
-        oldChatBanStatus = myData.isChatBanned;
+
+        // 🔥 KHÓA CỨNG Ô NHẬP LIỆU 🔥
+        if (chatInput) {
+          chatInput.disabled = true; // Không cho nhập
+          chatInput.value = ""; // Xóa chữ đang nhập dở
+          chatInput.placeholder = "⛔ Bạn đang bị cấm chat!";
+          chatInput.style.backgroundColor = "#2a0000"; // Đổi nền đỏ tối cảnh báo
+          chatInput.style.color = "#ff4444";
+          chatInput.style.cursor = "not-allowed";
+        }
+        if (chatBtn) {
+          chatBtn.disabled = true;
+          chatBtn.style.opacity = "0.5";
+        }
+      } else {
+        // Nếu được mở cấm
+        if (wasChatBanned) {
+          showNotification("✅ Bạn đã được mở Chat.", "success");
+          wasChatBanned = false;
+        }
+
+        // MỞ LẠI Ô NHẬP LIỆU
+        if (chatInput) {
+          chatInput.disabled = false;
+          chatInput.placeholder = "Nhập tin nhắn...";
+          chatInput.style.backgroundColor = ""; // Trả về màu gốc
+          chatInput.style.color = "";
+          chatInput.style.cursor = "text";
+        }
+        if (chatBtn) {
+          chatBtn.disabled = false;
+          chatBtn.style.opacity = "1";
+        }
       }
 
-      // 2. Check Cấm Mic
+      // --- XỬ LÝ CẤM MIC (Giữ nguyên) ---
       if (myData.isMicBanned && isMicEnabled) {
-        // Tắt mic ngay lập tức
         if (myStream && myStream.getAudioTracks()[0]) {
           myStream.getAudioTracks()[0].enabled = false;
         }
         isMicEnabled = false;
         updateMicUI(false);
-
         showNotification("⛔ QUẢN TRỊ VIÊN ĐÃ TẮT MIC CỦA BẠN!", "warning");
-
-        // Cập nhật DB để icon đồng bộ
         roomRef
           .collection("members")
           .doc(currentUser.uid)
@@ -795,13 +824,21 @@ function loadChat(roomId) {
       container.scrollTop = container.scrollHeight;
     });
 }
+// 👇 Tìm và thay thế toàn bộ hàm sendChatMessage cũ
 async function sendChatMessage(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
+
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
 
-  // 👇 THÊM ĐOẠN NÀY: Kiểm tra quyền trước khi gửi
+  // 1. KIỂM TRA NHANH: Nếu ô nhập đang bị khóa -> Chặn luôn
+  if (input.disabled) {
+    showNotification("⛔ BẠN ĐANG BỊ CẤM CHAT!", "error");
+    return;
+  }
+
+  // 2. KIỂM TRA KỸ (SERVER-SIDE CHECK): Lấy dữ liệu mới nhất từ DB để chắc chắn
   try {
     const memberDoc = await db
       .collection("watchRooms")
@@ -810,15 +847,22 @@ async function sendChatMessage(e) {
       .doc(currentUser.uid)
       .get();
 
+    // Nếu trên Server ghi là đang bị cấm -> Chặn ngay lập tức
     if (memberDoc.exists && memberDoc.data().isChatBanned) {
       showNotification("⛔ BẠN ĐANG BỊ CẤM CHAT!", "error");
-      return; // Dừng ngay, không gửi nữa
+
+      // Khóa lại giao diện ngay (đề phòng giao diện chưa kịp cập nhật)
+      input.disabled = true;
+      input.value = "";
+      input.placeholder = "⛔ Bạn đang bị cấm chat!";
+      return; // 🛑 DỪNG LẠI, KHÔNG GỬI
     }
   } catch (err) {
-    console.log("Lỗi check chat:", err);
+    console.log("Lỗi kiểm tra quyền chat:", err);
+    // Nếu lỗi mạng, có thể cho qua hoặc chặn tùy bạn, ở đây ta cứ để code chạy tiếp
   }
-  // 👆 HẾT ĐOẠN KIỂM TRA
 
+  // 3. GỬI TIN NHẮN (Khi đã vượt qua mọi kiểm tra)
   try {
     await db
       .collection("watchRooms")
@@ -832,8 +876,12 @@ async function sendChatMessage(e) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
     input.value = "";
+    // Scroll xuống cuối
+    const container = document.getElementById("chatMessages");
+    if (container) container.scrollTop = container.scrollHeight;
   } catch (e) {
-    console.error(e);
+    console.error("Lỗi gửi tin nhắn:", e);
+    showNotification("Không thể gửi tin nhắn", "error");
   }
 }
 function initYouTubePlayer(videoId) {
