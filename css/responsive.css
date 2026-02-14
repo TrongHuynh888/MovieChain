@@ -890,22 +890,20 @@
 [data-theme="light"] .footer-section ul li a {
   color: #555 !important;
 }
-/* --- HIỆU ỨNG VOICE CHAT (FINAL) --- */
-
-/* 1. Hiệu ứng cho Avatar (Viền xanh + Phát sáng) */
+/* ======================================================
+   HIỆU ỨNG VOICE CHAT (GLOBAL - ÁP DỤNG CHO MỌI MÀN HÌNH)
+   ====================================================== */
 .is-speaking .avatar-img,
 img.avatar-img.is-speaking {
-  border: 3px solid #00ff6a !important; /* Xanh lá siêu sáng */
-  box-shadow: 0 0 20px #00ff6a !important; /* Bóng sáng rực */
-  transform: scale(1.15) !important; /* Phóng to rõ rệt */
-  transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important; /* Hiệu ứng nảy */
+  border: 3px solid #00ff6a !important; /* Xanh lá dạ quang */
+  box-shadow: 0 0 15px #00ff6a !important; /* Phát sáng mạnh */
+  transform: scale(1.15) !important;
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
   z-index: 100 !important;
-  position: relative !important;
 }
 
-/* 2. Hiệu ứng nền cho cả dòng tên thành viên */
+/* Hiệu ứng rung nền cho cả dòng tên */
 .member-item.is-speaking {
   background: rgba(0, 255, 106, 0.15) !important;
   border: 1px solid rgba(0, 255, 106, 0.3) !important;
-  border-radius: 8px !important;
 }

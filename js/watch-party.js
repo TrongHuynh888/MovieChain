@@ -765,9 +765,7 @@ function connectToAllPeers() {
       });
     });
 }
-// 👇 HÀM MỚI: Phân tích âm lượng để tạo hiệu ứng nói 👇
-// 👇 HÀM MỚI: Phân tích âm lượng (Fix lỗi Chrome tự ngắt)
-// 👇 HÀM PHÂN TÍCH ÂM THANH (FIX LỖI RACE CONDITION)
+// 👇 HÀM PHÂN TÍCH ÂM THANH (BẢN FINAL: BẤT TỬ - KHÔNG BAO GIỜ NGẮT)
 function monitorAudioLevel(stream, peerId) {
   try {
     if (!globalAudioContext) {
@@ -775,65 +773,52 @@ function monitorAudioLevel(stream, peerId) {
         window.AudioContext || window.webkitAudioContext
       )();
     }
-    // 1. Luôn cố gắng đánh thức AudioContext nếu nó đang ngủ
+    // Cố gắng đánh thức liên tục nếu bị ngủ
     if (globalAudioContext.state === "suspended") {
-      // Thử đánh thức (có thể thất bại nếu chưa click, nhưng cứ thử)
-      globalAudioContext.resume().catch((e) => {});
+      globalAudioContext.resume().catch(() => {});
     }
 
     const audioContext = globalAudioContext;
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
 
-    source.connect(analyser);
-
-    // Kết nối vào loa ảo (Mute) để giữ luồng hoạt động
+    // Kết nối loa ảo để giữ luồng active
     const gainZero = audioContext.createGain();
-    gainZero.gain.value = 0;
+    gainZero.gain.value = 0.001; // Để cực nhỏ thay vì 0 hẳn để tránh bị Chrome tối ưu bỏ đi
     source.connect(gainZero);
     gainZero.connect(audioContext.destination);
+
+    source.connect(analyser);
 
     analyser.fftSize = 256;
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
-    // Biến đếm số lần không tìm thấy UI
-    let missingUICount = 0;
-
     const checkVolume = () => {
-      // 2. Tìm UI của thành viên
+      // Tìm UI (Avatar)
       const memberRow = document.getElementById(`member-row-${peerId}`);
 
-      // 👇 FIX QUAN TRỌNG: NẾU KHÔNG THẤY UI, ĐỪNG HỦY NGAY!
+      // 👇 LOGIC BẤT TỬ: Nếu không thấy UI, chỉ đơn giản là đợi frame sau.
+      // KHÔNG BAO GIỜ gọi disconnect() ở đây nữa.
       if (!memberRow) {
-        missingUICount++;
-        // Nếu không thấy UI quá 1000 lần (khoảng 20 giây) mới chịu hủy
-        if (missingUICount > 1000) {
-          source.disconnect();
-          gainZero.disconnect();
-          return;
-        }
-        // Chưa thấy thì chờ tiếp frame sau
         requestAnimationFrame(checkVolume);
         return;
       }
 
-      // Nếu đã thấy UI -> Reset biến đếm
-      missingUICount = 0;
-
       analyser.getByteFrequencyData(dataArray);
-
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) {
         sum += dataArray[i];
       }
       const average = sum / bufferLength;
 
-      // Hạ ngưỡng nhạy xuống thấp hơn (3) để dễ nháy
+      // Debug: Nếu bạn mở Console (F12) sẽ thấy số này nhảy khi nói
+      // if (average > 0) console.log(`🎤 Voice ${peerId}:`, average);
+
+      // Ngưỡng nhạy (giữ mức 3-5 là đẹp)
       const speakingThreshold = 3;
       const avatar = memberRow.querySelector(".avatar-img");
 
-      // LOGIC VISUAL
       if (average > speakingThreshold) {
         if (avatar) avatar.classList.add("is-speaking");
         memberRow.classList.add("is-speaking");
@@ -845,7 +830,8 @@ function monitorAudioLevel(stream, peerId) {
       requestAnimationFrame(checkVolume);
     };
 
-    checkVolume();
+    checkVolume(); // Bắt đầu vòng lặp
+    console.log(`✅ Đã kích hoạt theo dõi âm thanh cho: ${peerId}`);
   } catch (e) {
     console.warn("Lỗi phân tích âm thanh:", e);
   }
