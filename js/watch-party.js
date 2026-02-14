@@ -321,6 +321,7 @@ async function joinRoom(roomId, type, passwordInput = null) {
 }
 
 async function setupMemberAndChat(roomId, roomRef) {
+  // 1. Thêm bản thân vào phòng
   await roomRef
     .collection("members")
     .doc(currentUser.uid)
@@ -332,28 +333,52 @@ async function setupMemberAndChat(roomId, roomRef) {
       isMicMuted: false,
       isMicBanned: false,
     });
+
+  // Tăng biến đếm
   await roomRef.update({
     memberCount: firebase.firestore.FieldValue.increment(1),
   });
 
+  // 2. Lắng nghe danh sách thành viên (LOGIC QUAN TRỌNG)
   membersUnsubscribe = roomRef.collection("members").onSnapshot((snapshot) => {
-    document.getElementById("memberCount").textContent = snapshot.size;
+    // Cập nhật số lượng
+    const countEl = document.getElementById("memberCount");
+    if (countEl) countEl.textContent = snapshot.size;
+
+    // Render giao diện
     renderMembersList(snapshot);
 
-    const myData = snapshot.docs.find((d) => d.id === currentUser.uid)?.data();
-    if (myData && myData.isMicBanned && isMicEnabled) {
-      if (myStream) myStream.getAudioTracks()[0].enabled = false;
-      isMicEnabled = false;
-      updateMicUI(false);
-      showNotification("Chủ phòng đã tắt mic của bạn", "warning");
-      roomRef
-        .collection("members")
-        .doc(currentUser.uid)
-        .update({ isMicMuted: true });
+    // --- KIỂM TRA: MÌNH CÒN TRONG PHÒNG KHÔNG? ---
+    // (Fix lỗi Kick không hoạt động)
+    const amIHere = snapshot.docs.find((d) => d.id === currentUser.uid);
+    if (!amIHere && currentRoomId) {
+      // Nếu không tìm thấy mình -> Bị Kick hoặc lỗi mạng -> Buộc thoát
+      leaveRoom(true); // true = bị kick
+      alert("⚠️ BẠN ĐÃ BỊ MỜI RA KHỎI PHÒNG!");
+      return;
+    }
+
+    // Kiểm tra xem có bị cấm Mic không
+    if (amIHere) {
+      const myData = amIHere.data();
+      if (myData.isMicBanned && isMicEnabled) {
+        if (myStream) myStream.getAudioTracks()[0].enabled = false;
+        isMicEnabled = false;
+        updateMicUI(false);
+        showNotification("Host đã tắt mic của bạn", "warning");
+        // Đồng bộ lại DB
+        roomRef
+          .collection("members")
+          .doc(currentUser.uid)
+          .update({ isMicMuted: true });
+      }
     }
   });
 
+  // 3. Load Chat & Gửi thông báo vào phòng
   loadChat(roomId);
+
+  // Gửi tin nhắn hệ thống: "A đã vào phòng"
   sendSystemMessage(`${currentUser.displayName} đã vào phòng 👋`);
 }
 
@@ -824,17 +849,85 @@ function handleSync(data) {
       player.pauseVideo();
   }
 }
-async function leaveRoom() {
-  if (myPeer) myPeer.destroy();
-  if (myStream) myStream.getTracks().forEach((t) => t.stop());
+// Thay thế toàn bộ hàm leaveRoom cũ
+async function leaveRoom(isKicked = false) {
+  // 1. Gửi thông báo Chat (Nếu tự rời đi)
+  if (!isKicked && currentRoomId) {
+    try {
+      // Gửi nhanh tin nhắn báo rời
+      await db
+        .collection("watchRooms")
+        .doc(currentRoomId)
+        .collection("chat")
+        .add({
+          content: `${currentUser.displayName} đã rời phòng 🚪`,
+          type: "system",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+    } catch (e) {
+      console.log("Không gửi được tn rời phòng");
+    }
+  }
+
+  // 2. Dọn dẹp Voice Chat & Âm thanh (QUAN TRỌNG: FIX LỖI NGHE TIẾNG)
+  if (myPeer) {
+    myPeer.destroy();
+    myPeer = null;
+  }
+  if (myStream) {
+    myStream.getTracks().forEach((track) => track.stop());
+    myStream = null;
+  }
+
+  // Xóa sạch các thẻ Audio của người khác
+  document.querySelectorAll("audio").forEach((el) => el.remove());
+  const audioContainer = document.getElementById("audioContainer");
+  if (audioContainer) audioContainer.innerHTML = "";
+
+  // 3. Hủy lắng nghe Firebase
   if (roomUnsubscribe) roomUnsubscribe();
   if (chatUnsubscribe) chatUnsubscribe();
   if (membersUnsubscribe) membersUnsubscribe();
+
+  // 4. Dọn dẹp Player
+  if (player && typeof player.destroy === "function") {
+    try {
+      player.destroy();
+    } catch (e) {}
+  }
+  player = null;
+  document.getElementById("partyPlayer").innerHTML = ""; // Xóa trắng iframe
+
+  // 5. Xóa tên khỏi danh sách thành viên (Nếu không phải bị kick)
+  if (!isKicked && currentRoomId) {
+    try {
+      await db
+        .collection("watchRooms")
+        .doc(currentRoomId)
+        .collection("members")
+        .doc(currentUser.uid)
+        .delete();
+      await db
+        .collection("watchRooms")
+        .doc(currentRoomId)
+        .update({
+          memberCount: firebase.firestore.FieldValue.increment(-1),
+        });
+    } catch (e) {
+      console.log("Lỗi xóa user:", e);
+    }
+  }
+
+  // 6. Reset giao diện
   currentRoomId = null;
   document.getElementById("partyRoom").classList.add("hidden");
   document.getElementById("partyLobby").classList.remove("hidden");
+
+  // Hiện lại Footer
   const footer = document.querySelector("footer");
   if (footer) footer.style.display = "block";
+
+  console.log("✅ Đã thoát phòng sạch sẽ.");
 }
 function renderMessage(msg, c) {
   const div = document.createElement("div");
@@ -1074,24 +1167,48 @@ window.kickUser = async function (uid, name) {
   if (!confirm(`Bạn có chắc muốn mời ${name} ra khỏi phòng?`)) return;
 
   try {
+    // 1. Gửi thông báo lên kênh Chat trước
+    await db
+      .collection("watchRooms")
+      .doc(currentRoomId)
+      .collection("chat")
+      .add({
+        content: `🚫 ${name} đã bị mời ra khỏi phòng.`,
+        type: "system",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+    // 2. Xóa thành viên (Code bên phía nạn nhân sẽ tự bắt sự kiện này và thoát)
     await db
       .collection("watchRooms")
       .doc(currentRoomId)
       .collection("members")
       .doc(uid)
       .delete();
-    // Giảm số lượng thành viên đi 1
+
+    // 3. Giảm số lượng
     await db
       .collection("watchRooms")
       .doc(currentRoomId)
       .update({
         memberCount: firebase.firestore.FieldValue.increment(-1),
       });
+
     showNotification(`Đã mời ${name} ra khỏi phòng`, "success");
   } catch (e) {
     console.error("Lỗi kick user:", e);
   }
 };
+
+// Đảm bảo nút "Rời phòng" trong HTML gọi đúng hàm
+// Bạn hãy tìm nút "Rời phòng" trong file HTML (hoặc JS tạo ra nó) và đảm bảo nó là onclick="leaveRoom()"
+// Nếu nút đó có ID là "btnLeaveRoom", thêm dòng này vào cuối file JS:
+setTimeout(() => {
+  const btnLeave =
+    document.getElementById("btnLeaveRoom") ||
+    document.querySelector(".btn-leave-room");
+  if (btnLeave) btnLeave.onclick = () => leaveRoom();
+}, 2000);
 
 // 2. Các hàm điều khiển Player (Play, Pause, Tua) - Gán vào window để HTML gọi được
 window.syncPlay = function () {
