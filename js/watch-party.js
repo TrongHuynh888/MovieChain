@@ -767,6 +767,7 @@ function connectToAllPeers() {
 }
 // 👇 HÀM MỚI: Phân tích âm lượng để tạo hiệu ứng nói 👇
 // 👇 HÀM MỚI: Phân tích âm lượng (Fix lỗi Chrome tự ngắt)
+// 👇 HÀM PHÂN TÍCH ÂM THANH (FIX LỖI RACE CONDITION)
 function monitorAudioLevel(stream, peerId) {
   try {
     if (!globalAudioContext) {
@@ -774,62 +775,69 @@ function monitorAudioLevel(stream, peerId) {
         window.AudioContext || window.webkitAudioContext
       )();
     }
-    // Luôn đảm bảo AudioContext đang chạy
+    // 1. Luôn cố gắng đánh thức AudioContext nếu nó đang ngủ
     if (globalAudioContext.state === "suspended") {
-      globalAudioContext.resume();
+      // Thử đánh thức (có thể thất bại nếu chưa click, nhưng cứ thử)
+      globalAudioContext.resume().catch((e) => {});
     }
 
     const audioContext = globalAudioContext;
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
 
-    // 1. Kết nối nguồn -> Bộ phân tích
     source.connect(analyser);
 
-    // 🔥 FIX QUAN TRỌNG: KẾT NỐI VÀO LOA ẢO (MUTE) 🔥
-    // Điều này lừa trình duyệt rằng stream đang được sử dụng,
-    // giúp ngăn chặn việc trình duyệt tự động "đóng băng" bộ phân tích.
+    // Kết nối vào loa ảo (Mute) để giữ luồng hoạt động
     const gainZero = audioContext.createGain();
-    gainZero.gain.value = 0; // Tắt tiếng hoàn toàn (để không bị vọng)
+    gainZero.gain.value = 0;
     source.connect(gainZero);
     gainZero.connect(audioContext.destination);
 
-    // Cấu hình bộ phân tích
     analyser.fftSize = 256;
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
-    // Hàm vòng lặp kiểm tra âm lượng
+    // Biến đếm số lần không tìm thấy UI
+    let missingUICount = 0;
+
     const checkVolume = () => {
-      // Tìm UI của thành viên
+      // 2. Tìm UI của thành viên
       const memberRow = document.getElementById(`member-row-${peerId}`);
 
-      // Nếu thành viên đã thoát -> Dừng kiểm tra, ngắt kết nối để nhẹ máy
+      // 👇 FIX QUAN TRỌNG: NẾU KHÔNG THẤY UI, ĐỪNG HỦY NGAY!
       if (!memberRow) {
-        source.disconnect();
-        gainZero.disconnect();
+        missingUICount++;
+        // Nếu không thấy UI quá 1000 lần (khoảng 20 giây) mới chịu hủy
+        if (missingUICount > 1000) {
+          source.disconnect();
+          gainZero.disconnect();
+          return;
+        }
+        // Chưa thấy thì chờ tiếp frame sau
+        requestAnimationFrame(checkVolume);
         return;
       }
 
+      // Nếu đã thấy UI -> Reset biến đếm
+      missingUICount = 0;
+
       analyser.getByteFrequencyData(dataArray);
 
-      // Tính âm lượng trung bình
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) {
         sum += dataArray[i];
       }
       const average = sum / bufferLength;
 
-      // Ngưỡng nhạy (Giảm xuống 5 cho dễ nháy)
-      const speakingThreshold = 5;
+      // Hạ ngưỡng nhạy xuống thấp hơn (3) để dễ nháy
+      const speakingThreshold = 3;
       const avatar = memberRow.querySelector(".avatar-img");
 
+      // LOGIC VISUAL
       if (average > speakingThreshold) {
-        // Đang nói -> Thêm class
         if (avatar) avatar.classList.add("is-speaking");
         memberRow.classList.add("is-speaking");
       } else {
-        // Im lặng -> Gỡ class
         if (avatar) avatar.classList.remove("is-speaking");
         memberRow.classList.remove("is-speaking");
       }
@@ -837,7 +845,7 @@ function monitorAudioLevel(stream, peerId) {
       requestAnimationFrame(checkVolume);
     };
 
-    checkVolume(); // Bắt đầu chạy
+    checkVolume();
   } catch (e) {
     console.warn("Lỗi phân tích âm thanh:", e);
   }
@@ -1285,3 +1293,20 @@ function switchRoomTab(tab) {
 function escapeHtml(t) {
   return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+// --- FORCE WAKE UP AUDIO CONTEXT (FIX MOBILE) ---
+document.addEventListener("click", () => {
+  if (globalAudioContext && globalAudioContext.state === "suspended") {
+    globalAudioContext.resume().then(() => {
+      console.log("🔊 Audio Context đã được đánh thức bằng Click!");
+    });
+  }
+});
+document.addEventListener(
+  "touchstart",
+  () => {
+    if (globalAudioContext && globalAudioContext.state === "suspended") {
+      globalAudioContext.resume();
+    }
+  },
+  { passive: true },
+);
