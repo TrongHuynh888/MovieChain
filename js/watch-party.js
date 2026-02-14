@@ -321,7 +321,7 @@ async function joinRoom(roomId, type, passwordInput = null) {
 }
 
 async function setupMemberAndChat(roomId, roomRef) {
-  // 1. Thêm bản thân vào phòng
+  // 1. Vào phòng (Tạo data thành viên)
   await roomRef
     .collection("members")
     .doc(currentUser.uid)
@@ -334,39 +334,61 @@ async function setupMemberAndChat(roomId, roomRef) {
       isMicBanned: false,
     });
 
-  // Tăng biến đếm
   await roomRef.update({
     memberCount: firebase.firestore.FieldValue.increment(1),
   });
 
-  // 2. Lắng nghe danh sách thành viên (LOGIC QUAN TRỌNG)
+  // Biến lưu trạng thái cũ để so sánh (để hiện thông báo)
+  let oldChatBanStatus = false;
+
+  // 2. Lắng nghe thay đổi (Realtime)
   membersUnsubscribe = roomRef.collection("members").onSnapshot((snapshot) => {
-    // Cập nhật số lượng
+    // Cập nhật số người
     const countEl = document.getElementById("memberCount");
     if (countEl) countEl.textContent = snapshot.size;
 
-    // Render giao diện
+    // Vẽ lại danh sách
     renderMembersList(snapshot);
 
-    // --- KIỂM TRA: MÌNH CÒN TRONG PHÒNG KHÔNG? ---
-    // (Fix lỗi Kick không hoạt động)
-    const amIHere = snapshot.docs.find((d) => d.id === currentUser.uid);
-    if (!amIHere && currentRoomId) {
-      // Nếu không tìm thấy mình -> Bị Kick hoặc lỗi mạng -> Buộc thoát
-      leaveRoom(true); // true = bị kick
+    // --- KIỂM TRA BẢN THÂN ---
+    const myDoc = snapshot.docs.find((d) => d.id === currentUser.uid);
+
+    // A. LOGIC KICK (QUAN TRỌNG): Nếu không tìm thấy mình trong danh sách -> Bị Kick
+    if (!myDoc && currentRoomId) {
+      console.warn("🚫 Phát hiện bị Kick khỏi phòng!");
+      leaveRoom(true); // Gọi hàm thoát (true = bị kick)
+
+      // Hiện thông báo to
       alert("⚠️ BẠN ĐÃ BỊ MỜI RA KHỎI PHÒNG!");
       return;
     }
 
-    // Kiểm tra xem có bị cấm Mic không
-    if (amIHere) {
-      const myData = amIHere.data();
+    // B. LOGIC THÔNG BÁO CẤM/MỞ
+    if (myDoc) {
+      const myData = myDoc.data();
+
+      // 1. Check Cấm Chat (Nếu trạng thái thay đổi thì báo)
+      if (myData.isChatBanned !== oldChatBanStatus) {
+        if (myData.isChatBanned) {
+          showNotification("⛔ QUẢN TRỊ VIÊN ĐÃ CẤM BẠN CHAT!", "error");
+        } else {
+          showNotification("✅ Bạn đã được mở Chat.", "success");
+        }
+        oldChatBanStatus = myData.isChatBanned;
+      }
+
+      // 2. Check Cấm Mic
       if (myData.isMicBanned && isMicEnabled) {
-        if (myStream) myStream.getAudioTracks()[0].enabled = false;
+        // Tắt mic ngay lập tức
+        if (myStream && myStream.getAudioTracks()[0]) {
+          myStream.getAudioTracks()[0].enabled = false;
+        }
         isMicEnabled = false;
         updateMicUI(false);
-        showNotification("Host đã tắt mic của bạn", "warning");
-        // Đồng bộ lại DB
+
+        showNotification("⛔ QUẢN TRỊ VIÊN ĐÃ TẮT MIC CỦA BẠN!", "warning");
+
+        // Cập nhật DB để icon đồng bộ
         roomRef
           .collection("members")
           .doc(currentUser.uid)
@@ -375,10 +397,7 @@ async function setupMemberAndChat(roomId, roomRef) {
     }
   });
 
-  // 3. Load Chat & Gửi thông báo vào phòng
   loadChat(roomId);
-
-  // Gửi tin nhắn hệ thống: "A đã vào phòng"
   sendSystemMessage(`${currentUser.displayName} đã vào phòng 👋`);
 }
 
@@ -781,14 +800,41 @@ async function sendChatMessage(e) {
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
-  await db.collection("watchRooms").doc(currentRoomId).collection("chat").add({
-    userId: currentUser.uid,
-    userName: currentUser.displayName,
-    content: text,
-    type: "text",
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  input.value = "";
+
+  // 👇 THÊM ĐOẠN NÀY: Kiểm tra quyền trước khi gửi
+  try {
+    const memberDoc = await db
+      .collection("watchRooms")
+      .doc(currentRoomId)
+      .collection("members")
+      .doc(currentUser.uid)
+      .get();
+
+    if (memberDoc.exists && memberDoc.data().isChatBanned) {
+      showNotification("⛔ BẠN ĐANG BỊ CẤM CHAT!", "error");
+      return; // Dừng ngay, không gửi nữa
+    }
+  } catch (err) {
+    console.log("Lỗi check chat:", err);
+  }
+  // 👆 HẾT ĐOẠN KIỂM TRA
+
+  try {
+    await db
+      .collection("watchRooms")
+      .doc(currentRoomId)
+      .collection("chat")
+      .add({
+        userId: currentUser.uid,
+        userName: currentUser.displayName,
+        content: text,
+        type: "text",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    input.value = "";
+  } catch (e) {
+    console.error(e);
+  }
 }
 function initYouTubePlayer(videoId) {
   const container = document.getElementById("partyPlayer");
