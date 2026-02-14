@@ -366,34 +366,81 @@ function updateRoomUI(data) {
   if (!player) initYouTubePlayer(data.videoId);
 }
 
+// --- RENDER DANH SÁCH THÀNH VIÊN (FULL CHỨC NĂNG ADMIN) ---
 function renderMembersList(snapshot) {
   const list = document.getElementById("memberList");
+  if (!list) return;
   list.innerHTML = "";
+
   snapshot.forEach((doc) => {
     const m = doc.data();
     const uid = doc.id;
     const isMe = uid === currentUser.uid;
     const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name || "U")}&background=random&color=fff`;
 
+    // Icon trạng thái Mic
     const micIcon = m.isMicMuted
-      ? '<i class="fas fa-microphone-slash mic-off"></i>'
-      : '<i class="fas fa-microphone mic-on"></i>';
+      ? '<i class="fas fa-microphone-slash mic-off" style="color:#ff4444"></i>'
+      : '<i class="fas fa-microphone mic-on" style="color:#00ff6a"></i>';
+
+    // Icon nếu bị cấm Chat
+    const chatBanIcon = m.isChatBanned
+      ? '<i class="fas fa-comment-slash" style="color:#ff4444; font-size:10px; margin-left:5px;" title="Bị cấm chat"></i>'
+      : "";
+
+    // --- LOGIC HIỂN THỊ NÚT BẤM ---
+    let actionButtons = "";
+
+    // 1. Nút chỉnh volume cá nhân (Ai cũng thấy trừ chính mình)
+    if (!isMe) {
+      const isMuted = localMutedPeers.has(uid);
+      actionButtons += `
+            <button class="btn-icon-small ${isMuted ? "active" : ""}" onclick="toggleLocalVolume('${uid}')" title="${isMuted ? "Bật tiếng" : "Tắt tiếng"}">
+                <i class="fas ${isMuted ? "fa-volume-mute" : "fa-volume-up"}"></i>
+            </button>
+        `;
+    }
+
+    // 2. Nút QUẢN TRỊ (Chỉ Host hoặc Admin mới thấy)
+    // (Hiện cho người khác, không hiện cho chính mình)
+    if ((isHost || (typeof isAdmin !== "undefined" && isAdmin)) && !isMe) {
+      actionButtons += `
+            <div class="admin-actions" style="display:flex; gap:5px; margin-left:5px;">
+                <button class="btn-icon-small ${m.isChatBanned ? "active" : ""}" onclick="toggleChatBan('${uid}', ${!m.isChatBanned})" title="${m.isChatBanned ? "Mở Chat" : "Cấm Chat"}">
+                    <i class="fas fa-comment-${m.isChatBanned ? "slash" : "dots"}"></i>
+                </button>
+
+                <button class="btn-icon-small ${m.isMicBanned ? "active" : ""}" onclick="toggleMicBan('${uid}', ${!m.isMicBanned})" title="${m.isMicBanned ? "Mở Mic" : "Cấm Mic"}">
+                    <i class="fas fa-microphone-${m.isMicBanned ? "slash" : "lines"}"></i>
+                </button>
+
+                <button class="btn-icon-small danger" onclick="kickUser('${uid}', '${m.name}')" title="Mời ra khỏi phòng">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        `;
+    }
 
     list.innerHTML += `
-            <div class="member-item" id="member-row-${uid}">
-                <img src="${m.avatar || defaultAvatar}" class="member-avatar avatar-img">
-                <div class="member-info">
-                    <div><span class="member-name">${m.name}</span> ${micIcon}</div>
-                    <span class="member-role">${uid === latestRoomData?.hostId ? "👑 Host" : "Member"}</span>
+            <div class="member-item" id="member-row-${uid}" style="display:flex; align-items:center; justify-content:space-between; padding:8px; margin-bottom:5px; background:rgba(255,255,255,0.05); border-radius:8px;">
+                <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                    <div style="position:relative;">
+                        <img src="${m.avatar || defaultAvatar}" class="member-avatar avatar-img" style="width:35px; height:35px; object-fit:cover; border-radius:50%;">
+                        ${m.isSpeaking ? '<div class="speaking-indicator"></div>' : ""}
+                    </div>
+                    <div class="member-info">
+                        <div style="font-size:13px; font-weight:bold; color:#fff;">
+                            ${m.name} ${micIcon} ${chatBanIcon}
+                        </div>
+                        <span class="member-role" style="font-size:10px; color:#aaa;">
+                            ${uid === latestRoomData?.hostId ? '<span style="color:#f1c40f">👑 Chủ phòng</span>' : "Thành viên"}
+                        </span>
+                    </div>
                 </div>
-                ${
-                  !isMe
-                    ? `<button class="btn-volume-local" onclick="toggleLocalVolume('${uid}')">
-                    <i class="fas ${localMutedPeers.has(uid) ? "fa-volume-mute" : "fa-volume-up"}"></i>
-                </button>`
-                    : ""
-                }
-                ${isHost && !isMe ? `<button class="btn-mod" onclick="kickUser('${uid}','${m.name}')"><i class="fas fa-sign-out-alt"></i></button>` : ""}
+                
+                <div style="display:flex; align-items:center; gap:5px;">
+                    ${actionButtons}
+                </div>
             </div>`;
   });
 }
@@ -909,3 +956,111 @@ renderMessage = function (msg, container) {
   // Nếu là tin nhắn thường thì gọi hàm cũ
   originalRenderMessage(msg, container);
 };
+// ============================================================
+// PHẦN BỔ SUNG: LOGIC QUẢN TRỊ & FIX TAB (DÁN VÀO CUỐI FILE)
+// ============================================================
+
+// 1. FIX LỖI CHUYỂN TAB (PC & MOBILE)
+// Gán vào window để đảm bảo gọi được từ HTML
+window.switchRoomTab = function (tabName) {
+  console.log("Đang chuyển sang tab:", tabName);
+
+  // Xóa active cũ
+  document
+    .querySelectorAll(".room-tab")
+    .forEach((t) => t.classList.remove("active"));
+  document
+    .querySelectorAll(".room-tab-content")
+    .forEach((c) => c.classList.remove("active"));
+
+  // Active tab button vừa bấm
+  // (Tìm nút có data-tab tương ứng hoặc dựa vào event)
+  const btns = document.querySelectorAll(".room-tab");
+  btns.forEach((btn) => {
+    if (
+      btn.textContent
+        .toLowerCase()
+        .includes(tabName === "chat" ? "chat" : "thành viên")
+    ) {
+      btn.classList.add("active");
+    }
+  });
+
+  // Hiện nội dung
+  if (tabName === "chat") {
+    const chatTab = document.getElementById("tabChat");
+    if (chatTab) chatTab.classList.add("active");
+  } else {
+    const memberTab = document.getElementById("tabMembers");
+    if (memberTab) memberTab.classList.add("active");
+  }
+};
+
+// 2. LOGIC CẤM CHAT (Ban Chat)
+window.toggleChatBan = async function (uid, shouldBan) {
+  if (!currentRoomId) return;
+  try {
+    await db
+      .collection("watchRooms")
+      .doc(currentRoomId)
+      .collection("members")
+      .doc(uid)
+      .update({
+        isChatBanned: shouldBan,
+      });
+    showNotification(
+      shouldBan ? "Đã cấm chat thành viên này" : "Đã mở chat",
+      "success",
+    );
+  } catch (e) {
+    console.error("Lỗi cấm chat:", e);
+    showNotification("Lỗi: Không thể cấm chat", "error");
+  }
+};
+
+// 3. LOGIC CẤM MIC (Ban Mic)
+window.toggleMicBan = async function (uid, shouldBan) {
+  if (!currentRoomId) return;
+  try {
+    // Cập nhật trạng thái cấm mic VÀ ép tắt mic luôn (isMicMuted = true)
+    const updateData = { isMicBanned: shouldBan };
+    if (shouldBan) updateData.isMicMuted = true;
+
+    await db
+      .collection("watchRooms")
+      .doc(currentRoomId)
+      .collection("members")
+      .doc(uid)
+      .update(updateData);
+    showNotification(
+      shouldBan ? "Đã khóa Mic thành viên này" : "Đã mở khóa Mic",
+      "success",
+    );
+  } catch (e) {
+    console.error("Lỗi cấm mic:", e);
+  }
+};
+
+// 4. CSS BỔ SUNG CHO NÚT BẤM (Dùng JS chèn CSS cho tiện)
+const styleAdmin = document.createElement("style");
+styleAdmin.innerHTML = `
+    .btn-icon-small {
+        width: 28px; height: 28px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: 0.2s;
+    }
+    .btn-icon-small:hover { background: rgba(255,255,255,0.2); }
+    .btn-icon-small.active { background: #ff4444; color: white; }
+    .btn-icon-small.danger { background: rgba(255,0,0,0.2); color: #ff4444; }
+    .btn-icon-small.danger:hover { background: #ff4444; color: white; }
+    
+    /* Active class cho Tab Content */
+    .room-tab-content { display: none !important; height: 100%; }
+    .room-tab-content.active { display: flex !important; flex-direction: column; }
+`;
+document.head.appendChild(styleAdmin);
