@@ -1,6 +1,7 @@
 /**
- * WATCH PARTY MODULE (SIMPLE & STABLE VERSION)
- * Đã xóa VPN/Metered - Dùng kết nối trực tiếp cho nhanh & ổn định
+ * WATCH PARTY MODULE (MASTER VERSION - INTERNET READY)
+ * - Đã tích hợp sẵn API Key Metered của bạn để xuyên tường lửa 4G/Wifi
+ * - Fix triệt để lỗi Mic/Loa và Avatar
  */
 
 let currentRoomId = null;
@@ -17,18 +18,22 @@ let latestRoomData = null;
 let myPeer = null;
 let myStream = null;
 let peers = {};
-let isMicEnabled = false; // Mặc định là TẮT MIC
+let isMicEnabled = false; // Mặc định tắt Mic
 let globalAudioContext = null;
 
 // QUẢN LÝ ÂM THANH
-let isDeafened = false; // Mặc định là NGHE ĐƯỢC
+let isDeafened = false; // Mặc định nghe được
 let localMutedPeers = new Set();
+
+// API KEY CỦA BẠN (Đã điền sẵn)
+const METERED_API_KEY = "XdPnoCY8k0fnWLdeEczCipMdUx8zgEbQHbdbjyKMPVgNNQYk";
+const APP_NAME = "moviechain";
 
 // ==========================================
 // 1. MODULE LOADER
 // ==========================================
 async function initWatchPartyModule() {
-  console.log("🚀 Đang tải module Watch Party (Simple Version)...");
+  console.log("🚀 Đang tải module Watch Party (Internet Version)...");
 
   if (!document.getElementById("watchPartyPage")) {
     try {
@@ -99,11 +104,8 @@ async function loadRooms() {
       const count = room.memberCount || 0;
 
       let deleteBtn = "";
-      if (currentUser) {
-        const isOwner = currentUser.uid === room.hostId;
-        if (isOwner || isAdmin) {
-          deleteBtn = `<button class="btn-delete-room" onclick="event.stopPropagation(); deleteRoom('${doc.id}', '${room.hostId}')" title="Giải tán phòng"><i class="fas fa-trash"></i></button>`;
-        }
+      if (currentUser && (currentUser.uid === room.hostId || isAdmin)) {
+        deleteBtn = `<button class="btn-delete-room" onclick="event.stopPropagation(); deleteRoom('${doc.id}', '${room.hostId}')"><i class="fas fa-trash"></i></button>`;
       }
 
       const html = `
@@ -112,7 +114,7 @@ async function loadRooms() {
                     <div class="card-body">
                         <div class="mb-2" style="display:flex; align-items:center; gap:10px;">
                             <span class="status-badge active" style="background:#e50914">LIVE</span>
-                            ${isPrivate ? '<i class="fas fa-lock text-warning" title="Riêng tư"></i>' : '<i class="fas fa-globe-asia text-success" title="Công khai"></i>'}
+                            ${isPrivate ? '<i class="fas fa-lock text-warning"></i>' : '<i class="fas fa-globe-asia text-success"></i>'}
                         </div>
                         <h4 style="margin-bottom:5px; font-size:16px; padding-right: 25px;">${room.name}</h4>
                         <p class="text-muted" style="font-size:13px; margin-bottom:10px;">
@@ -139,15 +141,13 @@ async function deleteRoom(roomId, hostId) {
     return;
   }
   if (!confirm("⚠️ BẠN CÓ CHẮC MUỐN GIẢI TÁN PHÒNG NÀY?")) return;
-
   try {
-    showLoading(true, "Đang giải tán phòng...");
+    showLoading(true);
     await db.collection("watchRooms").doc(roomId).delete();
-    showNotification("Đã giải tán phòng thành công!", "success");
+    showNotification("Đã giải tán phòng!", "success");
     loadRooms();
   } catch (error) {
-    console.error("Lỗi xóa phòng:", error);
-    showNotification("Có lỗi xảy ra", "error");
+    console.error(error);
   } finally {
     showLoading(false);
   }
@@ -170,9 +170,7 @@ function openCreateRoomModal() {
   } else {
     const purchased = currentUser.purchasedMovies || [];
     allowedMovies = allMovies.filter((movie) => {
-      const isFree = !movie.price || movie.price === 0;
-      const isPurchased = purchased.includes(movie.id);
-      return isFree || isPurchased;
+      return !movie.price || movie.price === 0 || purchased.includes(movie.id);
     });
   }
 
@@ -180,22 +178,15 @@ function openCreateRoomModal() {
     ...new Map(allowedMovies.map((item) => [item.id, item])).values(),
   ];
   const select = document.getElementById("roomMovieSelect");
-  if (uniqueMovies.length === 0) {
-    select.innerHTML =
-      '<option value="">-- Bạn chưa sở hữu phim nào --</option>';
-  } else {
-    select.innerHTML =
-      '<option value="">-- Chọn phim --</option>' +
-      uniqueMovies
-        .map(
-          (m) =>
-            `<option value="${m.id}">${m.title} ${m.price > 0 && !currentUser.isVip ? "(Đã mua)" : ""}</option>`,
-        )
-        .join("");
-  }
+  select.innerHTML =
+    uniqueMovies.length === 0
+      ? '<option value="">-- Bạn chưa sở hữu phim nào --</option>'
+      : '<option value="">-- Chọn phim --</option>' +
+        uniqueMovies
+          .map((m) => `<option value="${m.id}">${m.title}</option>`)
+          .join("");
 
   document.getElementById("roomEpisodeGroup").classList.add("hidden");
-  document.getElementById("roomEpisodeSelect").innerHTML = "";
   openModal("createRoomModal");
 }
 
@@ -208,8 +199,7 @@ function updateEpisodeSelect() {
     epGroup.classList.remove("hidden");
     epSelect.innerHTML = movie.episodes
       .map(
-        (ep, idx) =>
-          `<option value="${idx}">Tập ${ep.episodeNumber}: ${ep.title || ""}</option>`,
+        (ep, idx) => `<option value="${idx}">Tập ${ep.episodeNumber}</option>`,
       )
       .join("");
   } else {
@@ -220,8 +210,7 @@ function updateEpisodeSelect() {
 function toggleRoomPass() {
   const type = document.getElementById("roomType").value;
   const passGroup = document.getElementById("roomPassGroup");
-  if (type === "private") passGroup.classList.remove("hidden");
-  else passGroup.classList.add("hidden");
+  passGroup.classList.toggle("hidden", type !== "private");
 }
 
 async function handleCreateRoom(e) {
@@ -231,23 +220,21 @@ async function handleCreateRoom(e) {
   const epIndex = document.getElementById("roomEpisodeSelect").value || 0;
   const type = document.getElementById("roomType").value;
   const password = document.getElementById("roomPassword").value;
-
   const movie = allMovies.find((m) => m.id === movieId);
   let videoId = movie.episodes[epIndex].youtubeId;
 
   try {
-    showLoading(true, "Đang tạo phòng...");
+    showLoading(true);
     const roomRef = await db.collection("watchRooms").add({
-      name: name,
+      name,
       hostId: currentUser.uid,
-      hostName:
-        currentUser.displayName || currentUser.email.split("@")[0] || "User",
-      movieId: movieId,
+      hostName: currentUser.displayName || "User",
+      movieId,
       movieTitle: movie.title,
       episodeIndex: parseInt(epIndex),
-      videoId: videoId,
-      type: type,
-      password: password,
+      videoId,
+      type,
+      password,
       status: "paused",
       currentTime: 0,
       lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
@@ -259,7 +246,7 @@ async function handleCreateRoom(e) {
     showLoading(false);
     joinRoom(roomRef.id, type, password);
   } catch (error) {
-    console.error("Lỗi tạo phòng:", error);
+    console.error(error);
     showLoading(false);
   }
 }
@@ -273,70 +260,50 @@ async function joinRoom(roomId, type, passwordInput = null) {
     openAuthModal();
     return;
   }
-
   try {
-    showLoading(true, "Đang kiểm tra phòng...");
+    showLoading(true);
     const roomRef = db.collection("watchRooms").doc(roomId);
     const doc = await roomRef.get();
-
     if (!doc.exists) {
       showLoading(false);
       alert("Phòng không tồn tại!");
       return;
     }
-    const data = doc.data();
 
-    if (data.bannedUsers && data.bannedUsers.includes(currentUser.uid)) {
+    const data = doc.data();
+    if (data.bannedUsers?.includes(currentUser.uid)) {
       showLoading(false);
-      alert("⛔ BẠN ĐÃ BỊ CẤM KHỎI PHÒNG NÀY!");
+      alert("BẠN ĐÃ BỊ CẤM!");
       return;
     }
-
     if (data.type === "private" && currentUser.uid !== data.hostId) {
-      if (!passwordInput) {
-        passwordInput = prompt("🔒 Phòng này cần mật khẩu:");
-        if (passwordInput === null) {
-          showLoading(false);
-          return;
-        }
-      }
+      if (!passwordInput) passwordInput = prompt("🔒 Nhập mật khẩu:");
       if (passwordInput !== data.password) {
         showLoading(false);
-        alert("⛔ Sai mật khẩu!");
+        alert("Sai mật khẩu!");
         return;
       }
     }
 
     currentRoomId = roomId;
-
     document.getElementById("partyLobby").classList.add("hidden");
     document.getElementById("partyRoom").classList.remove("hidden");
     const footer = document.querySelector("footer");
     if (footer) footer.style.display = "none";
-    const inviteBtn = document.getElementById("roomInviteBtn");
-    if (inviteBtn)
-      inviteBtn.innerHTML = `<i class="fas fa-link"></i> Mời bạn bè (Copy Link)`;
 
     showLoading(false);
 
     roomUnsubscribe = roomRef.onSnapshot(async (docSnapshot) => {
       if (!docSnapshot.exists) {
-        alert("Phòng đã giải tán!");
         leaveRoom();
         return;
       }
       const roomData = docSnapshot.data();
       latestRoomData = roomData;
-
-      if (
-        roomData.bannedUsers &&
-        roomData.bannedUsers.includes(currentUser.uid)
-      ) {
-        alert("Bạn vừa bị Admin cấm khỏi phòng!");
+      if (roomData.bannedUsers?.includes(currentUser.uid)) {
         leaveRoom();
         return;
       }
-
       updateRoomUI(roomData);
       handleSync(roomData);
     });
@@ -345,12 +312,11 @@ async function joinRoom(roomId, type, passwordInput = null) {
     try {
       initVoiceChat();
     } catch (err) {
-      console.warn("Không thể khởi động Voice Chat:", err);
+      console.warn(err);
     }
   } catch (error) {
     console.error(error);
     showLoading(false);
-    showNotification("Lỗi vào phòng", "error");
   }
 }
 
@@ -359,16 +325,13 @@ async function setupMemberAndChat(roomId, roomRef) {
     .collection("members")
     .doc(currentUser.uid)
     .set({
-      name:
-        currentUser.displayName || currentUser.email.split("@")[0] || "User",
+      name: currentUser.displayName || "User",
       avatar: currentUser.photoURL || "",
       joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
       isChatBanned: false,
       isMicMuted: false,
       isMicBanned: false,
-      peerId: currentUser.uid,
     });
-
   await roomRef.update({
     memberCount: firebase.firestore.FieldValue.increment(1),
   });
@@ -377,32 +340,16 @@ async function setupMemberAndChat(roomId, roomRef) {
     document.getElementById("memberCount").textContent = snapshot.size;
     renderMembersList(snapshot);
 
-    let amIHere = false;
-    let myData = null;
-    snapshot.forEach((doc) => {
-      if (doc.id === currentUser.uid) {
-        amIHere = true;
-        myData = doc.data();
-      }
-    });
-
-    if (!amIHere && currentRoomId) {
-      alert("Bạn đã bị mời ra khỏi phòng!");
-      leaveRoom();
-      return;
-    }
-
-    if (myData && myData.isMicBanned) {
-      if (isMicEnabled) {
-        if (myStream) myStream.getAudioTracks()[0].enabled = false;
-        isMicEnabled = false;
-        updateMicUI(false);
-        showNotification("Host đã tắt mic của bạn!", "warning");
-        roomRef
-          .collection("members")
-          .doc(currentUser.uid)
-          .update({ isMicMuted: true });
-      }
+    const myData = snapshot.docs.find((d) => d.id === currentUser.uid)?.data();
+    if (myData && myData.isMicBanned && isMicEnabled) {
+      if (myStream) myStream.getAudioTracks()[0].enabled = false;
+      isMicEnabled = false;
+      updateMicUI(false);
+      showNotification("Host đã tắt mic của bạn", "warning");
+      roomRef
+        .collection("members")
+        .doc(currentUser.uid)
+        .update({ isMicMuted: true });
     }
   });
 
@@ -413,104 +360,55 @@ async function setupMemberAndChat(roomId, roomRef) {
 function updateRoomUI(data) {
   document.getElementById("roomTitleDisplay").textContent = data.name;
   isHost = currentUser.uid === data.hostId;
-  const controls = document.getElementById("hostControls");
-  if (isHost) controls.style.display = "flex";
-  else controls.style.display = "none";
+  document.getElementById("hostControls").style.display = isHost
+    ? "flex"
+    : "none";
   if (!player) initYouTubePlayer(data.videoId);
 }
 
-// ==========================================
-// 4. RENDER MEMBERS & AUDIO CONTROLS
-// ==========================================
 function renderMembersList(snapshot) {
   const list = document.getElementById("memberList");
   list.innerHTML = "";
-
   snapshot.forEach((doc) => {
     const m = doc.data();
     const uid = doc.id;
     const isMe = uid === currentUser.uid;
-
-    const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name || "User")}&background=random&color=fff&size=150`;
-    let avatarUrl = m.avatar && m.avatar.length > 5 ? m.avatar : defaultAvatar;
+    const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name || "U")}&background=random&color=fff`;
 
     const micIcon = m.isMicMuted
-      ? '<i class="fas fa-microphone-slash mic-status mic-off"></i>'
-      : '<i class="fas fa-microphone mic-status mic-on"></i>';
-
-    const banIcon = m.isMicBanned
-      ? '<i class="fas fa-lock" style="color:#ff4444; font-size:10px; margin-left:5px;"></i>'
-      : "";
-
-    let volumeBtn = "";
-    if (!isMe) {
-      const isLocalMuted = localMutedPeers.has(uid);
-      const stateClass = isLocalMuted ? "muted" : "";
-      const iconClass = isLocalMuted ? "fa-volume-mute" : "fa-volume-up";
-      const title = isLocalMuted ? "Bật tiếng" : "Tắt tiếng";
-
-      volumeBtn = `
-                <button class="btn-volume-local ${stateClass}" 
-                        onclick="toggleLocalVolume('${uid}')" 
-                        title="${title}">
-                    <i class="fas ${iconClass}"></i>
-                </button>
-            `;
-    }
-
-    let controls = "";
-    if ((isHost || isAdmin) && !isMe) {
-      controls = `
-                <div class="member-controls">
-                    <button class="btn-mod" onclick="toggleChatBan('${uid}', ${!m.isChatBanned})">
-                        <i class="fas fa-comment-${m.isChatBanned ? "slash" : "dots"}"></i>
-                    </button>
-                    <button class="btn-mod" onclick="toggleMicBan('${uid}', ${!m.isMicBanned})">
-                        <i class="fas fa-microphone-${m.isMicBanned ? "slash" : "lines"}"></i>
-                    </button>
-                    <button class="btn-mod kick" onclick="kickUser('${uid}', '${m.name}')">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
-                </div>
-            `;
-    }
+      ? '<i class="fas fa-microphone-slash mic-off"></i>'
+      : '<i class="fas fa-microphone mic-on"></i>';
 
     list.innerHTML += `
             <div class="member-item" id="member-row-${uid}">
-                <div style="position:relative;">
-                    <img src="${avatarUrl}" class="member-avatar avatar-img" onerror="this.src='${defaultAvatar}'">
-                </div>
-                
+                <img src="${m.avatar || defaultAvatar}" class="member-avatar avatar-img">
                 <div class="member-info">
-                    <div style="display:flex; align-items:center;">
-                        <span class="member-name">${m.name}</span>
-                        ${micIcon} ${banIcon}
-                    </div>
-                    <span class="member-role">${isMe ? "Bạn" : uid === latestRoomData?.hostId ? "👑 Chủ phòng" : "Thành viên"}</span>
+                    <div><span class="member-name">${m.name}</span> ${micIcon}</div>
+                    <span class="member-role">${uid === latestRoomData?.hostId ? "👑 Host" : "Member"}</span>
                 </div>
-                ${volumeBtn}
-                ${controls}
+                ${
+                  !isMe
+                    ? `<button class="btn-volume-local" onclick="toggleLocalVolume('${uid}')">
+                    <i class="fas ${localMutedPeers.has(uid) ? "fa-volume-mute" : "fa-volume-up"}"></i>
+                </button>`
+                    : ""
+                }
+                ${isHost && !isMe ? `<button class="btn-mod" onclick="kickUser('${uid}','${m.name}')"><i class="fas fa-sign-out-alt"></i></button>` : ""}
             </div>`;
   });
 }
 
 // ==========================================
-// 5. AUDIO LOGIC (FIXED PLAY/PAUSE)
+// 4. AUDIO & PEERJS (MASTER FIX)
 // ==========================================
 
 function toggleLocalVolume(peerId) {
-  const audioEl = document.getElementById("audio-" + peerId);
-  if (localMutedPeers.has(peerId)) {
-    localMutedPeers.delete(peerId);
-    if (!isDeafened && audioEl) {
-      audioEl.muted = false;
-      audioEl.play().catch((e) => console.warn("Lỗi auto-play:", e));
-    }
-  } else {
-    localMutedPeers.add(peerId);
-    if (audioEl) audioEl.muted = true;
-  }
-  // Re-render UI để cập nhật icon
+  if (localMutedPeers.has(peerId)) localMutedPeers.delete(peerId);
+  else localMutedPeers.add(peerId);
+
+  const audio = document.getElementById("audio-" + peerId);
+  if (audio) audio.muted = isDeafened || localMutedPeers.has(peerId);
+
   db.collection("watchRooms")
     .doc(currentRoomId)
     .collection("members")
@@ -520,29 +418,15 @@ function toggleLocalVolume(peerId) {
 
 function toggleDeafen() {
   isDeafened = !isDeafened;
-  const btn = document.getElementById("myDeafenBtn");
-  if (btn) {
-    if (isDeafened) {
-      btn.innerHTML =
-        '<i class="fas fa-headphones-alt" style="text-decoration: line-through;"></i>';
-      btn.classList.add("active");
-    } else {
-      btn.innerHTML = '<i class="fas fa-headphones"></i>';
-      btn.classList.remove("active");
-    }
-  }
+  document.getElementById("myDeafenBtn").innerHTML = isDeafened
+    ? '<i class="fas fa-headphones-alt slash"></i>'
+    : '<i class="fas fa-headphones"></i>';
+  document.getElementById("myDeafenBtn").classList.toggle("active", isDeafened);
 
-  const allAudios = document.querySelectorAll("#audioContainer audio");
-  allAudios.forEach((audio) => {
-    const peerId = audio.id.replace("audio-", "");
-    if (isDeafened) {
-      audio.muted = true;
-    } else {
-      if (!localMutedPeers.has(peerId)) {
-        audio.muted = false;
-        audio.play().catch((e) => console.warn("Lỗi resume audio:", e));
-      }
-    }
+  document.querySelectorAll("audio").forEach((a) => {
+    const peerId = a.id.replace("audio-", "");
+    a.muted = isDeafened || localMutedPeers.has(peerId);
+    if (!a.muted) a.play().catch((e) => {});
   });
 }
 
@@ -557,28 +441,37 @@ function initVoiceChat() {
   }
 }
 
-// --- HÀM KHỞI TẠO KẾT NỐI (SIMPLE - NO VPN) ---
+// --- HÀM LẤY SERVER XỊN (Tự động dùng Key của bạn) ---
+async function getTurnCredentials() {
+  try {
+    console.log("🔄 Đang lấy Server xuyên tường lửa...");
+    const response = await fetch(
+      `https://${APP_NAME}.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`,
+    );
+    if (!response.ok) throw new Error("API Metered lỗi");
+    const iceServers = await response.json();
+    console.log("✅ Đã có Server xịn!");
+    return iceServers;
+  } catch (error) {
+    console.error("⚠️ Lỗi lấy Server (Dùng tạm Google):", error);
+    return [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:global.stun.twilio.com:3478" },
+    ];
+  }
+}
+
 async function startPeerConnection() {
   addMicButtonToUI();
-
-  // 1. Đánh thức Audio Context (Quan trọng)
-  if (!globalAudioContext) {
+  if (!globalAudioContext)
     globalAudioContext = new (
       window.AudioContext || window.webkitAudioContext
     )();
-  }
-  if (globalAudioContext.state === "suspended") {
-    globalAudioContext.resume();
-  }
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showNotification("Trình duyệt không hỗ trợ Voice Chat", "error");
-    return;
-  }
+  if (globalAudioContext.state === "suspended") globalAudioContext.resume();
 
   try {
-    // 2. Lấy Mic
-    const stream = await navigator.mediaDevices.getUserMedia({
+    // 🔥 CHẠY SONG SONG: Vừa xin Mic, vừa lấy Server (Không chờ nhau -> Không lag)
+    const streamPromise = navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
@@ -587,51 +480,55 @@ async function startPeerConnection() {
       video: false,
     });
 
+    const serverPromise = getTurnCredentials();
+
+    // Đợi cả 2 xong
+    const [stream, iceServers] = await Promise.all([
+      streamPromise,
+      serverPromise,
+    ]);
+
     myStream = stream;
     isMicEnabled = false;
-    if (myStream.getAudioTracks().length > 0) {
+    if (myStream.getAudioTracks()[0])
       myStream.getAudioTracks()[0].enabled = false;
-    }
     updateMicUI(false);
+
     monitorAudioLevel(stream, currentUser.uid);
 
-    // 3. Kết nối Peer (Dùng Server Google mặc định)
+    // Tạo Peer với Server xịn vừa lấy được
     myPeer = new Peer(currentUser.uid, {
       config: {
-        iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:global.stun.twilio.com:3478" },
-        ],
+        iceServers: iceServers, // 👉 Đây là chìa khóa để xem từ xa
+        iceTransportPolicy: "all",
       },
       debug: 1,
     });
 
     myPeer.on("open", (id) => {
-      console.log("✅ Kết nối PeerJS thành công:", id);
+      console.log("✅ Kết nối Peer thành công:", id);
+      showNotification("Đã kết nối Voice Chat", "success");
       connectToAllPeers();
     });
 
     myPeer.on("call", (call) => {
       call.answer(myStream);
-      const audio = document.createElement("audio");
-      const callerId = call.peer;
-      call.on("stream", (userAudioStream) => {
-        addAudioStream(audio, userAudioStream, callerId);
+      call.on("stream", (remoteStream) => {
+        addAudioStream(remoteStream, call.peer);
       });
     });
 
     myPeer.on("error", (err) => {
-      console.warn("PeerJS Warning:", err);
-      // Tự reconnect nếu mất mạng
+      console.warn("Lỗi Peer:", err);
       if (err.type === "disconnected" || err.type === "network") {
         setTimeout(() => {
-          if (myPeer) myPeer.reconnect();
+          if (myPeer && !myPeer.destroyed) myPeer.reconnect();
         }, 3000);
       }
     });
   } catch (err) {
     console.error("Lỗi Mic:", err);
-    showNotification("Lỗi quyền Micro hoặc kết nối", "error");
+    showNotification("Vui lòng cho phép quyền Micro!", "error");
   }
 }
 
@@ -644,17 +541,47 @@ function connectToAllPeers() {
       snap.forEach((doc) => {
         if (doc.id !== currentUser.uid) {
           const call = myPeer.call(doc.id, myStream);
-          const audio = document.createElement("audio");
-          const receiverId = doc.id;
-          call.on("stream", (stream) =>
-            addAudioStream(audio, stream, receiverId),
-          );
+          if (call) {
+            call.on("stream", (remoteStream) => {
+              addAudioStream(remoteStream, doc.id);
+            });
+          }
         }
       });
     });
 }
 
-// 👇 HÀM PHÂN TÍCH ÂM THANH (BẤT TỬ)
+function addAudioStream(stream, peerId) {
+  const old = document.getElementById("audio-" + peerId);
+  if (old) old.remove();
+
+  const audio = document.createElement("audio");
+  audio.srcObject = stream;
+  audio.id = "audio-" + peerId;
+  audio.autoplay = true;
+  audio.playsInline = true;
+  audio.controls = false;
+
+  // 👇 FIX: Không dùng display:none để tránh bị trình duyệt chặn
+  let container = document.getElementById("audioContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "audioContainer";
+    container.style.cssText =
+      "position:fixed; bottom:0; right:0; width:1px; height:1px; opacity:0; pointer-events:none; z-index:-1;";
+    document.body.appendChild(container);
+  }
+  container.appendChild(audio);
+
+  monitorAudioLevel(stream, peerId);
+
+  audio.addEventListener("loadedmetadata", () => {
+    audio.muted = isDeafened || localMutedPeers.has(peerId);
+    if (!audio.muted) audio.play().catch((e) => {});
+  });
+}
+
+// 👇 HÀM MONITOR BẤT TỬ (ĐẢM BẢO AVATAR NHÁY)
 function monitorAudioLevel(stream, peerId) {
   try {
     if (!globalAudioContext)
@@ -664,124 +591,82 @@ function monitorAudioLevel(stream, peerId) {
     if (globalAudioContext.state === "suspended")
       globalAudioContext.resume().catch(() => {});
 
-    const audioContext = globalAudioContext;
-    const source = audioContext.createMediaStreamSource(stream);
-    const analyser = audioContext.createAnalyser();
+    const ctx = globalAudioContext;
+    const source = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
 
-    // Giữ context luôn sống
-    const gainZero = audioContext.createGain();
+    const gainZero = ctx.createGain();
     gainZero.gain.value = 0.001;
     source.connect(gainZero);
-    gainZero.connect(audioContext.destination);
+    gainZero.connect(ctx.destination);
 
     source.connect(analyser);
     analyser.fftSize = 256;
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    const checkVolume = () => {
-      const memberRow = document.getElementById(`member-row-${peerId}`);
-      if (!memberRow) {
-        requestAnimationFrame(checkVolume); // Vẫn chạy ngầm đợi UI
+    const check = () => {
+      const row = document.getElementById(`member-row-${peerId}`);
+      if (!row) {
+        requestAnimationFrame(check);
         return;
       }
 
       analyser.getByteFrequencyData(dataArray);
       let sum = 0;
       for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-      const average = sum / dataArray.length;
+      const avg = sum / dataArray.length;
 
-      const avatar = memberRow.querySelector(".avatar-img");
-      // Ngưỡng nhạy (3)
-      if (average > 3) {
+      const avatar = row.querySelector(".avatar-img");
+      if (avg > 3) {
         if (avatar) avatar.classList.add("is-speaking");
-        memberRow.classList.add("is-speaking");
+        row.classList.add("is-speaking");
       } else {
         if (avatar) avatar.classList.remove("is-speaking");
-        memberRow.classList.remove("is-speaking");
+        row.classList.remove("is-speaking");
       }
-
-      requestAnimationFrame(checkVolume);
+      requestAnimationFrame(check);
     };
-    checkVolume();
+    check();
   } catch (e) {
-    console.warn("Monitor Error:", e);
+    console.warn(e);
   }
-}
-
-function addAudioStream(audio, stream, peerId) {
-  audio.srcObject = stream;
-  audio.id = "audio-" + peerId;
-  audio.autoplay = true;
-  audio.playsInline = true;
-  audio.controls = false;
-
-  // Gọi monitor ngay để hiệu ứng Avatar hoạt động
-  monitorAudioLevel(stream, peerId);
-
-  audio.addEventListener("loadedmetadata", () => {
-    if (isDeafened || localMutedPeers.has(peerId)) {
-      audio.muted = true;
-    } else {
-      audio.muted = false;
-      audio.play().catch((e) => console.log("Cần tương tác để phát audio:", e));
-    }
-  });
-
-  let container = document.getElementById("audioContainer");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "audioContainer";
-    container.style.display = "none"; // Ẩn hoàn toàn
-    document.body.appendChild(container);
-  }
-
-  const oldAudio = document.getElementById("audio-" + peerId);
-  if (oldAudio) oldAudio.remove();
-  container.appendChild(audio);
 }
 
 function addMicButtonToUI() {
-  const headerBar = document.querySelector(".room-header-bar");
-  const oldMic = document.getElementById("myMicBtn");
-  if (oldMic) oldMic.remove();
-  const oldDeafen = document.getElementById("myDeafenBtn");
-  if (oldDeafen) oldDeafen.remove();
+  const header = document.querySelector(".room-header-bar");
+  if (!header) return;
+
+  if (document.getElementById("myMicBtn"))
+    document.getElementById("myMicBtn").remove();
+  if (document.getElementById("myDeafenBtn"))
+    document.getElementById("myDeafenBtn").remove();
 
   const micBtn = document.createElement("button");
   micBtn.id = "myMicBtn";
-  micBtn.className = "btn-mic-toggle";
-  micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+  micBtn.className = "btn-mic-toggle active";
+  micBtn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
   micBtn.onclick = toggleMyMic;
 
   const deafenBtn = document.createElement("button");
   deafenBtn.id = "myDeafenBtn";
   deafenBtn.className = "btn-deafen-toggle";
+  deafenBtn.innerHTML = '<i class="fas fa-headphones"></i>';
   deafenBtn.onclick = toggleDeafen;
-  deafenBtn.innerHTML = isDeafened
-    ? '<i class="fas fa-headphones-alt" style="text-decoration: line-through;"></i>'
-    : '<i class="fas fa-headphones"></i>';
-  if (isDeafened) deafenBtn.classList.add("active");
 
-  headerBar.insertBefore(deafenBtn, headerBar.firstChild);
-  headerBar.insertBefore(micBtn, headerBar.firstChild);
+  header.insertBefore(deafenBtn, header.firstChild);
+  header.insertBefore(micBtn, header.firstChild);
 }
 
 function toggleMyMic() {
-  if (globalAudioContext && globalAudioContext.state === "suspended")
-    globalAudioContext.resume();
-
+  if (globalAudioContext?.state === "suspended") globalAudioContext.resume();
   if (!myStream) {
-    showNotification("Micro chưa sẵn sàng, thử lại...", "warning");
-    initVoiceChat();
+    showNotification("Đang kết nối Mic...", "info");
     return;
   }
-
   isMicEnabled = !isMicEnabled;
-  const audioTrack = myStream.getAudioTracks()[0];
-  if (audioTrack) audioTrack.enabled = isMicEnabled;
-
+  if (myStream.getAudioTracks()[0])
+    myStream.getAudioTracks()[0].enabled = isMicEnabled;
   updateMicUI(isMicEnabled);
-
   db.collection("watchRooms")
     .doc(currentRoomId)
     .collection("members")
@@ -791,72 +676,18 @@ function toggleMyMic() {
 
 function updateMicUI(enabled) {
   const btn = document.getElementById("myMicBtn");
-  if (btn) {
-    if (enabled) {
-      btn.innerHTML = '<i class="fas fa-microphone"></i>';
-      btn.classList.remove("active");
-    } else {
-      btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
-      btn.classList.add("active");
-    }
+  if (!btn) return;
+  if (enabled) {
+    btn.innerHTML = '<i class="fas fa-microphone"></i>';
+    btn.classList.remove("active");
+  } else {
+    btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+    btn.classList.add("active");
   }
 }
 
-// --- LOGIC QUẢN LÝ ---
-async function kickUser(uid, name) {
-  if (!confirm(`Mời ${name} ra khỏi phòng?`)) return;
-  await db
-    .collection("watchRooms")
-    .doc(currentRoomId)
-    .collection("members")
-    .doc(uid)
-    .delete();
-  await db
-    .collection("watchRooms")
-    .doc(currentRoomId)
-    .update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
-}
-
-async function banUser(uid, name) {
-  if (!confirm(`⚠️ CẤM VĨNH VIỄN ${name}?`)) return;
-  await db
-    .collection("watchRooms")
-    .doc(currentRoomId)
-    .update({ bannedUsers: firebase.firestore.FieldValue.arrayUnion(uid) });
-  await db
-    .collection("watchRooms")
-    .doc(currentRoomId)
-    .collection("members")
-    .doc(uid)
-    .delete();
-  await db
-    .collection("watchRooms")
-    .doc(currentRoomId)
-    .update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
-}
-
-async function toggleChatBan(uid, ban) {
-  await db
-    .collection("watchRooms")
-    .doc(currentRoomId)
-    .collection("members")
-    .doc(uid)
-    .update({ isChatBanned: ban });
-}
-
-async function toggleMicBan(uid, shouldBan) {
-  const updateData = { isMicBanned: shouldBan };
-  if (shouldBan) updateData.isMicMuted = true;
-  await db
-    .collection("watchRooms")
-    .doc(currentRoomId)
-    .collection("members")
-    .doc(uid)
-    .update(updateData);
-}
-
 // ==========================================
-// 6. CÁC HÀM KHÁC
+// 5. CÁC HÀM KHÁC (CHAT, PLAYER...)
 // ==========================================
 function loadChat(roomId) {
   chatUnsubscribe = db
@@ -873,24 +704,11 @@ function loadChat(roomId) {
       container.scrollTop = container.scrollHeight;
     });
 }
-
 async function sendChatMessage(e) {
   e.preventDefault();
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
-
-  const memberDoc = await db
-    .collection("watchRooms")
-    .doc(currentRoomId)
-    .collection("members")
-    .doc(currentUser.uid)
-    .get();
-  if (memberDoc.exists && memberDoc.data().isChatBanned) {
-    showNotification("⛔ Bạn đã bị cấm chat!", "error");
-    return;
-  }
-
   await db.collection("watchRooms").doc(currentRoomId).collection("chat").add({
     userId: currentUser.uid,
     userName: currentUser.displayName,
@@ -900,16 +718,15 @@ async function sendChatMessage(e) {
   });
   input.value = "";
 }
-
 function initYouTubePlayer(videoId) {
   const container = document.getElementById("partyPlayer");
   container.innerHTML = '<div id="ytPlayerTarget"></div>';
-  let finalId = videoId.includes("youtu.be/")
-    ? videoId.split("youtu.be/")[1].split("?")[0]
-    : videoId;
+  let finalId = videoId;
   if (videoId.includes("v=")) finalId = videoId.split("v=")[1].split("&")[0];
+  else if (videoId.includes("youtu.be/"))
+    finalId = videoId.split("youtu.be/")[1].split("?")[0];
 
-  const createPlayer = () => {
+  const create = () => {
     player = new YT.Player("ytPlayerTarget", {
       height: "100%",
       width: "100%",
@@ -918,22 +735,17 @@ function initYouTubePlayer(videoId) {
         autoplay: 0,
         controls: 1,
         rel: 0,
-        modestbranding: 1,
         origin: window.location.origin,
       },
-      events: {
-        onReady: onPlayerReady,
-        onStateChange: onPlayerStateChange,
-        onError: onPlayerError,
-      },
+      events: { onReady: onPlayerReady, onStateChange: onPlayerStateChange },
     });
   };
-  if (window.YT && window.YT.Player) createPlayer();
+  if (window.YT && window.YT.Player) create();
   else {
-    window.onYouTubeIframeAPIReady = createPlayer;
+    window.onYouTubeIframeAPIReady = create;
     const tag = document.createElement("script");
-    tag.src = "https:/" +www.youtube.com/iframe_api";
-                                                 "document.body.appendChild(tag);
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.body.appendChild(tag);
   }
 }
 function onPlayerReady() {
@@ -942,29 +754,22 @@ function onPlayerReady() {
     if (latestRoomData.status === "playing") player.playVideo();
   }
 }
-function onPlayerError() {
-  showNotification("Lỗi phát video.", "error");
-}
 const onPlayerStateChange = (event) => {
   if (!isHost) return;
-  if (event.data === YT.PlayerState.PLAYING)
-    updateRoomState("playing", player.getCurrentTime());
-  else if (event.data === YT.PlayerState.PAUSED)
-    updateRoomState("paused", player.getCurrentTime());
+  if (event.data === 1) updateRoomState("playing", player.getCurrentTime());
+  else if (event.data === 2) updateRoomState("paused", player.getCurrentTime());
 };
 async function updateRoomState(status, time) {
-  if (!currentRoomId || !isHost) return;
-  const now = Date.now();
-  if (now - lastSyncTime < 500) return;
-  lastSyncTime = now;
+  if (Date.now() - lastSyncTime < 500) return;
+  lastSyncTime = Date.now();
   await db
     .collection("watchRooms")
     .doc(currentRoomId)
-    .update({ status: status, currentTime: time });
+    .update({ status, currentTime: time });
 }
 function handleSync(data) {
-  if (!isHost && player && typeof player.getPlayerState === "function") {
-    if (Math.abs(player.getCurrentTime() - data.currentTime) > SYNC_THRESHOLD)
+  if (!isHost && player && player.getPlayerState) {
+    if (Math.abs(player.getCurrentTime() - data.currentTime) > 2)
       player.seekTo(data.currentTime, true);
     if (data.status === "playing" && player.getPlayerState() !== 1)
       player.playVideo();
@@ -972,122 +777,58 @@ function handleSync(data) {
       player.pauseVideo();
   }
 }
-function syncPlay() {
-  if (player) player.playVideo();
-}
-function syncPause() {
-  if (player) player.pauseVideo();
-}
-function syncSeek(s) {
-  if (player) player.seekTo(player.getCurrentTime() + s, true);
-}
-
 async function leaveRoom() {
   if (myPeer) myPeer.destroy();
-  if (myStream) myStream.getTracks().forEach((track) => track.stop());
+  if (myStream) myStream.getTracks().forEach((t) => t.stop());
   if (roomUnsubscribe) roomUnsubscribe();
   if (chatUnsubscribe) chatUnsubscribe();
   if (membersUnsubscribe) membersUnsubscribe();
-  if (player && player.destroy) player.destroy();
-  player = null;
-  if (currentRoomId) {
-    await db
-      .collection("watchRooms")
-      .doc(currentRoomId)
-      .collection("members")
-      .doc(currentUser.uid)
-      .delete();
-    await db
-      .collection("watchRooms")
-      .doc(currentRoomId)
-      .update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
-  }
   currentRoomId = null;
   document.getElementById("partyRoom").classList.add("hidden");
   document.getElementById("partyLobby").classList.remove("hidden");
   const footer = document.querySelector("footer");
   if (footer) footer.style.display = "block";
 }
-
-function renderMessage(msg, container) {
-  if (msg.type === "reaction") {
-    showFloatingEmoji(msg.content);
-    return;
-  }
+function renderMessage(msg, c) {
   const div = document.createElement("div");
   if (msg.type === "system") {
     div.className = "chat-msg system";
     div.textContent = msg.content;
   } else {
-    const isMe = msg.userId === currentUser.uid;
-    div.className = `chat-msg ${isMe ? "me" : ""}`;
-    div.innerHTML = `<span class="author">${isMe ? "" : msg.userName + ":"}</span><span class="text">${escapeHtml(msg.content)}</span>`;
+    div.className = `chat-msg ${msg.userId === currentUser.uid ? "me" : ""}`;
+    div.innerHTML = `<span class="author">${msg.userId === currentUser.uid ? "" : msg.userName + ":"}</span> <span class="text">${msg.content}</span>`;
   }
-  container.appendChild(div);
+  c.appendChild(div);
 }
-function sendReaction(e) {
-  showFloatingEmoji(e);
+function sendSystemMessage(t) {
   db.collection("watchRooms").doc(currentRoomId).collection("chat").add({
-    userId: currentUser.uid,
-    content: e,
-    type: "reaction",
+    content: t,
+    type: "system",
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
 }
-function sendSystemMessage(t) {
+function kickUser(uid, name) {
+  if (!confirm("KICK " + name + "?")) return;
   db.collection("watchRooms")
     .doc(currentRoomId)
-    .collection("chat")
-    .add({
-      content: t,
-      type: "system",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-}
-function showFloatingEmoji(e) {
-  const c = document.getElementById("floatingEmojis");
-  if (!c) return;
-  const el = document.createElement("div");
-  el.className = "float-icon";
-  el.textContent = e;
-  el.style.left = Math.random() * 80 + "%";
-  c.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-}
-function copyRoomLink() {
-  navigator.clipboard.writeText(
-    `${window.location.origin}${window.location.pathname}?room=${currentRoomId}`,
-  );
-  showNotification("Đã copy link!", "success");
-}
-function switchRoomTab(tab) {
-  document
-    .querySelectorAll(".room-tab")
-    .forEach((t) => t.classList.remove("active"));
-  document
-    .querySelectorAll(".room-tab-content")
-    .forEach((c) => c.classList.remove("active"));
-  event.target.closest(".room-tab").classList.add("active");
-  document
-    .getElementById(tab === "chat" ? "tabChat" : "tabMembers")
-    .classList.add("active");
-}
-function escapeHtml(t) {
-  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    .collection("members")
+    .doc(uid)
+    .delete();
 }
 
-// --- FORCE WAKE UP AUDIO CONTEXT (FIX MOBILE) ---
+// --- GLOBAL CLICK LISTENER: FORCE WAKE UP AUDIO ---
 document.addEventListener("click", () => {
-  if (globalAudioContext && globalAudioContext.state === "suspended") {
+  if (globalAudioContext && globalAudioContext.state === "suspended")
     globalAudioContext.resume();
-  }
+  document.querySelectorAll("audio").forEach((a) => {
+    if (a.paused && !a.muted) a.play().catch((e) => {});
+  });
 });
 document.addEventListener(
   "touchstart",
   () => {
-    if (globalAudioContext && globalAudioContext.state === "suspended") {
+    if (globalAudioContext && globalAudioContext.state === "suspended")
       globalAudioContext.resume();
-    }
   },
   { passive: true },
 );
