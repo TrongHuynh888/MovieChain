@@ -832,3 +832,80 @@ document.addEventListener(
   },
   { passive: true },
 );
+// ==========================================
+// 6. CÁC TIỆN ÍCH UI (TAB, EMOJI, COPY LINK) - BỔ SUNG
+// ==========================================
+
+// 1. Chuyển Tab (Chat <-> Thành viên)
+function switchRoomTab(tabName) {
+  // Xóa active cũ
+  document
+    .querySelectorAll(".room-tab")
+    .forEach((t) => t.classList.remove("active"));
+  document
+    .querySelectorAll(".room-tab-content")
+    .forEach((c) => c.classList.remove("active"));
+
+  // Active tab vừa bấm
+  event.currentTarget.classList.add("active");
+
+  // Hiện nội dung tương ứng
+  if (tabName === "chat") {
+    document.getElementById("tabChat").classList.add("active");
+  } else {
+    document.getElementById("tabMembers").classList.add("active");
+  }
+}
+
+// 2. Copy Link mời bạn bè
+function copyRoomLink() {
+  const url = window.location.href;
+  navigator.clipboard
+    .writeText(url)
+    .then(() => {
+      showNotification("Đã copy link phòng! Gửi cho bạn bè ngay.", "success");
+    })
+    .catch(() => {
+      showNotification("Lỗi copy link", "error");
+    });
+}
+
+// 3. Thả tim/Emoji bay bay
+function sendReaction(emoji) {
+  // Hiển thị ngay trên máy mình
+  showFloatingEmoji(emoji);
+
+  // Gửi qua chat để người khác cũng thấy
+  db.collection("watchRooms").doc(currentRoomId).collection("chat").add({
+    userId: currentUser.uid,
+    content: emoji,
+    type: "reaction",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+function showFloatingEmoji(char) {
+  const container = document.getElementById("floatingEmojis");
+  if (!container) return;
+
+  const el = document.createElement("div");
+  el.className = "float-icon";
+  el.textContent = char;
+  el.style.left = Math.random() * 80 + 10 + "%"; // Random vị trí ngang
+  container.appendChild(el);
+
+  // Tự xóa sau 3 giây
+  setTimeout(() => el.remove(), 3000);
+}
+
+// 4. Xử lý hiển thị tin nhắn Emoji từ người khác
+// (Tìm hàm renderMessage cũ và thay thế, hoặc để đoạn này đè lên cũng được)
+const originalRenderMessage = renderMessage; // Lưu hàm cũ
+renderMessage = function (msg, container) {
+  if (msg.type === "reaction") {
+    showFloatingEmoji(msg.content);
+    return; // Không hiện reaction vào khung chat cho đỡ rác
+  }
+  // Nếu là tin nhắn thường thì gọi hàm cũ
+  originalRenderMessage(msg, container);
+};
