@@ -4,7 +4,9 @@
  */
 async function loadComponent(elementId, filePath) {
   try {
-    const response = await fetch(filePath);
+    // Thêm timestamp để tránh cache
+    const url = filePath + "?v=" + new Date().getTime();
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`Không thể tải ${filePath}`);
 
     const html = await response.text();

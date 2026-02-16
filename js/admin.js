@@ -116,25 +116,44 @@ function renderRecentMovies() {
 /**
  * Load danh sách phim cho Admin
  */
-async function loadAdminMovies() {
+/**
+ * Lọc danh sách phim (Admin)
+ */
+function filterAdminMovies() {
+  const searchInput = document.getElementById("adminSearchMovies");
+  const statusSelect = document.getElementById("adminFilterStatus");
+  
+  if (!searchInput) return;
+
+  const searchText = searchInput.value.toLowerCase().trim();
+  const statusFilter = statusSelect ? statusSelect.value : "";
+  
+  // Lọc phim từ biến toàn cục allAdminMovies (chứa đủ mọi trạng thái)
+  const filteredMovies = allAdminMovies.filter(m => {
+    const matchText = (m.title && m.title.toLowerCase().includes(searchText)) ||
+                      (m.category && m.category.toLowerCase().includes(searchText));
+    
+    const matchStatus = statusFilter === "" || m.status === statusFilter;
+
+    return matchText && matchStatus;
+  });
+
+  renderAdminMoviesList(filteredMovies);
+}
+
+/**
+ * Render bảng phim
+ */
+function renderAdminMoviesList(movies) {
   const tbody = document.getElementById("adminMoviesTable");
+  if (!tbody) return;
 
-  try {
-    let movies = [];
+  if (movies.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Không tìm thấy phim nào</td></tr>';
+    return;
+  }
 
-    // 1. Lấy TẤT CẢ phim từ Firestore (Mới nhất lên đầu)
-    if (db) {
-      const snapshot = await db
-        .collection("movies")
-        .orderBy("createdAt", "desc")
-        .get();
-      movies = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    } else {
-      movies = allMovies; // Dữ liệu mẫu nếu chưa có DB
-    }
-
-    // 2. Render Bảng Quản lý Phim Chính
-    tbody.innerHTML = movies
+  tbody.innerHTML = movies
       .map(
         (movie) => `
             <tr>
@@ -156,6 +175,43 @@ async function loadAdminMovies() {
         `,
       )
       .join("");
+}
+
+/**
+ * Biến toàn cục lưu danh sách phim cho Admin (Bao gồm cả ẩn/chờ duyệt)
+ */
+let allAdminMovies = [];
+
+/**
+ * Load danh sách phim cho Admin
+ */
+async function loadAdminMovies() {
+  const tbody = document.getElementById("adminMoviesTable");
+
+  try {
+    let movies = [];
+
+    // 1. Lấy TẤT CẢ phim từ Firestore (Mới nhất lên đầu)
+    if (db) {
+      const snapshot = await db
+        .collection("movies")
+        .orderBy("createdAt", "desc")
+        .get();
+      movies = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    } else {
+      movies = allMovies; // Dữ liệu mẫu nếu chưa có DB
+    }
+    
+    // Lưu vào biến toàn cục để dùng cho lọc
+    allAdminMovies = movies;
+
+    // 2. Render Bảng Quản lý Phim Chính
+    // Render lần đầu (hoặc dùng hàm filter để render)
+    renderAdminMoviesList(allAdminMovies);
+    
+    // ... (Code cập nhật dropdown/dashboard giữ nguyên bên dưới)
+
+
 
     // =======================================================
     // 👇 ĐOẠN CODE MỚI THÊM ĐỂ FIX LỖI CỦA BẠN 👇
@@ -205,6 +261,68 @@ async function loadAdminMovies() {
 /**
  * Mở modal thêm/sửa phim
  */
+// Thêm hàm này vào trước openMovieModal
+/**
+ * Cập nhật UI nhập Phần/Mùa dựa trên Type
+ */
+function updateMoviePartUI() {
+    const type = document.getElementById("moviePartType").value;
+    const groupNumber = document.getElementById("groupPartNumber"); // Chứa Input Number + Buttons
+    const inputCustom = document.getElementById("moviePartCustom");
+
+    if (type === "custom") {
+        // Hiện ô nhập text, ẩn ô nhập số
+        groupNumber.style.display = "none";
+        inputCustom.style.display = "block";
+        inputCustom.focus();
+    } else if (type === "") {
+        // Ẩn cả 2
+        groupNumber.style.display = "none";
+        inputCustom.style.display = "none";
+    } else {
+        // Hiện ô nhập số, ẩn ô text
+        groupNumber.style.display = "flex";
+        inputCustom.style.display = "none";
+    }
+}
+
+/**
+ * Tăng giảm số phần
+ */
+function adjustPartNumber(delta) {
+    const input = document.getElementById("moviePartNumber");
+    let current = parseInt(input.value) || 1;
+    current += delta;
+    if (current < 1) current = 1;
+    input.value = current;
+}
+
+/**
+ * Chuyển đổi chế độ nhập giá
+ */
+function toggleMoviePrice(type) {
+  const priceInput = document.getElementById("moviePrice");
+  if (!priceInput) return;
+
+  if (type === "free") {
+    priceInput.value = 0;
+    priceInput.disabled = true;
+    priceInput.style.backgroundColor = "#e9ecef"; // Màu xám nhạt
+    priceInput.style.color = "#6c757d"; // Màu chữ xám
+  } else {
+    // Nếu chuyển sang Paid mà giá đang là 0 thì set mặc định 1
+    if (parseFloat(priceInput.value) === 0) {
+        priceInput.value = 1;
+    }
+    priceInput.disabled = false;
+    priceInput.style.backgroundColor = "";
+    priceInput.style.color = "";
+  }
+}
+
+/**
+ * Mở modal thêm/sửa phim
+ */
 function openMovieModal(movieId = null) {
   const modal = document.getElementById("movieModal");
   const title = document.getElementById("movieModalTitle");
@@ -234,7 +352,35 @@ function openMovieModal(movieId = null) {
     if (movie) {
       document.getElementById("movieId").value = movieId;
       document.getElementById("movieTitle").value = movie.title;
-      document.getElementById("moviePart").value = movie.part || "";
+      // document.getElementById("moviePart").value = movie.part || ""; // Code cũ
+      
+      // Xử lý Phần/Mùa (Parse dữ liệu cũ)
+      const partStr = movie.part || "";
+      const partTypeSelect = document.getElementById("moviePartType");
+      const partNumberInput = document.getElementById("moviePartNumber");
+      const partCustomInput = document.getElementById("moviePartCustom");
+
+      // Regex check: "Phần 1", "Season 2", "Chapter 10"
+      const match = partStr.match(/^(Phần|Season|Chapter|Quyển|Tập)\s+(\d+)$/);
+
+      if (match) {
+          // Khớp mẫu -> Chọn Type và điền Number
+          partTypeSelect.value = match[1];
+          partNumberInput.value = match[2];
+          partCustomInput.value = "";
+      } else if (partStr.trim() === "") {
+          // Trống
+          partTypeSelect.value = "";
+          partNumberInput.value = "1";
+          partCustomInput.value = "";
+      } else {
+          // Không khớp (VD: "Tập Đặc Biệt") -> Chọn Custom
+          partTypeSelect.value = "custom";
+          partNumberInput.value = "1";
+          partCustomInput.value = partStr;
+      }
+      updateMoviePartUI(); // Cập nhật UI ẩn hiện
+
       document.getElementById("moviePoster").value = movie.posterUrl;
       document.getElementById("movieCategory").value = movie.category || "";
       document.getElementById("movieCountry").value = movie.country || "";
@@ -242,11 +388,21 @@ function openMovieModal(movieId = null) {
       document.getElementById("moviePrice").value = movie.price || 0;
       document.getElementById("movieDescription").value =
         movie.description || "";
-      document.getElementById("movieType").value = movie.type || "series"; // Mặc định là phim bộ nếu chưa có
+      document.getElementById("movieType").value = movie.type || "series";
       document.getElementById("movieTags").value = (movie.tags || []).join(
         ", ",
       );
       document.getElementById("movieStatus").value = movie.status || "public";
+      
+      // Xử lý Radio Button Free/Paid
+      const priceVal = parseFloat(movie.price || 0);
+      if (priceVal === 0) {
+          document.querySelector('input[name="movieFeeType"][value="free"]').checked = true;
+          toggleMoviePrice('free');
+      } else {
+          document.querySelector('input[name="movieFeeType"][value="paid"]').checked = true;
+          toggleMoviePrice('paid');
+      }
     }
   } else {
     // Add mode
@@ -254,8 +410,17 @@ function openMovieModal(movieId = null) {
     form.reset();
     document.getElementById("movieId").value = "";
     document.getElementById("movieYear").value = new Date().getFullYear();
-    document.getElementById("movieType").value = "series"; // Mặc định khi thêm mới
-    document.getElementById("moviePart").value = "";
+    document.getElementById("movieType").value = "series";
+    
+    // Mặc định Phần/Mùa: Chọn "Phần 1"
+    document.getElementById("moviePartType").value = "Phần";
+    document.getElementById("moviePartNumber").value = "1";
+    document.getElementById("moviePartCustom").value = "";
+    updateMoviePartUI();
+
+    // Mặc định là Miễn phí
+    document.querySelector('input[name="movieFeeType"][value="free"]').checked = true;
+    toggleMoviePrice("free");
   }
 
   openModal("movieModal");
@@ -279,10 +444,19 @@ async function handleMovieSubmit(event) {
     category: document.getElementById("movieCategory").value,
     country: document.getElementById("movieCountry").value,
     year: parseInt(document.getElementById("movieYear").value),
-    price: parseFloat(document.getElementById("moviePrice").value),
+    // Logic giá vé mới
+    price: document.querySelector('input[name="movieFeeType"]:checked').value === 'free' 
+           ? 0 
+           : parseFloat(document.getElementById("moviePrice").value || 0),
     description: document.getElementById("movieDescription").value,
     type: document.getElementById("movieType").value,
-    part: document.getElementById("moviePart").value.trim(),
+    // Logic gộp Phần/Mùa
+    part: (() => {
+        const type = document.getElementById("moviePartType").value;
+        if (!type) return ""; // Trống
+        if (type === "custom") return document.getElementById("moviePartCustom").value.trim();
+        return `${type} ${document.getElementById("moviePartNumber").value}`;
+    })(),
     tags: document
       .getElementById("movieTags")
       .value.split(",")
@@ -359,6 +533,48 @@ async function deleteMovie(movieId) {
   }
 }
 /**
+ * Lọc phim trong dropdown chọn phim (Quản lý Tập)
+ */
+function filterEpisodeMovies() {
+  const searchInput = document.getElementById("episodeMovieSearch");
+  const select = document.getElementById("selectMovieForEpisodes");
+  
+  if (!searchInput || !select) return;
+
+  const searchText = searchInput.value.toLowerCase().trim();
+  
+  // Lọc phim
+  const filteredMovies = allMovies.filter(m => 
+    m.title.toLowerCase().includes(searchText)
+  );
+
+  // Render lại dropdown
+  if (filteredMovies.length === 0) {
+    select.innerHTML = '<option value="">-- Không tìm thấy phim --</option>';
+    select.size = 1; // Thu gọn
+  } else {
+    // Nếu đang tìm kiếm thì mở rộng danh sách (max 5 dòng) để user dễ thấy
+    if (searchText.length > 0) {
+       select.size = Math.min(filteredMovies.length + 1, 6);
+    } else {
+       select.size = 1; // Thu gọn nếu không tìm
+    }
+
+    select.innerHTML =
+      '<option value="">-- Chọn phim --</option>' +
+      filteredMovies
+        .map((m) => `<option value="${m.id}">${m.title}</option>`)
+        .join("");
+        
+    // Tự động chọn kết quả đầu tiên để load dữ liệu ngay
+    if (searchText.length > 0 && filteredMovies.length > 0) {
+        select.value = filteredMovies[0].id; // Chọn phim đầu tiên
+        loadEpisodesForMovie(); // Load luôn tập phim
+    }
+  }
+}
+
+/**
  * Load tập phim cho phim đã chọn
  */
 async function loadEpisodesForMovie() {
@@ -406,7 +622,27 @@ async function loadEpisodesForMovie() {
     .join("");
 }
 /**
- * Mở modal thêm/sửa tập (Đã nâng cấp cho Phim Lẻ)
+ * Xử lý hiển thị gợi ý khi chọn loại video
+ */
+function toggleVideoInputByType() {
+    const type = document.getElementById("episodeVideoType").value;
+    const input = document.getElementById("episodeVideoSource");
+    const hint = document.getElementById("videoSourceHint");
+
+    if (type === "youtube") {
+        input.placeholder = "Nhập ID YouTube (VD: dQw4w9WgXcQ)";
+        hint.textContent = "Nhập ID video từ link YouTube (phần sau v=)";
+    } else if (type === "hls") {
+        input.placeholder = "https://example.com/video.m3u8";
+        hint.textContent = "Nhập đường dẫn file Manifest (.m3u8)";
+    } else if (type === "mp4") {
+        input.placeholder = "https://example.com/video.mp4";
+        hint.textContent = "Nhập đường dẫn trực tiếp đến file video (.mp4)";
+    }
+}
+
+/**
+ * Mở modal thêm/sửa tập (Đã nâng cấp cho Hybrid Player)
  */
 function openEpisodeModal(index = null) {
   const title = document.getElementById("episodeModalTitle");
@@ -418,7 +654,6 @@ function openEpisodeModal(index = null) {
   form.reset();
 
   // 1. Lấy phim đang chọn (Đảm bảo biến selectedMovieForEpisodes đã được khai báo)
-  // Nếu bạn chưa khai báo biến này, hãy dùng: document.getElementById('selectMovieForEpisodes').value
   const movieId = document.getElementById("selectMovieForEpisodes").value;
   const movie = allMovies.find((m) => m.id === movieId);
 
@@ -440,10 +675,15 @@ function openEpisodeModal(index = null) {
     if (episode) {
       document.getElementById("episodeNumber").value = episode.episodeNumber;
       document.getElementById("episodeTitle").value = episode.title || "";
-      document.getElementById("episodeYoutubeId").value =
-        episode.youtubeId || "";
       document.getElementById("episodeDuration").value = episode.duration || "";
-
+      
+      // Xử lý Hybrid Player Data
+      const videoType = episode.videoType || "youtube";
+      document.getElementById("episodeVideoType").value = videoType;
+      
+      // Nếu có videoSource (Data mới) dùng nó, nếu không dùng youtubeId (Data cũ)
+      document.getElementById("episodeVideoSource").value = episode.videoSource || episode.youtubeId || "";
+      
       // Nếu tập cũ chưa có quality, mặc định lấy 1080p60
       document.getElementById("episodeQuality").value =
         episode.quality || "1080p60";
@@ -464,10 +704,12 @@ function openEpisodeModal(index = null) {
       document.getElementById("episodeTitle").value = `Tập ${nextEp}`; // Tự điền tên tập
     }
 
-    // 👉 QUAN TRỌNG: Luôn set mặc định là 1080p60 khi thêm mới
+    // Mặc định
+    document.getElementById("episodeVideoType").value = "youtube";
     document.getElementById("episodeQuality").value = "1080p60";
   }
-
+  
+  toggleVideoInputByType(); // Cập nhật UI hint
   openModal("episodeModal");
 }
 /**
@@ -479,10 +721,20 @@ async function handleEpisodeSubmit(event) {
   if (!db || !selectedMovieForEpisodes) return;
 
   const index = document.getElementById("episodeIndex").value;
+  const videoType = document.getElementById("episodeVideoType").value;
+  const videoSource = document.getElementById("episodeVideoSource").value;
+  
+  // Logic tương thích ngược:
+  // Nếu là YouTube, lưu videoSource vào youtubeId.
+  // Nếu là loại khác, youtubeId để trống.
+  const youtubeId = videoType === "youtube" ? videoSource : "";
+
   const episodeData = {
     episodeNumber: parseInt(document.getElementById("episodeNumber").value),
     title: document.getElementById("episodeTitle").value,
-    youtubeId: document.getElementById("episodeYoutubeId").value,
+    videoType: videoType,
+    videoSource: videoSource,
+    youtubeId: youtubeId, // Giữ trường này để tương thích Watch Party cũ (nếu có)
     duration: document.getElementById("episodeDuration").value,
     quality: document.getElementById("episodeQuality").value,
   };
@@ -573,8 +825,15 @@ function populateMovieSelect() {
 /**
  * Load danh sách users cho Admin (Đã sửa: Hiện ảnh Avatar thật)
  */
+/**
+ * Biến toàn cục lưu danh sách users để tìm kiếm
+ */
+let allAdminUsers = [];
+
+/**
+ * Load danh sách users cho Admin (Đã sửa: Hiện ảnh Avatar thật + Tách hàm render)
+ */
 async function loadAdminUsers() {
-  const tbody = document.getElementById("adminUsersTable");
   if (!db) return;
 
   try {
@@ -582,82 +841,135 @@ async function loadAdminUsers() {
       .collection("users")
       .orderBy("createdAt", "desc")
       .get();
-    const users = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    
+    // Lưu vào biến toàn cục
+    allAdminUsers = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    tbody.innerHTML = users
-      .map((user) => {
-        const date = user.createdAt?.toDate
-          ? formatDate(user.createdAt.toDate())
-          : "N/A";
-        const initial = (user.displayName ||
-          user.email ||
-          "U")[0].toUpperCase();
+    // Render toàn bộ lần đầu
+    renderAdminUsersList(allAdminUsers);
 
-        // Avatar Logic
-        let avatarHtml =
-          user.avatar && user.avatar.startsWith("http")
-            ? `<img src="${user.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">`
-            : `<div class="comment-avatar" style="width:40px;height:40px;font-size:14px;">${initial}</div>`;
+    // Gắn sự kiện tìm kiếm nếu chưa gắn
+    const searchInput = document.getElementById("adminSearchUsers");
+    const filterRole = document.getElementById("adminFilterRole");
 
-        // 👇 LOGIC TÍNH THỜI HẠN VIP 👇
-        const isVip = user.isVip === true;
-        let expiryText = "-";
+    if (searchInput) {
+      searchInput.oninput = filterAdminUsers;
+    }
+    if (filterRole) {
+      filterRole.onchange = filterAdminUsers;
+    }
 
-        if (isVip) {
-          if (user.vipExpiresAt) {
-            // TRƯỜNG HỢP CÓ THỜI HẠN
-            const expiryDate = user.vipExpiresAt.toDate();
-            const now = new Date();
-            const diffTime = expiryDate - now;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays > 0) {
-              expiryText = `<span style="color: #00d4ff; font-weight:bold;">Còn ${diffDays} ngày</span>`;
-            } else {
-              expiryText = `<span style="color: #ff4444; font-weight:bold;">Đã hết hạn</span>`;
-            }
-          } else {
-            // TRƯỜNG HỢP VĨNH VIỄN (vipExpiresAt là null)
-            expiryText = `<span class="tag" style="background: linear-gradient(45deg, #00d4ff, #00ff88); color: #000; font-weight:800;">♾️ VĨNH VIỄN</span>`;
-          }
-        }
-        // 👆 HẾT LOGIC TÍNH HẠN 👆
-
-        const vipBadge = isVip
-          ? `<span class="status-badge vip"><i class="fas fa-crown"></i> VIP</span>`
-          : `<span class="status-badge free">Free</span>`;
-        const vipBtnClass = isVip ? "btn-secondary" : "btn-vip-action";
-        const vipIcon = isVip ? "fa-ban" : "fa-crown";
-
-        return `
-            <tr>
-                <td>${avatarHtml}</td>
-                <td>${user.email}</td>
-                <td>${user.displayName || "N/A"}</td>
-                <td><span class="status-badge ${user.role === "admin" ? "public" : ""}">${user.role || "user"}</span></td>
-                <td><span class="status-badge ${user.isActive ? "active" : "blocked"}">${user.isActive ? "Hoạt động" : "Bị khóa"}</span></td>
-                <td>${vipBadge}</td>
-                
-                <td style="font-size: 13px;">${expiryText}</td>
-                
-                <td>${date}</td>
-                <td>
-                    <button class="btn btn-sm ${vipBtnClass}" onclick="toggleUserVip('${user.id}', ${!isVip})">
-                        <i class="fas ${vipIcon}"></i>
-                    </button>
-                    <button class="btn btn-sm btn-secondary" onclick="openUserRoleModal('${user.id}', '${user.email}', '${user.role}')"><i class="fas fa-user-cog"></i></button>
-                    <button class="btn btn-sm ${user.isActive ? "btn-danger" : "btn-success"}" onclick="toggleUserStatus('${user.id}', ${!user.isActive})"><i class="fas fa-${user.isActive ? "lock" : "unlock"}"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}', '${user.email}')" title="Xóa vĩnh viễn">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                    </td>
-            </tr>
-        `;
-      })
-      .join("");
   } catch (error) {
     console.error(error);
   }
+}
+
+/**
+ * Hàm lọc user theo tên/email và vai trò
+ */
+function filterAdminUsers() {
+  const searchText = document.getElementById("adminSearchUsers").value.toLowerCase().trim();
+  const roleFilter = document.getElementById("adminFilterRole").value;
+
+  const filtered = allAdminUsers.filter(user => {
+    const matchName = (user.displayName || "").toLowerCase().includes(searchText);
+    const matchEmail = (user.email || "").toLowerCase().includes(searchText);
+    const matchRole = roleFilter ? user.role === roleFilter : true;
+
+    return (matchName || matchEmail) && matchRole;
+  });
+
+  renderAdminUsersList(filtered);
+}
+
+/**
+ * Hàm render UI danh sách user (Tách ra để tái sử dụng)
+ */
+function renderAdminUsersList(users) {
+  const tbody = document.getElementById("adminUsersTable");
+  if (!tbody) return;
+
+  if (users.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center">Không tìm thấy người dùng nào</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = users
+    .map((user) => {
+      const date = user.createdAt?.toDate
+        ? formatDate(user.createdAt.toDate())
+        : "N/A";
+      const initial = (user.displayName ||
+        user.email ||
+        "U")[0].toUpperCase();
+
+      // Avatar Logic
+      let avatarHtml =
+        user.avatar && user.avatar.startsWith("http")
+          ? `<img src="${user.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">`
+          : `<div class="comment-avatar" style="width:40px;height:40px;font-size:14px;">${initial}</div>`;
+
+      // 👇 LOGIC TÍNH THỜI HẠN VIP 👇
+      const isVip = user.isVip === true;
+      let expiryText = "-";
+
+      if (isVip) {
+        if (user.vipExpiresAt) {
+          // TRƯỜNG HỢP CÓ THỜI HẠN
+          const expiryDate = user.vipExpiresAt.toDate 
+             ? user.vipExpiresAt.toDate() 
+             : new Date(user.vipExpiresAt);
+             
+          const now = new Date();
+          const diffTime = expiryDate - now;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays > 0) {
+            expiryText = `<span style="color: #00d4ff; font-weight:bold;">Còn ${diffDays} ngày</span>`;
+          } else {
+            expiryText = `<span style="color: #ff4444; font-weight:bold;">Đã hết hạn</span>`;
+          }
+        } else {
+          // TRƯỜNG HỢP VĨNH VIỄN (vipExpiresAt là null)
+          expiryText = `<span class="tag" style="background: linear-gradient(45deg, #00d4ff, #00ff88); color: #000; font-weight:800;">♾️ VĨNH VIỄN</span>`;
+        }
+      }
+      // 👆 HẾT LOGIC TÍNH HẠN 👆
+
+      const vipBadge = isVip
+        ? `<span class="status-badge vip"><i class="fas fa-crown"></i> VIP</span>`
+        : `<span class="status-badge free">Free</span>`;
+      const vipBtnClass = isVip ? "btn-secondary" : "btn-vip-action";
+      const vipIcon = isVip ? "fa-ban" : "fa-crown";
+      
+      const roleClass = user.role === "admin" ? "public" : (user.role === "editor" ? "pending" : "");
+
+      return `
+          <tr>
+              <td>${avatarHtml}</td>
+              <td>${user.email}</td>
+              <td>${user.displayName || "N/A"}</td>
+              <td><span class="status-badge ${roleClass}">${user.role || "user"}</span></td>
+              <td><span class="status-badge ${user.isActive ? "active" : "blocked"}">${user.isActive ? "Hoạt động" : "Bị khóa"}</span></td>
+              <td>${vipBadge}</td>
+              
+              <td style="font-size: 13px;">${expiryText}</td>
+              
+              <td>${date}</td>
+              <td>
+                  <button class="btn btn-sm ${vipBtnClass}" onclick="toggleUserVip('${user.id}', ${!isVip})" title="Cấp/Hủy VIP">
+                      <i class="fas ${vipIcon}"></i>
+                  </button>
+                  <button class="btn btn-sm btn-secondary" onclick="openUserRoleModal('${user.id}', '${user.email}', '${user.role}')" title="Phân quyền"><i class="fas fa-user-cog"></i></button>
+                  <button class="btn btn-sm ${user.isActive ? "btn-danger" : "btn-success"}" onclick="toggleUserStatus('${user.id}', ${!user.isActive})" title="${user.isActive ? "Khóa" : "Mở khóa"}"><i class="fas fa-${user.isActive ? "lock" : "unlock"}"></i></button>
+              <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}', '${user.email}')" title="Xóa vĩnh viễn">
+                      <i class="fas fa-trash-alt"></i>
+                  </button>
+                  </td>
+          </tr>
+      `;
+    })
+    .join("");
 }
 // 👇 HÀM MỚI: CẤP VIP CÓ THỜI HẠN 👇
 // 👇 HÀM CẤP VIP (ĐÃ CÓ TÙY CHỌN VĨNH VIỄN) 👇
@@ -828,21 +1140,38 @@ async function updateUserRole() {
  */
 function renderAdminCategories() {
   const tbody = document.getElementById("adminCategoriesTable");
+  const searchInput = document.getElementById("adminSearchCategory");
+  
   if (!tbody) return;
 
-  if (allCategories.length === 0) {
+  let categoriesToRender = allCategories;
+
+  // Lọc nếu có từ khóa tìm kiếm
+  if (searchInput) {
+    const searchText = searchInput.value.toLowerCase().trim();
+    if (searchText) {
+      categoriesToRender = allCategories.filter(c => 
+        (c.name && c.name.toLowerCase().includes(searchText)) || 
+        (c.slug && c.slug.toLowerCase().includes(searchText)) ||
+        (c.id && c.id.toLowerCase().includes(searchText))
+      );
+    }
+  }
+
+  if (categoriesToRender.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="4" class="text-center">Chưa có dữ liệu</td></tr>';
+      '<tr><td colspan="5" class="text-center">Không tìm thấy thể loại nào</td></tr>';
     return;
   }
 
-  tbody.innerHTML = allCategories
+  tbody.innerHTML = categoriesToRender
     .map((cat, index) => {
       return `
             <tr>
                 <td>${index + 1}</td>
                 <td>${cat.id}</td>
                 <td>${cat.name}</td>
+                <td>${cat.slug || "N/A"}</td>
                 <td>
                     <button class="btn btn-sm btn-primary" onclick="editCategory('${cat.id}')">
                         <i class="fas fa-edit"></i>
@@ -971,17 +1300,30 @@ async function deleteCategory(categoryId) {
  */
 function renderAdminCountries() {
   const tbody = document.getElementById("adminCountriesTable");
+  const searchInput = document.getElementById("adminSearchCountry");
   if (!tbody) return;
 
   // Nếu không có dữ liệu thì báo trống
-  if (allCountries.length === 0) {
+  let countriesToRender = allCountries;
+
+  if (searchInput) {
+    const searchText = searchInput.value.toLowerCase().trim();
+    if (searchText) {
+      countriesToRender = allCountries.filter(c => 
+        (c.name && c.name.toLowerCase().includes(searchText)) || 
+        (c.id && c.id.toLowerCase().includes(searchText))
+      );
+    }
+  }
+
+  if (countriesToRender.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="5" class="text-center">Chưa có dữ liệu quốc gia</td></tr>';
+      '<tr><td colspan="5" class="text-center">Không tìm thấy quốc gia nào</td></tr>';
     return;
   }
 
   // Vẽ từng dòng
-  tbody.innerHTML = allCountries
+  tbody.innerHTML = countriesToRender
     .map((country, index) => {
       return `
             <tr>
@@ -1093,61 +1435,114 @@ async function loadAdminComments() {
   const tbody = document.getElementById("adminCommentsTable");
   if (!tbody || !db) return;
 
-  try {
-    tbody.innerHTML =
-      '<tr><td colspan="6" class="text-center">Đang tải...</td></tr>';
+  if (!db) return;
 
+  try {
     const snapshot = await db
       .collection("comments")
       .orderBy("createdAt", "desc")
-      .limit(20)
       .get();
+    
+    // Lưu vào biến toàn cục
+    allAdminComments = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    if (snapshot.empty) {
-      tbody.innerHTML =
-        '<tr><td colspan="6" class="text-center">Không có bình luận nào</td></tr>';
-      return;
+    // Render toàn bộ
+    renderAdminCommentsList(allAdminComments);
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/**
+ * Hàm lọc comment theo nội dung và đánh giá
+ */
+function filterAdminComments() {
+  const searchText = document.getElementById("adminSearchComments").value.toLowerCase().trim();
+  const ratingFilter = document.getElementById("adminFilterCommentRating").value;
+
+  const filtered = allAdminComments.filter(comment => {
+    // Resolve tên phim chuẩn từ ID (giống logic render)
+    let movieName = comment.movieTitle || "";
+    if (comment.movieId && typeof allMovies !== 'undefined') {
+        const foundMovie = allMovies.find(m => m.id === comment.movieId);
+        if (foundMovie) movieName = foundMovie.title;
     }
 
-    tbody.innerHTML = snapshot.docs
-      .map((doc) => {
-        const comment = doc.data();
-        const date = comment.createdAt ? formatDate(comment.createdAt) : "N/A";
+    const matchContent = (comment.content || "").toLowerCase().includes(searchText);
+    const matchUser = (comment.userName || "").toLowerCase().includes(searchText);
+    const matchMovie = (movieName || "").toLowerCase().includes(searchText);
+    
+    const matchRating = ratingFilter ? parseInt(comment.rating) === parseInt(ratingFilter) : true;
 
-        // Tìm tên phim
-        const movie = allMovies.find((m) => m.id === comment.movieId);
-        const movieName = movie ? movie.title : `ID: ${comment.movieId}`;
+    return (matchContent || matchUser || matchMovie) && matchRating;
+  });
 
-        const initial = (comment.userName || "U")[0].toUpperCase();
-        const avatarHtml =
-          comment.userAvatar && comment.userAvatar.startsWith("http")
-            ? `<img src="${comment.userAvatar}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; margin-right: 8px;" onerror="this.src='https://ui-avatars.com/api/?name=${initial}&background=random'">`
-            : `<div style="display:inline-block; width:30px; height:30px; line-height:30px; text-align:center; background:#666; color:#fff; border-radius:50%; margin-right:8px; font-size:12px; font-weight:bold;">${initial}</div>`;
+  renderAdminCommentsList(filtered);
+}
 
-        // 👇 QUAN TRỌNG: Thêm id="row-comment-${doc.id}" vào thẻ tr
-        return `
-            <tr id="row-comment-${doc.id}">
-                <td style="display:flex; align-items:center;">${avatarHtml} ${escapeHtml(comment.userName || "Ẩn danh")}</td>
-                <td>${escapeHtml(movieName)}</td>
-                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    ${escapeHtml(comment.content)}
-                </td>
-                <td><span class="star-rating"><i class="fas fa-star text-warning"></i> ${comment.rating || 0}</span></td>
-                <td>${date}</td>
-                <td>
-                    <button class="btn btn-sm btn-danger" onclick="deleteAdminComment('${doc.id}')">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-      })
-      .join("");
-  } catch (error) {
-    console.error("Lỗi load comments:", error);
-    tbody.innerHTML =
-      '<tr><td colspan="6" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>';
+/**
+ * Render danh sách comment (UI)
+ */
+function renderAdminCommentsList(comments) {
+  const tbody = document.getElementById("adminCommentsTable");
+  if (!tbody) return;
+
+  if (comments.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center">Không tìm thấy bình luận nào</td></tr>`;
+    return;
   }
+
+  tbody.innerHTML = comments
+    .map((comment) => {
+      const date = comment.createdAt?.toDate
+        ? formatDate(comment.createdAt.toDate())
+        : "N/A";
+      
+      // FIX: Tìm tên phim từ allMovies nếu comment không có sẵn movieTitle
+      let movieDisplay = comment.movieTitle || "N/A";
+      if (comment.movieId && typeof allMovies !== 'undefined') {
+          const foundMovie = allMovies.find(m => m.id === comment.movieId);
+          if (foundMovie) {
+              movieDisplay = foundMovie.title;
+          }
+      }
+
+      const ratingStars = Array(5)
+        .fill(0)
+        .map(
+          (_, i) =>
+            `<i class="fas fa-star ${i < comment.rating ? "text-warning" : "text-muted"}"></i>`,
+        )
+        .join("");
+
+      // Avatar User (Giả lập from name)
+      const initial = (comment.userName || "U")[0].toUpperCase();
+      const avatarHtml = comment.userAvatar
+        ? `<img src="${comment.userAvatar}" class="comment-avatar-small" style="width:30px;height:30px;border-radius:50%">`
+        : `<div class="comment-avatar-small" style="width:30px;height:30px;background:#E50914;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">${initial}</div>`;
+
+      return `
+          <tr>
+              <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                      ${avatarHtml}
+                      <span>${comment.userName || "Ẩn danh"}</span>
+                  </div>
+              </td>
+              <td>${movieDisplay}</td>
+              <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${comment.content}">${comment.content}</td>
+              <td style="color:#ffaa00; font-size:12px;">⭐ ${comment.rating}</td>
+              <td>${date}</td>
+              <td>
+                  <button class="btn btn-sm btn-danger" onclick="deleteComment('${comment.id}')">
+                      <i class="fas fa-trash"></i>
+                  </button>
+              </td>
+          </tr>
+      `;
+    })
+    .join("");
 }
 /**
  * Xóa bình luận Admin (Xóa dòng ngay lập tức)

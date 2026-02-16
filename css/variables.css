@@ -69,24 +69,24 @@
 }
 
 /* Light Theme */
-/* Light Theme (Đã Fix lỗi hiển thị) */
+/* Light Theme (Đã Fix lỗi hiển thị & Tăng tương phản) */
 [data-theme="light"] {
-  --bg-primary: #f0f2f5; /* Xám nhạt dịu mắt */
-  --bg-secondary: #ffffff; /* Trắng tinh */
-  --bg-tertiary: #e4e6eb; /* Xám đậm hơn chút cho input */
+  --bg-primary: #e9ebee; /* Nền xám mát dịu mắt (giảm chói) */
+  --bg-secondary: #ffffff; /* Card vẫn giữ trắng để nổi bật */
+  --bg-tertiary: #d8dadf; /* Input/Button xám rõ hơn */
   --bg-card: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.85);
+  --bg-glass: rgba(255, 255, 255, 0.95); /* Giảm độ trong suốt để text rõ hơn */
 
-  --text-primary: #050505; /* Đen gần như tuyệt đối */
-  --text-secondary: #65676b; /* Xám đậm */
-  --text-muted: #8c949e;
+  --text-primary: #000000; /* Đen tuyệt đối cho tiêu đề */
+  --text-secondary: #333333; /* Xám đậm (gần như đen) cho nội dung phụ */
+  --text-muted: #555555; /* Xám vừa phải, không quá mờ */
 
-  --border-color: rgba(0, 0, 0, 0.1); /* Viền màu đen mờ */
+  --border-color: rgba(0, 0, 0, 0.2); /* Viền đậm hơn giúp phân tách rõ ràng */
 
-  /* Shadow mềm hơn cho nền sáng */
-  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
-  --shadow-neon: 0 0 15px rgba(0, 212, 255, 0.4);
-  --shadow-red: 0 0 15px rgba(229, 9, 20, 0.4);
+  /* Shadow đậm hơn chút để tạo chiều sâu trên nền sáng */
+  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.2);
+  --shadow-neon: 0 0 15px rgba(0, 150, 255, 0.5); /* Blue highlight rõ hơn */
+  --shadow-red: 0 0 15px rgba(220, 0, 0, 0.5);
 }

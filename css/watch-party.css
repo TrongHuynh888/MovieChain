@@ -29,6 +29,51 @@
   .room-sidebar {
     height: 500px;
   }
+
+  /* Room Header Bar - thu gọn trên mobile */
+  .room-header-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .room-header-bar h3 {
+    display: none;
+  }
+  .room-header-bar .btn-sm {
+    font-size: 12px;
+    padding: 5px 10px;
+    order: 0;
+  }
+  .room-meta {
+    order: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .room-meta .btn-neon {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .live-badge { font-size: 10px; }
+
+  /* Player wrapper - giảm chiều cao tối thiểu */
+  .room-player-wrapper {
+    min-height: 220px;
+  }
+
+  /* Ẩn legacy host controls trên mobile vì đã có custom controls */
+  .room-controls#hostControls {
+    display: none !important;
+  }
+
+  /* Thu nhỏ nút Mic/Deafen trên mobile */
+  .btn-mic-toggle,
+  .btn-deafen-toggle {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+    margin-right: 4px;
+  }
 }
 
 /* Main Area */
@@ -529,4 +574,161 @@
 }
 .is-speaking .speaking-indicator {
   opacity: 1;
+}
+
+/* =========================================
+   WATCH PARTY - CUSTOM VIDEO CONTROLS
+   ========================================= */
+
+/* --- Center Overlay (Reuse detail page classes) --- */
+.room-player-wrapper .wp-center-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    z-index: 15;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.room-player-wrapper:hover .wp-center-overlay,
+.room-player-wrapper.paused .wp-center-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+.room-player-wrapper.playing .wp-center-overlay {
+    opacity: 0;
+    pointer-events: none;
+}
+.room-player-wrapper.playing:hover .wp-center-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* --- Bottom Controls Bar --- */
+.wp-controls-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px 10px 8px;
+    background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 16;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.room-player-wrapper:hover .wp-controls-bar,
+.room-player-wrapper.paused .wp-controls-bar {
+    opacity: 1;
+    pointer-events: auto;
+}
+.room-player-wrapper.playing .wp-controls-bar {
+    opacity: 0;
+    pointer-events: none;
+}
+.room-player-wrapper.playing:hover .wp-controls-bar {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Progress Bar */
+.wp-progress-container {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: height 0.15s;
+}
+.wp-progress-container:hover { height: 8px; }
+.wp-progress-filled {
+    position: absolute; top: 0; left: 0;
+    height: 100%;
+    background: var(--accent-primary, #e50914);
+    border-radius: 2px;
+    z-index: 2;
+}
+.wp-progress-buffer {
+    position: absolute; top: 0; left: 0;
+    height: 100%;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    z-index: 1;
+}
+.wp-progress-slider {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; z-index: 3;
+    margin: 0;
+}
+
+/* Controls Row */
+.wp-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.wp-controls-left, .wp-controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.wp-ctrl-btn {
+    background: none; border: none; color: #fff;
+    cursor: pointer; font-size: 16px; padding: 6px;
+    transition: color 0.2s, transform 0.2s;
+    display: flex; align-items: center; justify-content: center;
+}
+.wp-ctrl-btn:hover { color: var(--accent-primary, #e50914); transform: scale(1.1); }
+
+/* Volume */
+.wp-volume-container { display: flex; align-items: center; gap: 4px; }
+.wp-volume-wrapper { width: 0; overflow: hidden; transition: width 0.3s; }
+.wp-volume-container:hover .wp-volume-wrapper { width: 70px; }
+.wp-volume-slider {
+    -webkit-appearance: none; appearance: none; width: 70px; height: 4px;
+    background: rgba(255,255,255,0.3); border-radius: 2px; outline: none;
+}
+.wp-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    background: #fff; border-radius: 50%; cursor: pointer;
+}
+
+/* Time */
+.wp-time-display { color: rgba(255,255,255,0.8); font-size: 12px; white-space: nowrap; }
+
+/* Settings (reuse from layout.css styles) */
+.wp-settings-container { position: relative; }
+.wp-settings-container .settings-menu,
+.wp-settings-container .settings-submenu {
+    position: absolute;
+    bottom: 40px;
+    right: 0;
+    min-width: 180px;
+    background: rgba(20,20,30,0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    padding: 6px 0;
+    z-index: 100;
+    flex-direction: column;
+}
+
+/* Hide native controls on Watch Party HTML5 video */
+#partyHtml5Player::-webkit-media-controls { display: none !important; }
+#partyHtml5Player::-webkit-media-controls-enclosure { display: none !important; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .room-player-wrapper .wp-center-overlay { gap: 20px; }
+    .wp-controls-bar { padding: 10px 6px 5px; }
+    .wp-time-display { font-size: 11px; }
 }

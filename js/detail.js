@@ -219,42 +219,487 @@ async function checkAndUpdateVideoAccess() {
     buyTicketBtn.classList.remove("btn-primary");
     buyTicketBtn.classList.add("btn-success");
 
-    // 👇 ĐOẠN CODE XỬ LÝ LINK THÔNG MINH (SỬA Ở ĐÂY) 👇
+    // 👇 LOGIC HYBRID PLAYER (SỬA Ở ĐÂY) 👇
     const movie = allMovies.find((m) => m.id === currentMovieId);
     if (movie && movie.episodes && movie.episodes[currentEpisode]) {
-      let videoId = movie.episodes[currentEpisode].youtubeId; // Lấy cái chuỗi bạn nhập vào
-      let embedUrl = "";
+      const episode = movie.episodes[currentEpisode];
+      const videoType = episode.videoType || "youtube";
+      const videoSource = episode.videoSource || episode.youtubeId; // Fallback cho data cũ
+      
+      const iframePlayer = document.getElementById("videoPlayer");
+      const html5Player = document.getElementById("html5Player");
 
-      // 1. Kiểm tra nếu là OK.RU (Ví dụ nhập: 123456789 hoặc link ok.ru/video/123...)
-      if (videoId.includes("ok.ru")) {
-        // Tự động chuyển link thường thành link Embed
-        // Ví dụ: https://ok.ru/video/12345 -> https://ok.ru/videoembed/12345
-        const id = videoId.split("/").pop(); // Lấy số cuối cùng
-        embedUrl = `https://ok.ru/videoembed/${id}`;
-      }
-      // 2. Kiểm tra nếu là Google Drive (ID dài > 25 ký tự)
-      else if (videoId.length > 25) {
-        embedUrl = `https://drive.google.com/file/d/${videoId}/preview`;
-      }
-      // 3. Mặc định coi như là YouTube (ID ngắn 11 ký tự)
-      else {
-        embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`;
+      // Reset players
+      iframePlayer.classList.add("hidden");
+      iframePlayer.src = "";
+      html5Player.classList.add("hidden");
+      html5Player.pause();
+      
+      // Clear HLS instance if exists
+      if (window.hlsInstance) {
+          window.hlsInstance.destroy();
+          window.hlsInstance = null;
       }
 
-      // Gán link đã xử lý vào Player
-      videoPlayer.src = embedUrl;
+      if (videoType === "youtube") {
+          // --- YOUTUBE PLAYER ---
+          iframePlayer.classList.remove("hidden");
+          
+          let embedUrl = "";
+          // Xử lý các dạng link đặc biệt (OK.RU, GDrive...)
+          if (videoSource.includes("ok.ru")) {
+            const id = videoSource.split("/").pop();
+            embedUrl = `https://ok.ru/videoembed/${id}`;
+          } else if (videoSource.length > 25) { // GDrive
+            embedUrl = `https://drive.google.com/file/d/${videoSource}/preview`;
+          } else {
+            embedUrl = `https://www.youtube.com/embed/${videoSource}?autoplay=1&rel=0`;
+          }
+          iframePlayer.src = embedUrl;
+          
+      } else if (videoType === "hls") {
+          // --- HLS PLAYER ---
+          html5Player.classList.remove("hidden");
+          
+          if (Hls.isSupported()) {
+              const hls = new Hls();
+              window.hlsInstance = hls; // Lưu global để destroy sau này
+              hls.loadSource(videoSource);
+              hls.attachMedia(html5Player);
+              hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                  html5Player.play().catch(e => console.log("Auto-play blocked:", e));
+                  // Populate quality menu from HLS levels
+                  populateQualityMenu(hls);
+              });
+              // Listen for level switching to update UI
+              hls.on(Hls.Events.LEVEL_SWITCHED, function(event, data) {
+                  updateQualityDisplay(data.level);
+              });
+          } else if (html5Player.canPlayType('application/vnd.apple.mpegurl')) {
+              // Safari Native HLS
+              html5Player.src = videoSource;
+              html5Player.addEventListener('loadedmetadata', function() {
+                  html5Player.play();
+              });
+          }
+          
+      } else if (videoType === "mp4") {
+          // --- MP4 PLAYER ---
+          html5Player.classList.remove("hidden");
+          html5Player.src = videoSource;
+          html5Player.play().catch(e => console.log("Auto-play blocked:", e));
+      }
+      // --- XỬ LÝ HIỂN THỊ CUSTOM CONTROLS ---
+      const customControls = document.getElementById("customControls");
+      if (customControls) {
+        if (videoType === "hls" || videoType === "mp4") {
+            customControls.classList.remove("hidden");
+            initCustomControls(html5Player);
+        } else {
+            customControls.classList.add("hidden");
+        }
+      }
     }
   } else {
-    // Khóa video
+    // Khóa video (Logic cũ giữ nguyên)
+    const videoLocked = document.getElementById("videoLocked");
+    const videoPlayer = document.getElementById("videoPlayer");
+    const html5Player = document.getElementById("html5Player");
+    
     videoLocked.classList.remove("hidden");
+    
     videoPlayer.classList.add("hidden");
     videoPlayer.src = "";
+    
+    if(html5Player) {
+        html5Player.classList.add("hidden");
+        html5Player.pause();
+        html5Player.src = "";
+    }
+    
+    const customControls = document.getElementById("customControls");
+    if(customControls) customControls.classList.add("hidden");
+
     buyTicketBtn.innerHTML = '<i class="fas fa-ticket-alt"></i> Mua Vé Ngay';
     buyTicketBtn.disabled = false;
     buyTicketBtn.classList.add("btn-primary");
     buyTicketBtn.classList.remove("btn-success");
   }
 }
+
+// --- CUSTOM VIDEO CONTROLS LOGIC ---
+let videoEl = null;
+let isDragging = false;
+let hideControlsTimeout;
+
+function initCustomControls(video) {
+    videoEl = video;
+    const container = document.getElementById("videoContainer");
+    
+    // Update Duration
+    video.addEventListener("loadedmetadata", () => {
+        document.getElementById("duration").textContent = formatTime(video.duration);
+        document.getElementById("progressSlider").max = video.duration;
+    });
+
+    // Update Time & Progress
+    video.addEventListener("timeupdate", () => {
+        if (!isDragging) {
+            const percent = (video.currentTime / video.duration) * 100;
+            document.getElementById("progressBar").style.width = `${percent}%`;
+            document.getElementById("progressSlider").value = video.currentTime;
+            document.getElementById("currentTime").textContent = formatTime(video.currentTime);
+        }
+        // Buffer bar
+        if (video.buffered.length > 0) {
+            const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+            const duration = video.duration;
+            const width = (bufferedEnd / duration) * 100;
+            document.getElementById("bufferBar").style.width = `${width}%`;
+        }
+    });
+
+    // Handle User Seek (Input Range)
+    const slider = document.getElementById("progressSlider");
+    slider.addEventListener("input", (e) => {
+        isDragging = true;
+        const time = parseFloat(e.target.value);
+        const percent = (time / video.duration) * 100;
+        document.getElementById("progressBar").style.width = `${percent}%`;
+        document.getElementById("currentTime").textContent = formatTime(time);
+    });
+    slider.addEventListener("change", (e) => {
+        isDragging = false;
+        video.currentTime = parseFloat(e.target.value);
+    });
+
+    // Handle Tooltip (Hover Progress)
+    const progressContainer = document.getElementById("progressContainer");
+    const tooltip = document.getElementById("progressTooltip");
+    progressContainer.addEventListener("mousemove", (e) => {
+        const rect = progressContainer.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        const time = pos * video.duration;
+        tooltip.style.left = `${e.clientX - rect.left}px`;
+        tooltip.textContent = formatTime(time);
+        tooltip.style.display = "block";
+    });
+    progressContainer.addEventListener("mouseleave", () => {
+        tooltip.style.display = "none";
+    });
+
+    // Play/Pause Icon Update & Container State
+    video.addEventListener("play", () => {
+        updatePlayIcons(true);
+        container.classList.add("playing");
+        container.classList.remove("paused");
+    });
+    video.addEventListener("pause", () => {
+        updatePlayIcons(false);
+        container.classList.remove("playing");
+        container.classList.add("paused");
+    });
+
+    // Volume Slider
+    const volSlider = document.getElementById("volumeSlider");
+    volSlider.addEventListener("input", (e) => {
+        video.volume = e.target.value;
+        updateVolumeIcon(video.volume);
+    });
+
+    // Show/Hide Controls on Hover/Activity
+    container.addEventListener("mousemove", () => {
+        showControls();
+        resetHideTimer();
+        // Force show center overlay on hover (handled by CSS, but ensure functionality)
+    });
+    container.addEventListener("click", (e) => {
+        // Toggle play if clicking on video area (not controls)
+        if (e.target === video || e.target === container) {
+            togglePlay();
+        }
+    });
+    
+    // Set initial state
+    container.classList.add("paused");
+}
+
+function showControls() {
+    const controls = document.getElementById("customControls");
+    if(controls) controls.classList.add("show");
+    document.getElementById("videoContainer").style.cursor = "default";
+}
+
+function hideControls() {
+    const controls = document.getElementById("customControls");
+    // Không ẩn nếu đang hover vào controls hoặc settings menu đang mở
+    const settingsMenu = document.getElementById("settingsMenu");
+    
+    // Logic mới: Chỉ ẩn bottom bar, center overlay follow theo Play State & Hover (CSS handled)
+    if (controls && (!settingsMenu || settingsMenu.style.display === 'none')) {
+        controls.classList.remove("show");
+        document.getElementById("videoContainer").style.cursor = "none";
+    }
+}
+
+function resetHideTimer() {
+    clearTimeout(hideControlsTimeout);
+    hideControlsTimeout = setTimeout(() => {
+        if (videoEl && !videoEl.paused) hideControls();
+    }, 3000);
+}
+
+function formatTime(seconds) {
+    if (!seconds || isNaN(seconds)) return "00:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
+}
+
+function updatePlayIcons(isPlaying) {
+    const bottomIcon = document.querySelector("#playPauseBtn i");
+    const centerIcon = document.querySelector("#centerOverlay .play-btn-large i");
+    
+    if (isPlaying) {
+        if(bottomIcon) bottomIcon.className = "fas fa-pause";
+        if(centerIcon) centerIcon.className = "fas fa-pause";
+    } else {
+        if(bottomIcon) bottomIcon.className = "fas fa-play";
+        if(centerIcon) centerIcon.className = "fas fa-play";
+    }
+}
+// Remove old updatePlayIcon function if exists custom logic
+
+
+// --- EXPORTED FUNCTIONS (Attached to HTML) ---
+window.togglePlay = function() {
+    if (!videoEl) return;
+    if (videoEl.paused) videoEl.play();
+    else videoEl.pause();
+};
+
+window.skipTime = function(seconds) {
+    if (!videoEl) return;
+    videoEl.currentTime += seconds;
+};
+
+window.toggleMute = function() {
+    if (!videoEl) return;
+    videoEl.muted = !videoEl.muted;
+    updateVolumeIcon(videoEl.muted ? 0 : videoEl.volume);
+    document.getElementById("volumeSlider").value = videoEl.muted ? 0 : videoEl.volume;
+};
+
+function updateVolumeIcon(vol) {
+    const icon = document.querySelector("#volumeBtn i");
+    if (vol == 0) icon.className = "fas fa-volume-mute";
+    else if (vol < 0.5) icon.className = "fas fa-volume-down";
+    else icon.className = "fas fa-volume-up";
+}
+
+// Settings Menu
+window.toggleSettingsMenu = function() {
+    const menu = document.getElementById("settingsMenu");
+    const speedMenu = document.getElementById("speedMenu");
+    const qualityMenu = document.getElementById("qualityMenu");
+    if (menu.style.display === "flex") {
+        menu.style.display = "none";
+        speedMenu.style.display = "none";
+        if (qualityMenu) qualityMenu.style.display = "none";
+    } else {
+        menu.style.display = "flex";
+    }
+};
+
+// --- SUBTITLE & SETTINGS LOGIC ---
+const SUBTITLE_COLORS = {
+    white: "#ffffff",
+    yellow: "#ffeb3b",
+    cyan: "#00ffff",
+    green: "#4caf50"
+};
+
+function initSubtitleTracks(video) {
+    const subtitleMenu = document.getElementById("subtitleMenu");
+    if (!subtitleMenu) return; // Add menu structure later if needed
+    // ... Implement fetch tracks logic or use textTracks API
+}
+
+window.showSubMenu = function(type) {
+    document.getElementById("settingsMenu").style.display = "none";
+    if (type === 'speed') {
+        document.getElementById("speedMenu").style.display = "flex";
+    } else if (type === 'color') {
+        document.getElementById("colorMenu").style.display = "flex";
+    } else if (type === 'quality') {
+        document.getElementById("qualityMenu").style.display = "flex";
+    }
+};
+
+window.hideSubMenu = function() {
+    document.getElementById("speedMenu").style.display = "none";
+    const colorMenu = document.getElementById("colorMenu");
+    if (colorMenu) colorMenu.style.display = "none";
+    const qualityMenu = document.getElementById("qualityMenu");
+    if (qualityMenu) qualityMenu.style.display = "none";
+    document.getElementById("settingsMenu").style.display = "flex";
+};
+
+// --- HLS QUALITY LOGIC ---
+function populateQualityMenu(hls) {
+    const qualityMenu = document.getElementById("qualityMenu");
+    const qualityItem = document.getElementById("qualitySettingsItem");
+    if (!qualityMenu || !hls || !hls.levels || hls.levels.length <= 1) return;
+
+    // Show quality item in settings
+    if (qualityItem) qualityItem.style.display = "flex";
+
+    // Remove old dynamic items (keep header and auto)
+    const existing = qualityMenu.querySelectorAll(".submenu-item:not([data-level='-1'])");
+    existing.forEach(el => el.remove());
+
+    // Sort levels by height (resolution) ascending
+    const levels = hls.levels.map((level, index) => ({
+        index: index,
+        height: level.height,
+        bitrate: level.bitrate
+    })).sort((a, b) => a.height - b.height);
+
+    // Add level options
+    levels.forEach(level => {
+        const item = document.createElement("div");
+        item.className = "submenu-item";
+        item.dataset.level = level.index;
+        item.onclick = () => setQuality(level.index);
+
+        const label = `${level.height}p`;
+        const bitrate = Math.round(level.bitrate / 1000);
+        item.innerHTML = `${label} <span class="quality-bitrate">${bitrate} kbps</span>`;
+        qualityMenu.appendChild(item);
+    });
+}
+
+function updateQualityDisplay(levelIndex) {
+    const hls = window.hlsInstance;
+    if (!hls) return;
+    const label = document.getElementById("currentQualityVal");
+    if (!label) return;
+
+    if (hls.autoLevelEnabled || levelIndex === -1) {
+        const currentLevel = hls.levels[hls.currentLevel];
+        const h = currentLevel ? currentLevel.height : '?';
+        label.textContent = `Tự động (${h}p)`;
+    } else {
+        const level = hls.levels[levelIndex];
+        label.textContent = level ? `${level.height}p` : 'N/A';
+    }
+
+    // Update active class
+    const qualityMenu = document.getElementById("qualityMenu");
+    if (qualityMenu) {
+        qualityMenu.querySelectorAll(".submenu-item").forEach(item => {
+            item.classList.remove("active");
+            const itemLevel = parseInt(item.dataset.level);
+            if (hls.autoLevelEnabled && itemLevel === -1) {
+                item.classList.add("active");
+            } else if (!hls.autoLevelEnabled && itemLevel === levelIndex) {
+                item.classList.add("active");
+            }
+        });
+    }
+}
+
+window.setQuality = function(levelIndex) {
+    const hls = window.hlsInstance;
+    if (!hls) {
+        showNotification("Chỉ hỗ trợ chọn chất lượng cho video HLS!", "warning");
+        return;
+    }
+
+    hls.currentLevel = levelIndex; // -1 = auto
+    
+    updateQualityDisplay(levelIndex);
+    window.hideSubMenu();
+    window.toggleSettingsMenu();
+};
+
+window.setSubtitleColor = function(colorKey) {
+    const video = document.getElementById("html5Player");
+    const color = SUBTITLE_COLORS[colorKey];
+    
+    // Create or update dynamic style for cues
+    let style = document.getElementById("custom-cue-style");
+    if (!style) {
+        style = document.createElement("style");
+        style.id = "custom-cue-style";
+        document.head.appendChild(style);
+    }
+    
+    // Webkit specific for Chrome/Safari
+    style.innerHTML = `
+        video::cue {
+            color: ${color} !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+        }
+    `;
+    
+    // Update active UI
+    document.querySelectorAll("#colorMenu .submenu-item").forEach(item => {
+        item.classList.remove("active");
+        if(item.dataset.color === colorKey) item.classList.add("active");
+    });
+    
+    document.getElementById("currentColorVal").textContent = colorKey.charAt(0).toUpperCase() + colorKey.slice(1);
+    
+    window.hideSubMenu();
+    window.toggleSettingsMenu();
+};
+
+window.setSpeed = function(speed) {
+    if (!videoEl) return;
+    videoEl.playbackRate = speed;
+    document.getElementById("currentSpeedVal").textContent = speed === 1 ? "Chuẩn" : `${speed}x`;
+    
+    // Update active class
+    document.querySelectorAll("#speedMenu .submenu-item").forEach(item => {
+        item.classList.remove("active");
+        if (item.textContent.includes(speed.toString()) || (speed === 1 && item.textContent === "Chuẩn")) {
+            item.classList.add("active");
+        }
+    });
+    
+    window.hideSubMenu();
+    window.toggleSettingsMenu(); // Close all
+};
+
+window.togglePiP = async function() {
+    if (!videoEl) return;
+    try {
+        if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+        } else {
+            await videoEl.requestPictureInPicture();
+        }
+    } catch (error) {
+        console.error("PiP error:", error);
+        showNotification("Trình duyệt không hỗ trợ PiP!", "error");
+    }
+};
+
+window.toggleFullscreen = function() {
+    const container = document.getElementById("videoContainer");
+    const icon = document.querySelector("#fullscreenBtn i");
+    
+    if (!document.fullscreenElement) {
+        if (container.requestFullscreen) container.requestFullscreen();
+        else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+        if(icon) icon.className = "fas fa-compress";
+    } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        if(icon) icon.className = "fas fa-expand";
+    }
+};
 
 /**
  * Cập nhật lượt xem
@@ -748,14 +1193,16 @@ async function deleteComment(commentId) {
     const commentEl = document.getElementById(`comment-${commentId}`);
     if (commentEl) {
       commentEl.remove();
+      showNotification("Đã xóa bình luận", "success");
     }
-
-    showNotification("Đã xóa bình luận!", "success");
   } catch (error) {
     console.error("Lỗi xóa comment:", error);
-    showNotification("Không thể xóa bình luận!", "error");
+    showNotification("Lỗi xóa bình luận", "error");
   }
 }
+
+// --- GLOBAL FUNCTIONS FOR HTML5 CONTROLS ---
+
 
 /**
  * Cập nhật rating trung bình của phim

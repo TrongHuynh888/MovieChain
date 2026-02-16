@@ -34,7 +34,7 @@
           </div>
         </div>
 
-        <div class="video-container room-player-wrapper">
+        <div class="video-container room-player-wrapper" id="wpVideoContainer">
           <div id="floatingEmojis" class="floating-emojis"></div>
 
           <div id="partyPlayer"></div>
@@ -43,8 +43,103 @@
             <div class="spinner-border"></div>
             <span>Đang đồng bộ...</span>
           </div>
+
+          <!-- Watch Party Center Controls (Host/Admin only for play/skip, shown for all) -->
+          <div class="wp-center-overlay" id="wpCenterOverlay">
+              <button class="center-btn skip-btn" onclick="syncSeek(-10)" title="Lùi 10s">
+                  <i class="fas fa-undo-alt"></i>
+              </button>
+              <button class="center-btn play-btn-large" id="wpPlayBtn" onclick="syncPlay()" title="Play/Pause">
+                  <i class="fas fa-play" id="wpPlayIcon"></i>
+              </button>
+              <button class="center-btn skip-btn" onclick="syncSeek(10)" title="Tiến 10s">
+                  <i class="fas fa-redo-alt"></i>
+              </button>
+          </div>
+
+          <!-- Watch Party Bottom Controls -->
+          <div class="wp-controls-bar" id="wpControlsBar">
+              <!-- Progress Bar -->
+              <div class="wp-progress-container" id="wpProgressContainer">
+                  <div class="wp-progress-filled" id="wpProgressBar"></div>
+                  <div class="wp-progress-buffer" id="wpBufferBar"></div>
+                  <input type="range" class="wp-progress-slider" id="wpProgressSlider" min="0" max="100" value="0" step="0.1">
+              </div>
+              
+              <div class="wp-controls-row">
+                  <!-- Left -->
+                  <div class="wp-controls-left">
+                      <button class="wp-ctrl-btn" id="wpPlayPauseBtn" onclick="syncPlay()">
+                          <i class="fas fa-play"></i>
+                      </button>
+                      <div class="wp-volume-container">
+                          <button class="wp-ctrl-btn" id="wpVolumeBtn" onclick="wpToggleMute()">
+                              <i class="fas fa-volume-up"></i>
+                          </button>
+                          <div class="wp-volume-wrapper">
+                              <input type="range" class="wp-volume-slider" id="wpVolumeSlider" min="0" max="1" step="0.05" value="1">
+                          </div>
+                      </div>
+                      <div class="wp-time-display">
+                          <span id="wpCurrentTime">00:00</span> / <span id="wpDuration">00:00</span>
+                      </div>
+                  </div>
+                  <!-- Right -->
+                  <div class="wp-controls-right">
+                      <!-- Settings (All users) -->
+                      <div class="wp-settings-container" id="wpSettingsContainer">
+                          <button class="wp-ctrl-btn" id="wpSettingsBtn" onclick="wpToggleSettings()">
+                              <i class="fas fa-cog"></i>
+                          </button>
+                          <div class="settings-menu" id="wpSettingsMenu" style="display:none;">
+                              <div class="settings-item" onclick="wpShowSubMenu('speed')">
+                                  <span>Tốc độ</span>
+                                  <span class="settings-value" id="wpSpeedVal">Chuẩn</span>
+                                  <i class="fas fa-chevron-right"></i>
+                              </div>
+                              <div class="settings-item" id="wpQualityItem" onclick="wpShowSubMenu('quality')" style="display:none;">
+                                  <span>Chất lượng</span>
+                                  <span class="settings-value" id="wpQualityVal">Tự động</span>
+                                  <i class="fas fa-chevron-right"></i>
+                              </div>
+                              <div class="settings-item" onclick="wpShowSubMenu('color')">
+                                  <span>Màu phụ đề</span>
+                                  <span class="settings-value" id="wpColorVal">White</span>
+                                  <i class="fas fa-chevron-right"></i>
+                              </div>
+                          </div>
+                          <div class="settings-submenu" id="wpSpeedMenu" style="display:none;">
+                              <div class="submenu-header" onclick="wpHideSubMenu()"><i class="fas fa-chevron-left"></i> Tốc độ</div>
+                              <div class="submenu-item" onclick="wpSetSpeed(0.5)">0.5x</div>
+                              <div class="submenu-item" onclick="wpSetSpeed(0.75)">0.75x</div>
+                              <div class="submenu-item active" onclick="wpSetSpeed(1)">Chuẩn</div>
+                              <div class="submenu-item" onclick="wpSetSpeed(1.25)">1.25x</div>
+                              <div class="submenu-item" onclick="wpSetSpeed(1.5)">1.5x</div>
+                              <div class="submenu-item" onclick="wpSetSpeed(2)">2x</div>
+                          </div>
+                          <div class="settings-submenu" id="wpQualityMenu" style="display:none;">
+                              <div class="submenu-header" onclick="wpHideSubMenu()"><i class="fas fa-chevron-left"></i> Chất lượng</div>
+                              <div class="submenu-item active" data-level="-1" onclick="wpSetQuality(-1)">Tự động</div>
+                          </div>
+                          <!-- Color Submenu -->
+                          <div class="settings-submenu" id="wpColorMenu" style="display:none;">
+                              <div class="submenu-header" onclick="wpHideSubMenu()"><i class="fas fa-chevron-left"></i> Màu phụ đề</div>
+                              <div class="submenu-item active" data-color="white" onclick="wpSetSubtitleColor('white')">TRẮNG</div>
+                              <div class="submenu-item" data-color="yellow" onclick="wpSetSubtitleColor('yellow')" style="color: yellow;">VÀNG</div>
+                              <div class="submenu-item" data-color="cyan" onclick="wpSetSubtitleColor('cyan')" style="color: cyan;">XANH DƯƠNG</div>
+                              <div class="submenu-item" data-color="green" onclick="wpSetSubtitleColor('green')" style="color: #4caf50;">XANH LÁ</div>
+                          </div>
+                      </div>
+                      <!-- Fullscreen (All users) -->
+                      <button class="wp-ctrl-btn" id="wpFullscreenBtn" onclick="wpToggleFullscreen()">
+                          <i class="fas fa-expand"></i>
+                      </button>
+                  </div>
+              </div>
+          </div>
         </div>
 
+        <!-- Legacy Host Controls (hidden, kept for backward compat) -->
         <div class="room-controls" id="hostControls" style="display: none">
           <button class="btn btn-primary" onclick="syncPlay()">
             <i class="fas fa-play"></i> Play All

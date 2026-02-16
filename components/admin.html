@@ -157,9 +157,10 @@
               class="form-input"
               id="adminSearchMovies"
               placeholder="Tìm kiếm phim..."
+              oninput="filterAdminMovies()"
             />
           </div>
-          <select class="form-select" id="adminFilterStatus">
+          <select class="form-select" id="adminFilterStatus" onchange="filterAdminMovies()">
             <option value="">Tất cả trạng thái</option>
             <option value="public">Công khai</option>
             <option value="hidden">Ẩn</option>
@@ -252,6 +253,19 @@
           </button>
         </div>
 
+        <div class="search-filter mb-3">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input
+              type="text"
+              class="form-input"
+              id="adminSearchCategory"
+              placeholder="Tìm thể loại, slug, ID..."
+              oninput="renderAdminCategories()"
+            />
+          </div>
+        </div>
+
         <table class="admin-table">
           <thead>
             <tr>
@@ -275,6 +289,19 @@
           <button class="btn btn-primary" onclick="openCountryModal()">
             <i class="fas fa-plus"></i> Thêm Quốc Gia
           </button>
+        </div>
+
+        <div class="search-filter mb-3">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input
+              type="text"
+              class="form-input"
+              id="adminSearchCountry"
+              placeholder="Tìm tên quốc gia, mã code..."
+              oninput="renderAdminCountries()"
+            />
+          </div>
         </div>
 
         <div class="table-responsive">
@@ -339,6 +366,32 @@
       <div class="admin-panel" id="commentsPanel">
         <div class="admin-panel-header">
           <h2 class="admin-panel-title">Quản lý Bình Luận</h2>
+        </div>
+
+        <div class="search-filter mb-3">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input
+              type="text"
+              class="form-input"
+              id="adminSearchComments"
+              placeholder="Tìm nội dung, người dùng, tên phim..."
+              oninput="filterAdminComments()"
+            />
+          </div>
+          <select class="form-select" id="adminFilterCommentRating" onchange="filterAdminComments()">
+            <option value="">Tất cả đánh giá</option>
+            <option value="10">10 Sao (Tuyệt đỉnh)</option>
+            <option value="9">9 Sao (Xuất sắc)</option>
+            <option value="8">8 Sao (Rất tốt)</option>
+            <option value="7">7 Sao (Tốt)</option>
+            <option value="6">6 Sao (Khá)</option>
+            <option value="5">5 Sao (Trung bình)</option>
+            <option value="4">4 Sao (Hơi tệ)</option>
+            <option value="3">3 Sao (Tệ)</option>
+            <option value="2">2 Sao (Rất tệ)</option>
+            <option value="1">1 Sao (Thảm họa)</option>
+          </select>
         </div>
 
         <table class="admin-table">

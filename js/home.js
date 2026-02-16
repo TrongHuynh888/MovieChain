@@ -131,6 +131,7 @@ function createMovieCard(movie) {
                 <div class="popup-meta-row">
                     <span class="meta-match">${matchScore}% Phù hợp</span>
                     <span class="meta-age">${movie.ageLimit || "T13"}</span>
+                    <span>${movie.year || "2026"}</span> <!-- Thêm Năm -->
                     <span>${movie.duration || "90p"}</span>
                     <span class="meta-quality">${movie.quality || "HD"}</span>
                 </div>
@@ -164,8 +165,9 @@ function handleMovieClick(event, movieId) {
     return;
   }
 
-  // 👇 FIX: Dùng getElementById để chắc chắn lấy đúng thẻ wrapper theo ID
-  const currentWrapper = document.getElementById(`movie-wrapper-${movieId}`);
+  // 👇 FIX: Sử dụng event.currentTarget để lấy chính xác thẻ đang được click
+  // (Thay vì getElementById vì 1 phim có thể xuất hiện ở nhiều danh sách -> Trùng ID)
+  const currentWrapper = event.currentTarget.closest(".movie-card-wrapper") || event.currentTarget;
   if (!currentWrapper) return;
 
   // Kiểm tra xem nó đang mở hay đóng
@@ -176,15 +178,33 @@ function handleMovieClick(event, movieId) {
 
   // Nếu chưa mở thì mở ra (Nếu đang mở rồi thì ở trên đã đóng lại -> Tắt)
   if (!isAlreadyOpen) {
+    // --- LOGIC TÍNH TOÁN VỊ TRÍ THÔNG MINH ---
+    const rect = currentWrapper.getBoundingClientRect();
+    const screenWidth = window.innerWidth;
+    
+    // Reset các class định vị cũ
+    currentWrapper.classList.remove("popup-align-left", "popup-align-right");
+
+    // Nếu mép trái thẻ < 10% màn hình -> Đang ở lề TRÁI -> Mở sang phải
+    if (rect.left < screenWidth * 0.1) {
+        currentWrapper.classList.add("popup-align-left");
+    } 
+    // Nếu mép phải thẻ > 90% màn hình -> Đang ở lề PHẢI -> Mở sang trái
+    else if (rect.right > screenWidth * 0.9) {
+        currentWrapper.classList.add("popup-align-right");
+    }
+    // Mặc định: CENTER (Không cần add class gì)
+
     currentWrapper.classList.add("active-mobile");
   }
 
   // Ngăn click lan ra ngoài
   event.stopPropagation();
 }
+
 function closeAllPopups() {
   document.querySelectorAll(".movie-card-wrapper").forEach((el) => {
-    el.classList.remove("active-mobile");
+    el.classList.remove("active-mobile", "popup-align-left", "popup-align-right");
   });
 }
 

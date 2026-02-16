@@ -90,6 +90,26 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+/* Nhóm phụ: Theme + Wallet + Auth */
+.nav-utilities {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+/* FIX: loginBtn không bao giờ bị chèn ép */
+#loginBtn {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  min-width: fit-content !important;
+}
+.nav-menu {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Theme Toggle & Mobile Menu */
@@ -320,10 +340,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 1);
+  color: #fff; /* Fix: Luôn hiển thị màu trắng trên nền tối */
 }
 .movie-card-static .card-meta {
   font-size: 12px;
-  color: #ddd;
+  color: #ddd; /* Fix: Màu xám sáng dễ đọc trên nền tối */
   display: flex;
   justify-content: space-between;
 }
@@ -452,10 +473,34 @@
   background: rgba(0, 0, 0, 0.5);
 }
 .btn-popup-icon.liked {
-  color: #e50914;
-  border-color: #e50914;
-  background: rgba(229, 9, 20, 0.1);
+  color: #e50914 !important;
+  border-color: #e50914 !important;
+  background: rgba(229, 9, 20, 0.2);
 }
+
+/* Đảm bảo khi hover vào nút đã thích thì vẫn đỏ (không bị biến thành xanh) */
+.btn-popup-icon.liked:hover {
+  color: #ff1a1a !important; /* Đỏ sáng hơn chút */
+  border-color: #ff1a1a !important;
+  background: rgba(229, 9, 20, 0.4);
+}
+
+/* 👇 FIX TOÀN DIỆN CHO FONT AWESOME (Cả WebFont & SVG) */
+.btn-popup-icon.liked i,
+.btn-popup-icon.liked svg,
+.btn-popup-icon.liked path {
+  color: #e50914 !important;
+  fill: #e50914 !important; /* Dành cho SVG */
+}
+
+/* Khi hover cũng phải đỏ */
+.btn-popup-icon.liked:hover i,
+.btn-popup-icon.liked:hover svg,
+.btn-popup-icon.liked:hover path {
+  color: #ff1a1a !important;
+  fill: #ff1a1a !important;
+}
+
 .btn-popup-icon.ml-auto {
   margin-left: auto;
 }
@@ -488,11 +533,11 @@
 }
 .meta-age,
 .meta-quality {
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border-color); /* Fix: Dùng biến border thay vì màu trắng mờ */
   padding: 1px 6px;
   border-radius: 3px;
   font-size: 11px;
-  color: #ddd;
+  color: var(--text-secondary); /* Fix: Dùng biến text thay vì màu xám nhạt */
 }
 .popup-genres-row {
   font-size: 13px;

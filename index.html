@@ -5,10 +5,10 @@
     <link rel="stylesheet" href="css/watch-party.css" />
     <link rel="stylesheet" href="css/variables.css" />
     <link rel="stylesheet" href="css/base.css" />
-    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/components.css?v=5" />
     <link rel="stylesheet" href="css/layout.css" />
     <link rel="stylesheet" href="css/admin.css" />
-    <link rel="stylesheet" href="css/responsive.css?v=118" />
+    <link rel="stylesheet" href="css/responsive.css?v=145" />
     <!--<link rel="stylesheet" href="css/style.css" />-->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -49,6 +49,9 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
+
+    <!-- HLS.js for Streaming -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
     <!-- Custom CSS -->
   </head>
@@ -126,14 +129,15 @@
           </a>
         </div>
 
-        <!-- Navigation Actions -->
-        <div class="nav-actions">
+        <!-- Theme + Wallet (nhóm phụ - nằm giữa menu và auth) -->
+        <div class="nav-utilities" style="display: flex; align-items: center;">
           <!-- Theme Toggle -->
           <button
             class="theme-toggle"
             id="themeToggle"
             onclick="toggleTheme()"
             title="Đổi giao diện"
+            style="margin-right: 10px;"
           >
             <i class="fas fa-moon" id="themeIcon"></i>
           </button>
@@ -143,17 +147,19 @@
             class="btn wallet-btn"
             id="walletBtn"
             onclick="connectWallet()"
+            style="margin-right: 10px;"
           >
             <i class="fas fa-wallet"></i>
             <span>Kết nối ví</span>
           </button>
 
-          <!-- Auth Button -->
-          <div id="authContainer" style="position: relative">
+          <!-- Auth Button (ngay sau Wallet) -->
+          <div id="authContainer" style="position: relative; display: flex; align-items: center; flex-shrink: 0; margin-left: 2px;">
             <button
               class="btn btn-primary"
               id="loginBtn"
               onclick="openAuthModal()"
+              style="white-space: nowrap; flex-shrink: 0; min-width: fit-content; padding: 10px 24px; border-radius: 8px; display: flex; align-items: center; gap: 8px;"
             >
               <i class="fas fa-user"></i> <span>Đăng nhập</span>
             </button>
@@ -162,7 +168,7 @@
               id="userMenuTrigger"
               class="hidden"
               onclick="toggleUserDropdown(event)"
-              style="cursor: pointer"
+              style="cursor: pointer; margin-left: 30px; position: static;"
             >
               <img id="userAvatarSmall" src="" class="nav-user-avatar" />
             </div>
@@ -212,8 +218,10 @@
               </ul>
             </div>
           </div>
+        </div>
 
-          <!-- Mobile Menu Toggle -->
+        <!-- Mobile Menu Toggle -->
+        <div class="nav-actions">
           <button
             class="mobile-menu-toggle"
             id="mobileMenuToggle"
@@ -416,6 +424,133 @@
               src=""
               allowfullscreen
             ></iframe>
+            <!-- Hybrid Player: HTML5 Video for HLS/MP4 -->
+            <video id="html5Player" class="hidden" playsinline></video>
+            
+            <!-- Center Controls Overlay (New) -->
+            <div class="center-controls-overlay" id="centerOverlay">
+                <button class="center-btn skip-btn" onclick="skipTime(-10)">
+                    <i class="fas fa-undo-alt"></i>
+                </button>
+                <button class="center-btn play-btn-large" onclick="togglePlay()">
+                    <i class="fas fa-play" id="centerPlayIcon"></i>
+                </button>
+                <button class="center-btn skip-btn" onclick="skipTime(10)">
+                    <i class="fas fa-redo-alt"></i>
+                </button>
+            </div>
+
+            <!-- CUSTOM VIDEO CONTROLS START -->
+            <div class="custom-video-controls hidden" id="customControls">
+                <!-- Progress Tooltip -->
+                 <div class="progress-tooltip" id="progressTooltip">00:00</div>
+
+                <!-- Progress Bar -->
+                <div class="video-progress-container" id="progressContainer">
+                    <div class="video-progress-filled" id="progressBar"></div>
+                    <div class="video-progress-buffer" id="bufferBar"></div>
+                    <input type="range" class="video-progress-slider" id="progressSlider" min="0" max="100" value="0" step="0.1">
+                </div>
+
+
+                <!-- Control Bar -->
+                <div class="video-controls-row">
+                    <!-- Left Side -->
+                    <div class="controls-left">
+                        <button class="control-btn" id="playPauseBtn" onclick="togglePlay()">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        
+                        <div class="volume-container">
+                            <button class="control-btn" id="volumeBtn" onclick="toggleMute()">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                            <div class="volume-slider-wrapper">
+                                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1">
+                            </div>
+                        </div>
+
+                         <div class="time-display">
+                            <span id="currentTime">00:00</span> / <span id="duration">00:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Center (Spacer) -->
+                    <div class="controls-center">
+                         <!-- Skip buttons moved to center overlay -->
+                    </div>
+
+                    <!-- Right Side -->
+                    <div class="controls-right">
+                         <!-- Settings -->
+                        <div class="settings-container">
+                            <button class="control-btn" id="settingsBtn" onclick="toggleSettingsMenu()">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <!-- Settings Menu Popup -->
+                            <div class="settings-menu" id="settingsMenu">
+                                <div class="settings-item" onclick="showSubMenu('speed')">
+                                    <span>Tốc độ</span>
+                                    <span class="settings-value" id="currentSpeedVal">Chuẩn</span>
+                                    <i class="fas fa-chevron-right"></i>
+                                </div>
+                                <div class="settings-item" onclick="showSubMenu('color')">
+                                    <span>Màu phụ đề</span>
+                                    <span class="settings-value" id="currentColorVal">White</span>
+                                    <i class="fas fa-chevron-right"></i>
+                                </div>
+                                <div class="settings-item" id="qualitySettingsItem" onclick="showSubMenu('quality')" style="display:none;">
+                                    <span>Chất lượng</span>
+                                    <span class="settings-value" id="currentQualityVal">Tự động</span>
+                                    <i class="fas fa-chevron-right"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Speed Submenu -->
+                            <div class="settings-submenu" id="speedMenu">
+                                <div class="submenu-header" onclick="hideSubMenu()">
+                                    <i class="fas fa-chevron-left"></i> Tốc độ phát
+                                </div>
+                                <div class="submenu-item" onclick="setSpeed(0.5)">0.5x</div>
+                                <div class="submenu-item" onclick="setSpeed(0.75)">0.75x</div>
+                                <div class="submenu-item active" onclick="setSpeed(1)">Chuẩn</div>
+                                <div class="submenu-item" onclick="setSpeed(1.25)">1.25x</div>
+                                <div class="submenu-item" onclick="setSpeed(1.5)">1.5x</div>
+                                <div class="submenu-item" onclick="setSpeed(2)">2x</div>
+                            </div>
+
+                            <!-- Color Submenu -->
+                            <div class="settings-submenu" id="colorMenu">
+                                <div class="submenu-header" onclick="hideSubMenu()">
+                                    <i class="fas fa-chevron-left"></i> Màu phụ đề
+                                </div>
+                                <div class="submenu-item active" data-color="white" onclick="setSubtitleColor('white')">TRẮNG</div>
+                                <div class="submenu-item" data-color="yellow" onclick="setSubtitleColor('yellow')" style="color: yellow;">VÀNG</div>
+                                <div class="submenu-item" data-color="cyan" onclick="setSubtitleColor('cyan')" style="color: cyan;">XANH DƯƠNG</div>
+                                <div class="submenu-item" data-color="green" onclick="setSubtitleColor('green')" style="color: #4caf50;">XANH LÁ</div>
+                            </div>
+
+                            <!-- Quality Submenu (Populated dynamically) -->
+                            <div class="settings-submenu" id="qualityMenu">
+                                <div class="submenu-header" onclick="hideSubMenu()">
+                                    <i class="fas fa-chevron-left"></i> Chất lượng video
+                                </div>
+                                <div class="submenu-item active" data-level="-1" onclick="setQuality(-1)">Tự động</div>
+                                <!-- Dynamic levels will be inserted here by JS -->
+                            </div>
+                        </div>
+
+                        <button class="control-btn" id="pipBtn" onclick="togglePiP()" title="Hình trong hình">
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                        
+                        <button class="control-btn" id="fullscreenBtn" onclick="toggleFullscreen()">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- CUSTOM VIDEO CONTROLS END -->
           </div>
 
           <!-- Episodes Section -->
@@ -601,6 +736,14 @@
             item.classList.add("active");
           }
         });
+
+        // 4. [NEW] Tự động đóng menu trên Mobile sau khi chọn
+        if (window.innerWidth <= 768) {
+             var sidebar = document.querySelector(".admin-sidebar");
+             if (sidebar && sidebar.classList.contains("active")) {
+                 toggleSidebar(); // Gọi hàm đóng menu
+             }
+        }
       };
     </script>
     <script>

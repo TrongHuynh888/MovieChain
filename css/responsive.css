@@ -1,6 +1,50 @@
+/* --- GLOBAL RESET: CHỐNG VỠ GIAO DIỆN --- */
+* {
+  box-sizing: border-box !important;
+}
+/* Chống tràn - nhưng loại trừ nav */
+body, .page, .section, .hero, .movie-grid, .footer, main {
+  max-width: 100vw !important;
+}
 /* ============================================
    RESPONSIVE.CSS - FINAL FIX (BANNER, FOOTER, POPUP)
    ============================================ */
+/* --- FIX LỖI 2 TRANG ĐÈ NHAU (QUAN TRỌNG) --- */
+.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+  pointer-events: none !important;
+}
+
+/* FIX GLOBAL: NÚT ĐĂNG NHẬP KHÔNG BỊ CHÈN ÉP */
+#loginBtn {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  min-width: 100px !important;
+  padding: 8px 16px !important;
+  overflow: visible !important;
+}
+#loginBtn span {
+  white-space: nowrap !important;
+}
+.nav-actions {
+  flex-shrink: 0 !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+}
+.nav-menu {
+  flex-shrink: 1 !important; /* Menu co lại khi thiếu chỗ */
+  min-width: 0 !important;
+  gap: 4px !important;
+}
+.nav-menu .nav-link {
+  white-space: nowrap !important;
+  padding: 6px 8px !important;
+  font-size: 13px !important;
+}
 
 /* 1. TABLET (iPad) */
 @media (max-width: 1366px) {
@@ -82,6 +126,61 @@
   .movie-card-wrapper.active-mobile .popup-genres-row {
     display: none;
   }
+
+  /* FIX MENU TABLET: Scroll ngang mượt mà */
+  .nav-menu {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
+    justify-content: flex-start !important;
+    min-width: 0 !important;
+    padding-bottom: 0 !important; /* Bỏ padding bottom thừa */
+    padding-right: 60px !important; /* Tăng padding để nút Admin không bị che */
+    /* mask-image removed để tránh lỗi ẩn icon cuối cùng */
+    
+    /* Ẩn thanh cuộn nhưng vẫn scroll được (UX hiện đại) */
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
+  }
+  .nav-menu::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-menu .nav-link {
+    flex-shrink: 0 !important;
+  }
+
+  /* FIX PADDING CHO TABLET: Tránh bị che header và full chiều cao */
+  /* Chỉ áp dụng cho Tablet thực sự (>768px), KHÔNG ảnh hưởng mobile */
+  @media (min-width: 769px) {
+    .page {
+      min-height: 80vh !important;
+      padding-top: 100px !important;
+    }
+  }
+  
+  /* Riêng Tablet dọc (iPad Portrait) cần padding nhiều hơn */
+  @media (min-width: 769px) and (orientation: portrait) {
+    .page {
+      padding-top: 160px !important;
+    }
+    .footer {
+      margin-top: auto !important;
+    }
+  }
+}
+
+/* --- REDESIGN LOGIN BUTTON (GLOBAL) --- */
+/* Quay về style gốc (Gradient) nhưng bo tròn và đảm bảo không bị méo */
+#loginBtn {
+  border-radius: 50px !important; /* Bo tròn viên thuốc */
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 0 15px rgba(229, 9, 20, 0.4) !important; /* Bóng đỏ nhẹ đúng style */
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+#loginBtn span {
+  white-space: nowrap !important;
+  font-weight: 600 !important;
 }
 
 /* 2. MOBILE (Điện thoại) */
@@ -102,6 +201,12 @@
     z-index: 2000;
     justify-content: space-between !important;
     background: var(--bg-primary) !important;
+  }
+
+  /* FIX PADDING PAGE MOBILE (Tránh khoảng đen thừa do rule tablet 100px) */
+  .page {
+    padding-top: 60px !important;
+    min-height: auto !important;
   }
 
   /* 1. Logo */
@@ -130,11 +235,17 @@
 
   /* 2. Nhóm nút bên phải (Chứa tất cả icon) */
   .nav-actions {
-    display: flex !important; /* BẮT BUỘC FLEX */
+    display: flex !important;
     align-items: center !important;
-    gap: 6px !important;
-    flex-shrink: 0; /* Không cho phép co lại */
-    flex-wrap: nowrap !important; /* Không bao giờ được xuống dòng */
+    gap: 8px !important;
+    flex-shrink: 0;
+    flex-wrap: nowrap !important;
+  }
+  .nav-utilities {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
   }
 
   /* 👇 [FIX QUAN TRỌNG] Hộp chứa Login + Avatar phải là hàng ngang */
@@ -142,17 +253,18 @@
     display: flex !important;
     align-items: center !important;
     flex-direction: row !important;
-    gap: 6px !important; /* Khoảng cách giữa nút Login và Avatar */
+    gap: 8px !important;
+    margin: 0 !important;
   }
 
-  /* 3. Các nút Icon thường (Ví, Theme, Menu) */
   .wallet-btn,
   #connectWalletBtn,
   .theme-toggle,
   .mobile-menu-toggle {
-    width: 30px !important;
-    height: 30px !important;
+    width: 32px !important;
+    height: 32px !important;
     padding: 0 !important;
+    margin: 0 !important;
     border-radius: 50% !important;
     display: flex !important;
     align-items: center;
@@ -161,7 +273,7 @@
     background: rgba(128, 128, 128, 0.15) !important;
     border: 1px solid rgba(128, 128, 128, 0.1) !important;
     color: var(--text-primary) !important;
-    flex-shrink: 0 !important; /* Không bị bẹp */
+    flex-shrink: 0 !important;
   }
   .wallet-btn i,
   #connectWalletBtn i,
@@ -173,35 +285,41 @@
     display: block !important;
   }
   .wallet-btn span {
-    display: none !important;
+    flex-shrink: 0 !important;
   }
 
+  /* FIX: Dropdown (Select) không bị tràn màn hình */
+  .form-select {
+    max-width: 100% !important;
+    white-space: nowrap;
+    
+    /* Cho phép cuộn ngang nếu chữ quá dài thay vì cắt bớt */
+    overflow-x: auto !important; 
+    text-overflow: unset !important;
+  }
+  
   /* 4. LOGIC XỬ LÝ NÚT ĐĂNG NHẬP */
-  /* Trường hợp 1: Chưa đăng nhập */
+  /* Trường hợp 1: Chưa đăng nhập - Icon tròn giống avatar */
   #loginBtn {
-    width: auto !important;
-    height: 30px !important;
-    padding: 0 12px !important;
-    border-radius: 15px !important;
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
     display: flex !important;
     align-items: center;
-    gap: 5px;
+    justify-content: center;
     background: linear-gradient(135deg, #e50914 0%, #ff0055 100%) !important;
     box-shadow: 0 2px 10px rgba(229, 9, 20, 0.4);
     border: none !important;
-    white-space: nowrap !important;
+    min-width: unset !important;
   }
   #loginBtn i {
-    font-size: 12px !important;
+    font-size: 14px !important;
     margin: 0 !important;
     color: #fff !important;
   }
   #loginBtn span {
-    display: block !important;
-    font-size: 10px !important;
-    font-weight: 700;
-    color: #fff !important;
-    text-transform: uppercase;
+    display: none !important;
   }
 
   /* Trường hợp 2: Đã đăng nhập (Avatar hiện) */
@@ -225,16 +343,16 @@
 
   /* 5. AVATAR USER */
   #userMenuTrigger {
-    width: 30px !important;
-    height: 30px !important;
+    width: 32px !important;
+    height: 32px !important;
     border-radius: 50% !important;
     overflow: hidden;
     border: 1.5px solid #f02c3c !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #000;
     flex-shrink: 0 !important;
+    margin: 0 !important;
   }
   .nav-user-avatar,
   #userMenuTrigger img {
@@ -243,36 +361,88 @@
     object-fit: cover !important;
   }
 
-  /* 6. Menu trượt */
+  /* 6. Menu trượt - Cải thiện UX mobile */
   .nav-menu {
     position: fixed;
     top: 60px;
     right: 0;
     width: 100%;
-    height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
     background: var(--bg-primary);
-    flex-direction: column;
-    padding-top: 20px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    /* Override tablet rules (padding-right:60px, white-space:nowrap) */
+    padding: 10px 0 30px !important;
+    white-space: normal !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     transform: translateX(100%);
     transition: transform 0.3s ease;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 1999;
     visibility: hidden;
+    pointer-events: none;
   }
   .nav-menu.active {
     transform: translateX(0);
     visibility: visible;
+    pointer-events: auto;
   }
-  .nav-link {
-    width: 100%;
-    padding: 15px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  .nav-menu .nav-link {
+    width: 100% !important;
+    padding: 16px 24px !important;
+    margin: 0 !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    align-items: center;
+    gap: 14px;
+    box-sizing: border-box !important;
+    transition: background 0.2s;
+    position: relative;
+    flex-shrink: 0;
+  }
+  /* Giữ ::after gradient cho active item - nhưng full width */
+  .nav-menu .nav-link::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 0 !important;
+    height: 2px !important;
+    background: linear-gradient(90deg, #e50914, #ff0055) !important;
+    transform: none !important;
+    transition: width 0.3s !important;
+  }
+  .nav-menu .nav-link.active::after {
+    width: 100% !important;
+  }
+  .nav-menu .nav-link:last-child {
+    border-bottom: none !important;
+  }
+  .nav-menu .nav-link:hover,
+  .nav-menu .nav-link.active {
+    background: rgba(229, 9, 20, 0.1);
+  }
+  .nav-menu .nav-link i {
+    font-size: 18px !important;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+    color: var(--accent-primary, #e50914);
+  }
+  .nav-menu .nav-link.active i {
+    color: #ff0055;
   }
 
   /* --- B. FIX LỖI BANNER (Thu gọn lại) --- */
   .hero {
     min-height: auto !important;
-    padding: 65px 15px 30px !important; /* Giảm padding cho gọn */
+    padding: 15px 15px 30px !important;
     /* 👇 Thêm 2 dòng này để căn giữa nội dung theo chiều dọc nếu banner thấp */
     display: flex !important;
     flex-direction: column;
@@ -577,32 +747,98 @@
     display: none;
   }
 
-  /* --- F. FIX POPUP BỊ CHE MÉP --- */
-  .movie-grid
-    .movie-card-wrapper:nth-child(4n + 1).active-mobile
-    .movie-popup-nfx {
-    left: 0 !important;
+  /* --- POPUP PHIM THÔNG MINH (SMART POSITIONING) --- */
+  
+  .movie-card-wrapper {
+      position: relative;
+      z-index: 1; 
+  }
+
+  /* Khi active (được JS thêm class): Tăng z-index cao nhất */
+  .movie-card-wrapper.active-mobile {
+      z-index: 10000 !important;
+  }
+
+  .movie-popup-nfx {
+    position: absolute !important;
+    top: 50% !important;
+    
+    /* MẶC ĐỊNH: CENTER */
+    left: 50% !important;
     right: auto !important;
-    transform: none !important;
+    transform: translate(-50%, -50%) scale(1.15) !important;
+    
+    width: 100% !important; 
+    height: auto !important;
+    min-height: 100% !important;
+    
+    z-index: 10001 !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    
+    opacity: 0; 
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s, visibility 0.2s;
+    
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
   }
-  .movie-grid .movie-card-wrapper:nth-child(4n).active-mobile .movie-popup-nfx {
-    left: auto !important;
-    right: 0 !important;
-    transform: none !important;
+
+  /* --- LOGIC HIỂN THỊ DỰA TRÊN JS --- */
+  
+  /* 1. Mở popup khi có class .active-mobile */
+  .movie-card-wrapper.active-mobile .movie-popup-nfx {
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
   }
-  .movie-grid
-    .movie-card-wrapper:nth-child(4n + 2).active-mobile
-    .movie-popup-nfx {
-    transform: translateX(-35%) !important;
+
+  /* 2. Nếu ở lề TRÁI -> Mở lệch sang PHẢI */
+  .movie-card-wrapper.popup-align-left .movie-popup-nfx {
+      left: 0 !important;
+      right: auto !important;
+      transform: translate(0, -50%) scale(1.15) !important; /* Neo bên trái, scale từ tâm trái */
+      transform-origin: left center !important;
   }
-  .movie-grid
-    .movie-card-wrapper:nth-child(4n + 3).active-mobile
-    .movie-popup-nfx {
-    transform: translateX(-65%) !important;
+
+  /* 3. Nếu ở lề PHẢI -> Mở lệch sang TRÁI */
+  .movie-card-wrapper.popup-align-right .movie-popup-nfx {
+      left: auto !important;
+      right: 0 !important;
+      transform: translate(0, -50%) scale(1.15) !important; /* Neo bên phải, scale từ tâm phải */
+      transform-origin: right center !important;
+  }
+  
+  /* Đảm bảo tương tác */
+  .movie-popup-nfx button,
+  .movie-popup-nfx a,
+  .movie-popup-nfx i,
+  .movie-popup-nfx .popup-actions {
+      pointer-events: auto !important;
+  }
+
+  /* 👇 FIX: Hiển thị đầy đủ thông tin trong Popup Mobile */
+  .movie-popup-nfx .popup-genres-row,
+  .movie-popup-nfx .popup-meta-row span {
+      display: inline-block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      font-size: 11px; /* Chữ nhỏ cho vừa */
+  }
+  
+  .movie-popup-nfx .popup-genres-row {
+      margin-top: 4px;
+      color: #ccc;
+      display: flex !important;
+      align-items: center;
+      gap: 5px;
   }
 
   /* Fix Admin Sidebar */
   .admin-sidebar {
+    display: block !important;
     position: fixed !important;
     top: 0;
     left: -100% !important;
@@ -693,6 +929,10 @@
     font-weight: 800;
     line-height: 1.2;
     width: auto !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    flex: 1 !important;
   }
 
   /* Ẩn dòng phụ 'Khám phá ngay' cho gọn */
@@ -792,6 +1032,15 @@
     color: #ffffff !important;
     box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3) !important;
     border: none !important;
+  }
+
+  /* --- J. FIX TRÀN GRID (Watch Party & Admin) --- */
+  .party-grid,
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .party-container {
+    padding: 15px !important;
   }
 
   /* 5. TAG VIP (Vàng) */
@@ -906,4 +1155,685 @@ img.avatar-img.is-speaking {
 .member-item.is-speaking {
   background: rgba(0, 255, 106, 0.15) !important;
   border: 1px solid rgba(0, 255, 106, 0.3) !important;
+}
+/* ======================================================
+   WATCH PARTY: FINAL FIX (MOBILE & LIGHT MODE)
+   ====================================================== */
+
+/* --- 1. MẶC ĐỊNH (DARK MODE) - KHÔI PHỤC MÀU CHỮ --- */
+/* Vì đã xóa style cứng trong JS, ta phải định nghĩa màu ở đây */
+.member-name {
+  color: #ffffff; /* Mặc định chữ trắng */
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.member-role {
+  font-size: 11px;
+  color: #aaaaaa; /* Mặc định xám */
+  display: block;
+}
+.member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  margin-bottom: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+.member-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.member-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* --- 2. LIGHT MODE (CHẾ ĐỘ SÁNG) --- */
+/* Dùng body[data-theme="light"] để tăng độ ưu tiên (Specificity) */
+
+/* Sidebar & Tab */
+
+body[data-theme="light"] .room-tab {
+  color: #65676b !important;
+}
+body[data-theme="light"] .room-tab.active {
+  color: #0084ff !important;
+  border-bottom-color: #0084ff !important;
+  background: rgba(0, 132, 255, 0.05) !important;
+}
+
+/* Danh sách thành viên (Light Mode) */
+body[data-theme="light"] .member-item {
+  background-color: #ffffff !important;
+  border: 1px solid #e4e6eb !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+body[data-theme="light"] .member-name {
+  color: #050505 !important; /* 👉 CHỮ ĐEN */
+}
+body[data-theme="light"] .member-role {
+  color: #65676b !important; /* 👉 ROLE XÁM ĐẬM */
+}
+body[data-theme="light"] .member-item:hover {
+  background-color: #f2f2f2 !important;
+}
+
+/* Chat Input (Light Mode) */
+body[data-theme="light"] .chat-input-area {
+  background: #ffffff !important;
+  border-top: 1px solid #e4e6eb !important;
+}
+body[data-theme="light"] #chatInput {
+  background: #f0f2f5 !important;
+  color: #050505 !important;
+  border: 1px solid #ddd !important;
+}
+body[data-theme="light"] #chatInput::placeholder {
+  color: #65676b !important;
+}
+
+/* Tin nhắn Chat (Light Mode) */
+body[data-theme="light"] .chat-msg:not(.me) .text {
+  background-color: #e4e6eb !important;
+  color: #050505 !important;
+}
+body[data-theme="light"] .chat-msg.me .text {
+  background-color: #0084ff !important;
+  color: #ffffff !important;
+}
+body[data-theme="light"] .chat-msg .author {
+  color: #65676b !important;
+}
+
+/* ======================================================
+   WATCH PARTY: BẢN FULL (LAYOUT MOBILE + LIGHT MODE + HOST)
+   ====================================================== */
+
+/* --- 1. MÀU CHỮ CHỨC DANH (HOST/MEMBER) --- */
+.role-host {
+  color: #f1c40f;
+  font-weight: 800;
+}
+.role-member {
+  color: #aaa;
+}
+
+/* --- 2. LIGHT MODE (CHẾ ĐỘ SÁNG - QUAN TRỌNG) --- */
+/* Dùng selector mạnh để đè mọi thứ */
+
+[data-theme="light"] .room-tab {
+  color: #555 !important;
+}
+[data-theme="light"] .room-tab.active {
+  color: #0084ff !important;
+  background: rgba(0, 132, 255, 0.1) !important;
+}
+
+/* Danh sách thành viên (Light Mode) */
+[data-theme="light"] .member-item {
+  background-color: #ffffff !important;
+  border: 1px solid #eee !important;
+  color: #333 !important;
+}
+[data-theme="light"] .member-name {
+  color: #000000 !important; /* Chữ đen tuyền */
+}
+[data-theme="light"] .role-host {
+  color: #d35400 !important; /* Cam đậm (thay vì vàng chói) */
+}
+[data-theme="light"] .role-member {
+  color: #666 !important;
+}
+
+/* TIN NHẮN CHAT (Light Mode - Fix lỗi chữ vàng nền trắng) */
+[data-theme="light"] .chat-msg:not(.me) .text {
+  background-color: #e4e6eb !important;
+  color: #050505 !important;
+  font-weight: 500;
+}
+[data-theme="light"] .chat-msg.me .text {
+  background-color: #0084ff !important;
+  color: #ffffff !important;
+}
+[data-theme="light"] .chat-msg .author {
+  color: #666 !important;
+}
+
+/* TIN NHẮN HỆ THỐNG (Light Mode) */
+[data-theme="light"] .chat-msg.system {
+  color: #92400e !important; /* Nâu đậm */
+  background-color: #fef3c7 !important; /* Vàng nhạt */
+  border: 1px solid #fcd34d !important;
+  border-radius: 5px !important;
+  padding: 5px 10px !important;
+  font-weight: 600 !important;
+  text-shadow: none !important; /* Bỏ bóng chữ */
+  width: 90%;
+  margin: 10px auto;
+}
+
+/* Ô nhập liệu (Light Mode) */
+[data-theme="light"] .chat-input-area {
+  background: #fff !important;
+  border-top: 1px solid #ddd !important;
+}
+[data-theme="light"] #chatInput {
+  background: #f0f2f5 !important;
+  color: #000 !important;
+  border: 1px solid #ccc !important;
+}
+
+/* --- FIX NÚT LOGIN BỊ ẨN NHẦM (QUAN TRỌNG) --- */
+/* Ép hiển thị lại nút Login ngay cả khi nó dính class .hidden */
+#authContainer:has(#userMenuTrigger:not(.hidden)) #loginBtn.hidden {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 30px !important;
+  height: 30px !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  position: static !important;
+}
+/* =================================================================
+   MASTER FIX V9 (GRID SYSTEM - KHÔNG THỂ VỠ GIAO DIỆN)
+   ================================================================= */
+
+@media (max-width: 1024px) {
+  /* --- 1. CẤU HÌNH CHUNG --- */
+  html,
+  body {
+    background: #0f0f13 !important;
+    /* Reset lại mọi thuộc tính position có thể gây lỗi */
+    position: static !important;
+    width: 100% !important;
+  }
+  .party-container,
+  .main-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  /* ĐẢM BẢO .page KHÔNG BỊ NAV CHE - ÁP DỤNG MỌI ORIENTATION */
+  .page {
+    padding-top: 60px !important;
+  }
+  #partyRoom.page {
+    padding-top: 0 !important;
+  }
+
+  /* ============================================================
+       MODE 1: DỌC (PORTRAIT) - CHỈ CẦN CUỘN ĐƯỢC LÀ OK
+       ============================================================ */
+  @media (orientation: portrait) {
+    /* XÓA KHOẢNG TRỐNG PHÍA TRÊN - Chỉ cần đẩy xuống đúng chiều cao nav */
+    .page {
+      padding-top: 60px !important;
+      margin-top: 0 !important;
+      min-height: 80vh !important;
+    }
+    #partyRoom.page {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+      min-height: 80vh !important;
+    }
+
+    /* MẶC ĐỊNH: CÁC TRANG CUỘN BÌNH THƯỜNG */
+    html,
+    body {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      height: auto !important;
+      position: static !important;
+      width: 100% !important;
+    }
+    /* CHỈ KHÓA CUỘN KHI TRONG PHÒNG WATCH PARTY */
+    body.watch-party-active {
+      overflow: hidden !important;
+      height: 100dvh !important;
+      position: fixed !important;
+      width: 100% !important;
+    }
+
+    #partyRoom {
+      position: fixed !important;
+      top: 60px !important; /* Ngay dưới thanh nav */
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      background: #0f0f13 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+      z-index: 100 !important;
+    }
+
+    /* CONTAINER CHÍNH - FLEX DỌC, FILL HẾT VIEWPORT */
+    .room-layout {
+      display: flex !important;
+      flex-direction: column !important;
+      grid-template-columns: none !important;
+      width: 100% !important;
+      height: 100% !important;
+      gap: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+
+    /* Header - NẰM ĐẦU TIÊN trong .room-main (flex column) */
+    .room-header-bar {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      align-items: center !important;
+      background: #151521 !important;
+      padding: 6px 10px !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      width: 100% !important;
+      order: -1 !important; /* Luôn đứng đầu trong flex */
+      z-index: 100 !important;
+      position: relative !important;
+      min-height: 40px !important;
+      flex-shrink: 0 !important;
+    }
+    #roomTitleDisplay {
+      width: 100% !important;
+      text-align: center !important;
+      order: -1 !important;
+      font-weight: 700 !important;
+      margin-bottom: 4px !important;
+      font-size: 14px !important;
+      color: #fff !important;
+      display: block !important;
+    }
+    .room-meta {
+      display: flex !important;
+      gap: 8px !important;
+      justify-content: center !important;
+    }
+
+    /* Video Dọc */
+    .room-main,
+    .party-main {
+      width: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      background: #000 !important;
+      position: relative !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      order: 2 !important;
+      flex-shrink: 0 !important;
+      /* KHÔNG dùng aspect-ratio ở đây vì #hostControls cũng nằm trong room-main */
+    }
+    /* PLAYER WRAPPER - TỶ LỆ 16:9 */
+    .room-player-wrapper {
+      width: 100% !important;
+      aspect-ratio: 16/9 !important;
+      position: relative !important;
+      flex-shrink: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      min-height: unset !important;
+      height: auto !important;
+      overflow: hidden !important;
+      order: 1 !important; /* Sau header-bar */
+    }
+    #partyPlayer {
+      width: 100% !important;
+      height: 100% !important;
+      display: block !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+    }
+
+    /* Controls Dọc - NGAY SAU VIDEO trong .room-main */
+    #hostControls,
+    .room-controls {
+      width: 100% !important;
+      overflow-x: auto !important;
+      white-space: nowrap !important;
+      background: #151521 !important;
+      padding: 8px 10px !important;
+      display: flex !important;
+      gap: 8px !important;
+      order: 2 !important; /* Sau player-wrapper(1) trong .room-main flex */
+      flex-shrink: 0 !important;
+      position: relative !important;
+      transform: none !important;
+      border-top: 1px solid rgba(255,255,255,0.1) !important;
+    }
+
+    /* Chat Dọc - FILL ĐÚNG PHẦN CÒN LẠI GIỮA CONTROLS VÀ INPUT */
+    .room-sidebar,
+    .party-sidebar {
+      width: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 !important;
+      min-height: 0 !important; /* Quan trọng: cho phép co lại */
+      background: #0f0f13 !important;
+      border: none !important;
+      border-radius: 0 !important;
+      order: 4 !important;
+      overflow: hidden !important;
+      padding-bottom: 50px !important; /* Chừa chỗ cho chat-input fixed */
+    }
+
+    .room-tabs {
+      height: 42px !important;
+      min-height: 42px !important;
+      background: #252545 !important;
+      flex-shrink: 0 !important;
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      border-top: 2px solid #7c3aed !important;
+      border-bottom: 1px solid rgba(255,255,255,0.15) !important;
+      z-index: 10 !important;
+      position: relative !important;
+    }
+    .room-tab {
+      flex: 1 !important;
+      font-size: 14px !important;
+      padding: 8px 14px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: #999 !important;
+      font-weight: 700 !important;
+      background: transparent !important;
+      border: none !important;
+      border-bottom: 2px solid transparent !important;
+      cursor: pointer !important;
+    }
+    .room-tab.active {
+      color: #fff !important;
+      border-bottom-color: #7c3aed !important;
+      background: rgba(124, 58, 237, 0.1) !important;
+    }
+    #chatMessages,
+    #memberList {
+      flex: 1 !important;
+      overflow-y: auto !important;
+      padding: 10px !important;
+      min-height: 0 !important; /* Quan trọng: cho phép co lại trong flex */
+    }
+    /* Ô nhập tin nhắn - CỐ ĐỊNH DƯớI MÀN HÌNH MOBILE */
+    .chat-input-area {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      padding: 8px 10px !important;
+      background: #151521 !important;
+      border-top: 1px solid #333 !important;
+      z-index: 9500 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+    }
+    .room-tab-content {
+      display: none !important;
+      flex-direction: column !important;
+      flex: 1 !important;
+      overflow: hidden !important;
+    }
+    .room-tab-content.active {
+      display: flex !important;
+    }
+  }
+
+  /* ============================================================
+   FIX LỖI XOAY NGANG (MOBILE LANDSCAPE) - UPDATE
+   ============================================================ */
+  @media (max-width: 1024px) and (orientation: landscape) {
+    /* 0. CHỈ XÓA PADDING CHO WATCH PARTY (FULLSCREEN) */
+    #partyRoom.page {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+
+    /* partyRoom chỉ fixed full màn hình */
+    #partyRoom {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      overflow: hidden !important;
+      background: #000 !important;
+      z-index: 9000 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      display: block !important;
+    }
+
+    /* CONTAINER CHÍNH - GRID 75% VIDEO / 25% CHAT */
+    .room-layout {
+      display: grid !important;
+      grid-template-columns: 75% 25% !important;
+      width: 100% !important;
+      height: 100% !important;
+      gap: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+
+    /* CỘT TRÁI: VIDEO */
+    .room-main,
+    .party-main {
+      grid-column: 1 !important;
+      grid-row: 1 !important;
+      width: 100% !important;
+      height: 100% !important;
+      position: relative !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      overflow: hidden !important;
+      background: #000 !important;
+      max-height: 100vh !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      aspect-ratio: unset !important;
+    }
+
+    /* Video player - LẤP ĐẦY KHUNG */
+    #partyPlayer {
+      width: 100% !important;
+      height: 100% !important;
+      max-height: 100vh !important;
+      object-fit: contain !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+    }
+
+    /* CỘT PHẢI: KHUNG CHAT 25% */
+    .room-sidebar,
+    .party-sidebar {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-height: 100vh !important;
+      background: #151521 !important;
+      border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      z-index: 9100 !important;
+      overflow: hidden !important;
+      border-radius: 0 !important;
+      min-height: unset !important;
+      min-width: unset !important;
+    }
+
+    /* Header bar gọn hơn */
+    .room-header-bar {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      height: 32px !important;
+      min-height: 32px !important;
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.95),
+        rgba(0, 0, 0, 0.5)
+      ) !important;
+      padding: 2px 8px !important;
+      justify-content: flex-start !important;
+      align-items: center !important;
+      gap: 6px !important;
+      z-index: 9050 !important;
+      pointer-events: none;
+      flex-wrap: nowrap !important;
+      margin: 0 !important;
+    }
+    .room-header-bar > * {
+      pointer-events: auto !important;
+      transform: scale(0.85);
+    }
+    .room-header-bar .btn {
+      padding: 2px 8px !important;
+      font-size: 10px !important;
+    }
+    #roomTitleDisplay {
+      font-size: 11px !important;
+      margin: 0 4px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      max-width: 100px !important;
+      display: block !important;
+    }
+    .room-meta {
+      display: flex !important;
+      gap: 4px !important;
+      align-items: center !important;
+    }
+    .room-meta .btn {
+      padding: 2px 6px !important;
+      font-size: 9px !important;
+    }
+    .live-badge {
+      font-size: 8px !important;
+      padding: 1px 4px !important;
+    }
+
+    /* Video container */
+    .room-player-wrapper {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: unset !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      position: relative !important;
+      top: 0 !important;
+      left: 0 !important;
+      border-radius: 0 !important;
+    }
+
+    /* Chat tabs - hiển thị đầy đủ */
+    .room-tabs {
+      height: 30px !important;
+      flex-shrink: 0 !important;
+      display: flex !important;
+    }
+    .room-tab {
+      font-size: 11px !important;
+      padding: 0 6px !important;
+      display: flex !important;
+      align-items: center !important;
+    }
+    #chatMessages {
+      font-size: 11px !important;
+      flex: 1 !important;
+      overflow-y: auto !important;
+      min-height: 0 !important;
+    }
+
+    /* Chat input - TRONG SIDEBAR, KHÔNG FIXED */
+    .chat-input-area {
+      position: static !important;
+      padding: 8px !important;
+      background: #151521 !important;
+      border-top: 1px solid rgba(255,255,255,0.1) !important;
+      flex-shrink: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+    }
+    .chat-input-area input {
+      flex: 1 !important;
+      min-width: 0 !important;
+      padding: 6px 10px !important;
+      font-size: 12px !important;
+    }
+    .chat-input-area button {
+      width: 30px !important;
+      height: 30px !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* NÚT ĐIỀU KHIỂN - TO HƠN VÀ VỊ TRÍ HỢP LÝ */
+    #hostControls,
+    .room-controls {
+      position: absolute !important;
+      bottom: 8px !important;
+      left: 50% !important;
+      transform: translateX(-50%) scale(0.85) !important;
+      width: auto !important;
+      min-width: 50% !important;
+      max-width: 70% !important;
+      background: rgba(0, 0, 0, 0.9) !important;
+      border-radius: 25px !important;
+      padding: 6px 16px !important;
+      gap: 8px !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      white-space: nowrap !important;
+      z-index: 9050 !important;
+      margin: 0 !important;
+    }
+
+    /* Nút bấm điều khiển - TO HƠN */
+    #hostControls button,
+    .room-controls button {
+      padding: 6px 14px !important;
+      font-size: 12px !important;
+      height: 32px !important;
+      min-width: unset !important;
+    }
+  }
+
+  /* Fix nút Login */
+  #authContainer #loginBtn.hidden {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+  }
 }

@@ -489,7 +489,42 @@ function updateAuthUI(isLoggedIn) {
   }
 }
 /**
- * Bật/tắt Menu User (Đã sửa lỗi xung đột click)
+ * Hàm xử lý click bên trong dropdown (Tách ra để tránh duplicate event)
+ */
+function handleDropdownItemClick(e) {
+  const dropdown = document.getElementById("userDropdown");
+  if (!dropdown) return;
+
+  // Nếu click vào thẻ li, a, hoặc button bên trong menu
+  if (e.target.closest(".dropdown-item") || e.target.closest("button")) {
+      dropdown.classList.remove("active");
+      dropdown.removeEventListener("click", handleDropdownItemClick);
+      // Gỡ sự kiện click-outside nếu có (nếu sau này thêm vào)
+      document.removeEventListener("click", closeDropdownOutside);
+  }
+}
+
+/**
+ * Hàm đóng dropdown khi click ra ngoài
+ */
+function closeDropdownOutside(e) {
+    const dropdown = document.getElementById("userDropdown");
+    const trigger = document.getElementById("userMenuTrigger");
+    
+    // Nếu click ra ngoài dropdown VÀ không click vào nút mở (trigger)
+    if (dropdown && 
+        dropdown.classList.contains("active") && 
+        !dropdown.contains(e.target) && 
+        !trigger.contains(e.target)) {
+        
+        dropdown.classList.remove("active");
+        dropdown.removeEventListener("click", handleDropdownItemClick);
+        document.removeEventListener("click", closeDropdownOutside);
+    }
+}
+
+/**
+ * Bật/tắt Menu User (Đã sửa lỗi xung đột click & Auto-close)
  */
 function toggleUserDropdown(event) {
   // 1. Chặn sự kiện click lan ra ngoài (QUAN TRỌNG NHẤT)
@@ -499,9 +534,25 @@ function toggleUserDropdown(event) {
 
   const dropdown = document.getElementById("userDropdown");
   if (dropdown) {
-    dropdown.classList.toggle("active");
+    // Toggle trạng thái
+    const isActive = dropdown.classList.toggle("active");
+
+    if (isActive) {
+        // Mở -> Thêm sự kiện lắng nghe click bên trong & click bên ngoài
+        dropdown.addEventListener("click", handleDropdownItemClick);
+        
+        // Thêm timeout nhỏ để tránh sự kiện click hiện tại kích hoạt luôn hàm close
+        setTimeout(() => {
+            document.addEventListener("click", closeDropdownOutside);
+        }, 0);
+    } else {
+        // Đóng bằng nút toggle -> Gỡ bỏ sự kiện
+        dropdown.removeEventListener("click", handleDropdownItemClick);
+        document.removeEventListener("click", closeDropdownOutside);
+    }
   }
 }
+
 /**
  * Mở modal đăng nhập/đăng ký
  */

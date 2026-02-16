@@ -189,10 +189,31 @@
               />
             </div>
             <div class="form-group">
-    <label class="form-label">Tên Phần / Mùa</label>
-    <input type="text" class="form-input" id="moviePart" placeholder="VD: Phần 1, Season 2, Tập Đặc Biệt..." />
-    <small class="text-muted" style="font-size: 12px;">Để trống nếu là phim độc lập không có phần.</small>
-</div>
+                <label class="form-label">Tên Phần / Mùa</label>
+                <div style="display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center;">
+                    <select class="form-select" id="moviePartType" onchange="updateMoviePartUI()">
+                        <option value="">(Trống)</option>
+                        <option value="Phần">Phần</option>
+                        <option value="Season">Season</option>
+                        <option value="Chapter">Chapter</option>
+                        <option value="Quyển">Quyển</option>
+                        <option value="Mùa">Mùa</option>
+                        <option value="custom">Tùy chỉnh...</option>
+                    </select>
+                    
+                    <!-- Nhập số cho các loại định sẵn -->
+                    <div class="input-group-number" id="groupPartNumber" style="display: flex; align-items: center;">
+                         <input type="number" id="moviePartNumber" class="form-input" value="1" min="1" style="text-align: center; border-radius: 4px 0 0 4px; flex: 1;">
+                         <div style="display: flex; flex-direction: column;">
+                            <button type="button" class="btn btn-secondary" onclick="adjustPartNumber(1)" style="padding: 0 5px; height: 19px; line-height: 1; border-radius: 0 4px 0 0; font-size: 10px;">▲</button>
+                            <button type="button" class="btn btn-secondary" onclick="adjustPartNumber(-1)" style="padding: 0 5px; height: 19px; line-height: 1; border-radius: 0 0 4px 0; font-size: 10px;">▼</button>
+                         </div>
+                    </div>
+
+                    <!-- Nhập text cho loại Tùy chỉnh (ẩn mặc định) -->
+                    <input type="text" id="moviePartCustom" class="form-input" placeholder="Nhập tên phần..." style="display: none;">
+                </div>
+            </div>
             <div class="form-group">
               <label class="form-label">Link ảnh Poster *</label>
               <input
@@ -242,12 +263,25 @@
                 />
               </div>
               <div class="form-group">
+                <label class="form-label">Chế độ thu phí *</label>
+                <div class="radio-group" style="display: flex; gap: 20px; margin-top: 5px; height: 38px; align-items: center;">
+                    <label style="cursor: pointer; display: flex; align-items: center;">
+                        <input type="radio" name="movieFeeType" value="free" onchange="toggleMoviePrice(this.value)"> 
+                        <span style="margin-left: 8px">Miễn phí</span>
+                    </label>
+                    <label style="cursor: pointer; display: flex; align-items: center;">
+                        <input type="radio" name="movieFeeType" value="paid" checked onchange="toggleMoviePrice(this.value)"> 
+                        <span style="margin-left: 8px">Trả phí</span>
+                    </label>
+                </div>
+              </div>
+              <div class="form-group">
                 <label class="form-label">Giá vé (CRO) *</label>
                 <input
                   type="number"
                   class="form-input"
                   id="moviePrice"
-                  placeholder="10"
+                  placeholder="1"
                   min="0"
                   step="0.1"
                   required
@@ -320,19 +354,32 @@
                 placeholder="Tập 1: Khởi đầu"
               />
             </div>
+            <!-- Hybrid Player Fields -->
             <div class="form-group">
-              <label class="form-label">YouTube Video ID *</label>
+                <label class="form-label">Loại Video *</label>
+                <select class="form-select" id="episodeVideoType" onchange="toggleVideoInputByType()">
+                    <option value="youtube">YouTube (Mặc định)</option>
+                    <option value="hls">HLS Streaming (.m3u8)</option>
+                    <option value="mp4">File MP4 trực tiếp</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Nguồn Video (ID hoặc URL) *</label>
               <input
                 type="text"
                 class="form-input"
-                id="episodeYoutubeId"
-                placeholder="dQw4w9WgXcQ"
+                id="episodeVideoSource"
+                placeholder="Nhập ID YouTube hoặc Link Video"
                 required
               />
-              <small class="text-muted"
-                >ID video từ link YouTube (phần sau v=)</small
+              <small class="text-muted" id="videoSourceHint"
+                >Với YouTube: Nhập ID (VD: dQw4w9WgXcQ)</small
               >
             </div>
+            
+            <!-- Trường ẩn để tương thích ngược với code cũ -->
+            <input type="hidden" id="episodeYoutubeId" />
             <div
               style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px"
             >

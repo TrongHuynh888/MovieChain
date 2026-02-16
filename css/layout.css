@@ -188,7 +188,8 @@
   border-radius: var(--border-radius);
   overflow: hidden;
 }
-.video-container iframe {
+.video-container iframe,
+.video-container video {
   position: absolute;
   top: 0;
   left: 0;
@@ -228,6 +229,333 @@
   font-size: var(--font-xl);
   margin: 0;
 }
+/* --- CUSTOM VIDEO CONTROLS START --- */
+.custom-video-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 20px 10px 10px;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 20;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.video-container:hover .custom-video-controls,
+.custom-video-controls.show {
+    opacity: 1;
+}
+
+/* Progress Bar Container */
+.video-progress-container {
+    position: relative;
+    width: 100%;
+    height: 5px;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer;
+    border-radius: 5px;
+    transition: height 0.1s;
+}
+.video-progress-container:hover {
+    height: 8px;
+}
+
+.video-progress-filled {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: var(--accent-primary);
+    width: 0%;
+    border-radius: 5px;
+    z-index: 2;
+}
+
+.video-progress-buffer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(255,255,255,0.4);
+    width: 0%;
+    border-radius: 5px;
+    z-index: 1;
+}
+
+/* Input Range Overlay (Invisible but clickable) */
+.video-progress-slider {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 3;
+    margin: 0;
+}
+
+/* Tooltip */
+.progress-tooltip {
+    position: absolute;
+    bottom: 45px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    display: none;
+    pointer-events: none;
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+
+/* Controls Row */
+.video-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.controls-left, .controls-right, .controls-center {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.controls-center {
+    gap: 20px;
+}
+
+/* Buttons */
+.control-btn {
+    background: transparent;
+    border: none;
+    color: #eee;
+    font-size: 18px;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s, transform 0.2s;
+    border-radius: 4px; /* Reset border radius tròn cũ */
+}
+.control-btn:hover {
+    color: var(--accent-primary);
+    transform: scale(1.1);
+    background: transparent; /* Reset background cũ */
+    box-shadow: none;
+}
+.control-btn.mini {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+}
+
+/* Volume Control */
+.volume-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+    width: 32px; /* Mặc định ẩn slider */
+    transition: width 0.3s;
+    overflow: hidden;
+}
+.volume-container:hover {
+    width: 110px; /* Hiện slider khi hover */
+    overflow: visible;
+}
+.volume-slider-wrapper {
+    width: 0;
+    overflow: hidden;
+    transition: width 0.3s;
+    display: flex;
+    align-items: center;
+    margin-left: 5px;
+}
+.volume-container:hover .volume-slider-wrapper {
+    width: 70px;
+}
+.volume-slider {
+    width: 100%; /* Chiếm hết wrapper */
+    height: 4px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    appearance: none;
+    cursor: pointer;
+}
+.volume-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: white;
+}
+
+/* Time Display */
+.time-display {
+    font-size: 13px;
+    color: #ddd;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Settings Menu */
+.settings-container {
+    position: relative;
+}
+
+.settings-menu, .settings-submenu {
+    position: absolute;
+    bottom: 40px;
+    right: 0;
+    width: 200px;
+    background: rgba(20, 20, 20, 0.95);
+    border-radius: 8px;
+    padding: 8px 0;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.settings-item, .submenu-item, .submenu-header {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #eee;
+    transition: background 0.2s;
+}
+.settings-item:hover, .submenu-item:hover, .submenu-header:hover {
+    background: rgba(255,255,255,0.1);
+}
+.submenu-header {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.settings-value {
+    color: #aaa;
+    font-size: 13px;
+    margin-right: 5px;
+}
+.submenu-item.active {
+    color: var(--accent-primary);
+}
+.submenu-item.active::after {
+    content: '\f00c';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+}
+
+/* Quality bitrate label */
+.quality-bitrate {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    margin-left: 8px;
+}
+
+/* Hide native controls explicitly */
+video::-webkit-media-controls {
+    display: none !important;
+}
+video::-webkit-media-controls-enclosure {
+    display: none !important;
+}
+
+/* --- CUSTOM VIDEO CONTROLS END --- */
+
+/* --- CENTER CONTROLS OVERLAY --- */
+.center-controls-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    z-index: 15;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+/* Hiện khi hover vào video container */
+.video-container:hover .center-controls-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Hiện khi video đang Pause */
+.video-container.paused .center-controls-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Ẩn khi đang Play và không hover */
+.video-container.playing .center-controls-overlay {
+    opacity: 0;
+    pointer-events: none;
+}
+.video-container.playing:hover .center-controls-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Nút trung tâm */
+.center-btn {
+    background: rgba(0, 0, 0, 0.55);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.center-btn:hover {
+    background: rgba(229, 9, 20, 0.85);
+    transform: scale(1.15);
+}
+
+/* Nút Play lớn */
+.play-btn-large {
+    width: 75px;
+    height: 75px;
+    font-size: 28px;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Nút Skip nhỏ hơn */
+.skip-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 18px;
+}
+
+/* Responsive Mobile */
+@media (max-width: 768px) {
+    .center-controls-overlay { gap: 25px; }
+    .play-btn-large { width: 55px; height: 55px; font-size: 22px; }
+    .skip-btn { width: 38px; height: 38px; font-size: 15px; }
+}
+/* --- CENTER CONTROLS OVERLAY END --- */
+
 .video-locked p {
   color: var(--text-secondary);
   max-width: 400px;
