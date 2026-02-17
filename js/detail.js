@@ -1303,7 +1303,52 @@ window.togglePiP = async function() {
 window.toggleFullscreen = function() {
     const container = document.getElementById("videoContainer");
     const icon = document.querySelector("#fullscreenBtn i");
+    const customControls = document.getElementById("customControls");
+    const centerOverlay = document.getElementById("centerOverlay");
     
+    // Kiểm tra xem có đang ở chế độ "CSS fullscreen" (landscape mode) không
+    const isLandscapeMode = container && container.classList.contains("landscape-mode");
+    
+    // Nếu đang ở landscape mode - chỉ cần thoát ra (như bình thường)
+    if (isLandscapeMode) {
+        // Đánh dấu người dùng đã thoát thủ công
+        userHasExitedLandscape = true;
+        
+        // Thoát khỏi chế độ landscape fullscreen CSS
+        container.classList.remove("landscape-mode");
+        
+        // Reset styles về như chế độ portrait
+        container.style.position = "";
+        container.style.width = "";
+        container.style.height = "";
+        container.style.top = "";
+        container.style.left = "";
+        container.style.zIndex = "";
+        container.style.paddingTop = "";
+        
+        // Reset controls
+        if (customControls) {
+            customControls.classList.remove("show");
+            customControls.style.opacity = "";
+        }
+        if (centerOverlay) {
+            centerOverlay.style.opacity = "";
+        }
+        
+        // Cập nhật icon
+        if (icon) icon.className = "fas fa-expand";
+        
+        // Cũng thoát khỏi browser fullscreen nếu đang bật
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(e => console.log("Exit fullscreen error:", e));
+        } else if (document.webkitFullscreenElement) {
+            document.webkitExitFullscreen();
+        }
+        
+        return;
+    }
+    
+    // Chế độ bình thường (portrait) - sử dụng browser Fullscreen API
     if (!document.fullscreenElement) {
         if (container.requestFullscreen) container.requestFullscreen();
         else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
@@ -2462,3 +2507,98 @@ window.viewMovieFromHistory = async function(movieId, episodeIndex, timeWatched)
     // Sau khi video load xong, sẽ tự động hiện modal hỏi xem tiếp
     // (Vì checkAndShowContinueWatchingModal đã được gọi trong viewMovieDetail)
 };
+
+// ============================================
+// MOBILE LANDSCAPE FULLSCREEN HANDLING
+// ============================================
+
+// Biến để track trạng thái người dùng đã thoát thủ công chưa
+let userHasExitedLandscape = false;
+
+/**
+ * Xử lý sự kiện xoay màn hình trên mobile và tablet
+ */
+function handleOrientationChange() {
+    const videoContainer = document.getElementById("videoContainer");
+    const customControls = document.getElementById("customControls");
+    const centerOverlay = document.getElementById("centerOverlay");
+    const icon = document.querySelector("#fullscreenBtn i");
+    
+    if (!videoContainer) return;
+    
+    // Kiểm tra nếu đang ở landscape mode và màn hình nhỏ (mobile + tablet)
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const isMobileOrTablet = window.innerWidth <= 1024;
+    
+    if (isLandscape && isMobileOrTablet) {
+        // Chỉ vào landscape mode nếu người dùng CHƯA thoát thủ công
+        if (!videoContainer.classList.contains("landscape-mode") && !userHasExitedLandscape) {
+            videoContainer.classList.add("landscape-mode");
+            
+            // Hiển thị controls
+            if (customControls) {
+                customControls.classList.add("show");
+                customControls.style.display = "flex";
+                customControls.style.opacity = "1";
+            }
+            if (centerOverlay) {
+                centerOverlay.style.display = "flex";
+                centerOverlay.style.opacity = "1";
+            }
+            // Update icon
+            if (icon) icon.className = "fas fa-compress";
+        }
+    } else {
+        // Thoát khỏi landscape mode - reset mọi thứ
+        if (videoContainer.classList.contains("landscape-mode")) {
+            videoContainer.classList.remove("landscape-mode");
+            
+            // Reset styles
+            videoContainer.style.position = "";
+            videoContainer.style.width = "";
+            videoContainer.style.height = "";
+            videoContainer.style.top = "";
+            videoContainer.style.left = "";
+            videoContainer.style.zIndex = "";
+            
+            // Reset controls opacity (để CSS xử lý)
+            if (customControls) {
+                customControls.style.opacity = "";
+            }
+            if (centerOverlay) {
+                centerOverlay.style.opacity = "";
+            }
+            // Update icon
+            if (icon) icon.className = "fas fa-expand";
+        }
+        // Reset flag khi xoay về portrait
+        userHasExitedLandscape = false;
+    }
+}
+
+// Lắng nghe sự kiện orientation change và resize
+if (window.addEventListener) {
+    window.addEventListener("orientationchange", handleOrientationChange);
+    window.addEventListener("resize", handleOrientationChange);
+    
+    // Lắng nghe sự kiện fullscreen thay đổi (browser native fullscreen)
+    document.addEventListener("fullscreenchange", function() {
+        const icon = document.querySelector("#fullscreenBtn i");
+        if (document.fullscreenElement) {
+            if (icon) icon.className = "fas fa-compress";
+        } else {
+            if (icon) icon.className = "fas fa-expand";
+        }
+    });
+    document.addEventListener("webkitfullscreenchange", function() {
+        const icon = document.querySelector("#fullscreenBtn i");
+        if (document.webkitFullscreenElement) {
+            if (icon) icon.className = "fas fa-compress";
+        } else {
+            if (icon) icon.className = "fas fa-expand";
+        }
+    });
+    
+    // Kiểm tra ngay khi trang load
+    handleOrientationChange();
+}
