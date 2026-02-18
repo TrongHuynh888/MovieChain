@@ -109,3 +109,34 @@ function initVisitorStats() {
     });
   }
 }
+// ============================================
+// XỬ LÝ NAVIGATE BACK (Browser Back Button)
+// ============================================
+window.addEventListener('popstate', function(event) {
+    console.log("📍 Popstate triggered:", document.location.pathname, event.state);
+
+    if (event.state) {
+        const page = event.state.page;
+        const movieId = event.state.movieId;
+
+        if (page === 'intro' && movieId) {
+            // Quay lại trang Intro (không push state nữa)
+            if (typeof viewMovieIntro === 'function') {
+                viewMovieIntro(movieId, false);
+            }
+        } else if (page === 'watch' && movieId) {
+             if (typeof viewMovieDetail === 'function') {
+                viewMovieDetail(movieId);
+            }
+        } else if (page === 'home') {
+             showPage('home');
+        } else if (page) {
+             // Các trang khác (movies, categories...)
+             showPage(page);
+        }
+    } else {
+        // Fallback về trang chủ
+        console.log("📍 No state found, going Home fallback");
+        showPage('home');
+    }
+});

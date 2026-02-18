@@ -382,6 +382,14 @@ function openMovieModal(movieId = null) {
       updateMoviePartUI(); // Cập nhật UI ẩn hiện
 
       document.getElementById("moviePoster").value = movie.posterUrl;
+      // New fields
+      document.getElementById("movieBackground").value = movie.backgroundUrl || "";
+      document.getElementById("movieCast").value = movie.cast || "";
+      document.getElementById("movieVersions").value = movie.versions || "";
+      document.getElementById("movieDuration").value = movie.duration || "";
+      document.getElementById("movieAgeLimit").value = movie.ageLimit || "P";
+      document.getElementById("movieQuality").value = movie.quality || "HD";
+
       document.getElementById("movieCategory").value = movie.category || "";
       document.getElementById("movieCountry").value = movie.country || "";
       document.getElementById("movieYear").value = movie.year || "";
@@ -418,6 +426,14 @@ function openMovieModal(movieId = null) {
     document.getElementById("moviePartCustom").value = "";
     updateMoviePartUI();
 
+    // Reset new fields default
+    document.getElementById("movieBackground").value = "";
+    document.getElementById("movieCast").value = "";
+    document.getElementById("movieVersions").value = "";
+    document.getElementById("movieDuration").value = "";
+    document.getElementById("movieAgeLimit").value = "P";
+    document.getElementById("movieQuality").value = "HD";
+
     // Mặc định là Miễn phí
     document.querySelector('input[name="movieFeeType"][value="free"]').checked = true;
     toggleMoviePrice("free");
@@ -450,6 +466,15 @@ async function handleMovieSubmit(event) {
            : parseFloat(document.getElementById("moviePrice").value || 0),
     description: document.getElementById("movieDescription").value,
     type: document.getElementById("movieType").value,
+    
+    // New fields
+    backgroundUrl: document.getElementById("movieBackground").value,
+    cast: document.getElementById("movieCast").value,
+    versions: document.getElementById("movieVersions").value,
+    duration: document.getElementById("movieDuration").value,
+    ageLimit: document.getElementById("movieAgeLimit").value,
+    quality: document.getElementById("movieQuality").value,
+
     // Logic gộp Phần/Mùa
     part: (() => {
         const type = document.getElementById("moviePartType").value;
@@ -624,49 +649,74 @@ async function loadEpisodesForMovie() {
 /**
  * Xử lý hiển thị gợi ý khi chọn loại video
  */
-function toggleVideoInputByType() {
-    const type = document.getElementById("episodeVideoType").value;
-    const input = document.getElementById("episodeVideoSource");
-    const hint = document.getElementById("videoSourceHint");
+/**
+ * Thêm một dòng nhập source video
+ */
+function addSourceInput(type = "youtube", source = "", label = "") {
+  const container = document.getElementById("sourceListContainer");
+  const id = new Date().getTime() + Math.random().toString(36).substr(2, 9);
 
-    if (type === "youtube") {
-        input.placeholder = "Nhập ID YouTube (VD: dQw4w9WgXcQ)";
-        hint.textContent = "Nhập ID video từ link YouTube (phần sau v=)";
-    } else if (type === "hls") {
-        input.placeholder = "https://example.com/video.m3u8";
-        hint.textContent = "Nhập đường dẫn file Manifest (.m3u8)";
-    } else if (type === "mp4") {
-        input.placeholder = "https://example.com/video.mp4";
-        hint.textContent = "Nhập đường dẫn trực tiếp đến file video (.mp4)";
-    }
+  const html = `
+    <div class="source-item" id="source-${id}" style="display: grid; grid-template-columns: 100px 100px 1fr auto; gap: 10px; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
+        <div>
+            <input type="text" class="form-input source-label" placeholder="Nhãn (VD: Vietsub)" value="${label || "Bản gốc"}" required>
+        </div>
+        <div>
+            <select class="form-select source-type" onchange="updateSourcePlaceholder('${id}')">
+                <option value="youtube" ${type === "youtube" ? "selected" : ""}>YouTube</option>
+                <option value="hls" ${type === "hls" ? "selected" : ""}>HLS</option>
+                <option value="mp4" ${type === "mp4" ? "selected" : ""}>MP4</option>
+            </select>
+        </div>
+        <div>
+            <input type="text" class="form-input source-url" placeholder="Nhập ID hoặc URL" value="${source}" required>
+        </div>
+        <button type="button" class="btn btn-danger btn-sm" onclick="removeSourceInput('${id}')">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+  `;
+  container.insertAdjacentHTML("beforeend", html);
+  updateSourcePlaceholder(id);
+}
+
+function removeSourceInput(id) {
+  document.getElementById(`source-${id}`)?.remove();
+}
+
+function updateSourcePlaceholder(id) {
+  const item = document.getElementById(`source-${id}`);
+  if (!item) return;
+  const type = item.querySelector(".source-type").value;
+  const input = item.querySelector(".source-url");
+  
+  if (type === "youtube") input.placeholder = "ID YouTube (VD: dQw4...)";
+  else if (type === "hls") input.placeholder = "Link .m3u8";
+  else input.placeholder = "Link .mp4";
 }
 
 /**
- * Mở modal thêm/sửa tập (Đã nâng cấp cho Hybrid Player)
+ * Mở modal thêm/sửa tập (Hỗ trợ Multi-Source)
  */
 function openEpisodeModal(index = null) {
   const title = document.getElementById("episodeModalTitle");
   const form = document.getElementById("episodeForm");
   const epNumGroup = document.getElementById("episodeNumberGroup");
   const indexInput = document.getElementById("episodeIndex");
+  const sourceContainer = document.getElementById("sourceListContainer");
 
-  // Reset form trước tiên để xóa dữ liệu cũ
+  // Reset form
   form.reset();
+  sourceContainer.innerHTML = ""; // Xóa các source cũ
 
-  // 1. Lấy phim đang chọn (Đảm bảo biến selectedMovieForEpisodes đã được khai báo)
   const movieId = document.getElementById("selectMovieForEpisodes").value;
   const movie = allMovies.find((m) => m.id === movieId);
-
   const isSingle = movie && movie.type === "single";
 
-  // 2. Xử lý giao diện Lẻ/Bộ
-  if (epNumGroup) {
-    epNumGroup.style.display = isSingle ? "none" : "block";
-  }
+  if (epNumGroup) epNumGroup.style.display = isSingle ? "none" : "block";
 
-  // 3. Xử lý Dữ liệu
   if (index !== null) {
-    // === CHẾ ĐỘ SỬA (EDIT) ===
+    // === EDIT ===
     title.textContent = isSingle ? "Cập Nhật Link Phim" : "Sửa Tập Phim";
     indexInput.value = index;
 
@@ -676,42 +726,43 @@ function openEpisodeModal(index = null) {
       document.getElementById("episodeNumber").value = episode.episodeNumber;
       document.getElementById("episodeTitle").value = episode.title || "";
       document.getElementById("episodeDuration").value = episode.duration || "";
-      
-      // Xử lý Hybrid Player Data
-      const videoType = episode.videoType || "youtube";
-      document.getElementById("episodeVideoType").value = videoType;
-      
-      // Nếu có videoSource (Data mới) dùng nó, nếu không dùng youtubeId (Data cũ)
-      document.getElementById("episodeVideoSource").value = episode.videoSource || episode.youtubeId || "";
-      
-      // Nếu tập cũ chưa có quality, mặc định lấy 1080p60
-      document.getElementById("episodeQuality").value =
-        episode.quality || "1080p60";
+      document.getElementById("episodeQuality").value = episode.quality || "1080p60";
+
+      // Load Sources
+      if (episode.sources && Array.isArray(episode.sources) && episode.sources.length > 0) {
+        // Dữ liệu mới (Multi-source)
+        episode.sources.forEach(src => {
+            addSourceInput(src.type, src.source, src.label);
+        });
+      } else {
+        // Dữ liệu cũ (Single source) -> Convert sang 1 dòng source
+        const oldType = episode.videoType || "youtube";
+        const oldSource = episode.videoSource || episode.youtubeId || "";
+        addSourceInput(oldType, oldSource, "Mặc định");
+      }
     }
   } else {
-    // === CHẾ ĐỘ THÊM MỚI (ADD) ===
+    // === ADD NEW ===
     title.textContent = isSingle ? "Cập Nhật Link Phim" : "Thêm Tập Mới";
-    indexInput.value = ""; // Xóa index để biết là đang thêm mới
+    indexInput.value = "";
 
     if (isSingle) {
-      // Phim lẻ: Tự điền Tập 1
       document.getElementById("episodeNumber").value = 1;
       document.getElementById("episodeTitle").value = "Full Movie";
     } else {
-      // Phim bộ: Tự tính tập tiếp theo
       const nextEp = (movie?.episodes?.length || 0) + 1;
       document.getElementById("episodeNumber").value = nextEp;
-      document.getElementById("episodeTitle").value = `Tập ${nextEp}`; // Tự điền tên tập
+      document.getElementById("episodeTitle").value = `Tập ${nextEp}`;
     }
 
-    // Mặc định
-    document.getElementById("episodeVideoType").value = "youtube";
     document.getElementById("episodeQuality").value = "1080p60";
+    // Thêm 1 dòng trống mặc định
+    addSourceInput("youtube", "", "Bản gốc");
   }
-  
-  toggleVideoInputByType(); // Cập nhật UI hint
+
   openModal("episodeModal");
 }
+
 /**
  * Xử lý submit form tập phim
  */
@@ -721,22 +772,41 @@ async function handleEpisodeSubmit(event) {
   if (!db || !selectedMovieForEpisodes) return;
 
   const index = document.getElementById("episodeIndex").value;
-  const videoType = document.getElementById("episodeVideoType").value;
-  const videoSource = document.getElementById("episodeVideoSource").value;
   
-  // Logic tương thích ngược:
-  // Nếu là YouTube, lưu videoSource vào youtubeId.
-  // Nếu là loại khác, youtubeId để trống.
-  const youtubeId = videoType === "youtube" ? videoSource : "";
+  // Thu thập sources từ UI
+  const sourceItems = document.querySelectorAll(".source-item");
+  const sources = [];
+  
+  sourceItems.forEach(item => {
+      sources.push({
+          label: item.querySelector(".source-label").value,
+          type: item.querySelector(".source-type").value,
+          source: item.querySelector(".source-url").value
+      });
+  });
+
+  if (sources.length === 0) {
+      showNotification("Phải có ít nhất 1 nguồn video!", "warning");
+      return;
+  }
+
+  // Tương thích ngược: Lấy source đầu tiên làm default
+  const primarySource = sources[0];
+  const youtubeId = primarySource.type === "youtube" ? primarySource.source : "";
 
   const episodeData = {
     episodeNumber: parseInt(document.getElementById("episodeNumber").value),
     title: document.getElementById("episodeTitle").value,
-    videoType: videoType,
-    videoSource: videoSource,
-    youtubeId: youtubeId, // Giữ trường này để tương thích Watch Party cũ (nếu có)
     duration: document.getElementById("episodeDuration").value,
     quality: document.getElementById("episodeQuality").value,
+    
+    // Dữ liệu cũ (cho app cũ)
+    videoType: primarySource.type,
+    videoSource: primarySource.source,
+    youtubeId: youtubeId,
+    
+    // Dữ liệu mới
+    sources: sources
   };
 
   try {
@@ -747,14 +817,11 @@ async function handleEpisodeSubmit(event) {
     let episodes = movieDoc.data()?.episodes || [];
 
     if (index !== "") {
-      // Update
       episodes[parseInt(index)] = episodeData;
     } else {
-      // Add
       episodes.push(episodeData);
     }
 
-    // Sort by episode number
     episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
 
     await movieRef.update({ episodes });
@@ -762,7 +829,6 @@ async function handleEpisodeSubmit(event) {
     showNotification("Đã lưu tập phim!", "success");
     closeModal("episodeModal");
 
-    // Reload
     await loadMovies();
     loadEpisodesForMovie();
   } catch (error) {

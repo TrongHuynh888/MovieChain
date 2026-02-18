@@ -133,6 +133,46 @@
   max-width: 100%;
   margin: 0;
 }
+
+/* Nút Quay lại trên trang Detail */
+.detail-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.detail-back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+  transform: translateX(-5px);
+}
+
+.detail-back-btn i {
+  font-size: 16px;
+}
+
+/* Mobile responsive cho nút back */
+@media (max-width: 768px) {
+  .movie-detail {
+    padding-top: 80px; /* Tăng padding để tránh bị header che */
+  }
+  .detail-back-btn {
+    margin-bottom: 15px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}
+
 .movie-detail-header {
   display: grid;
   grid-template-columns: 300px 1fr;

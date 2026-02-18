@@ -121,13 +121,13 @@ function createMovieCard(movie) {
             </div>
             <div class="popup-body">
                 <div class="popup-actions">
-                    <button class="btn-popup-play" onclick="event.stopPropagation(); viewMovieDetail('${movie.id}')">
+                    <button class="btn-popup-play" onclick="event.stopPropagation(); viewMovieIntro('${movie.id}')">
                         <i class="fas fa-play"></i> Xem ngay
                     </button>
                     <button class="btn-popup-icon ${likeClass} btn-like-${movie.id}" style="${likeStyle}" onclick="event.stopPropagation(); toggleFavorite('${movie.id}')">
                         <i class="${likeIcon}"></i>
                     </button>
-                    <button class="btn-popup-icon ml-auto" onclick="event.stopPropagation(); viewMovieDetail('${movie.id}')">
+                    <button class="btn-popup-icon ml-auto" onclick="event.stopPropagation(); viewMovieIntro('${movie.id}')">
                         <i class="fas fa-chevron-down"></i>
                     </button>
                 </div>
@@ -159,7 +159,7 @@ function createMovieCard(movie) {
 function handleMovieClick(event, movieId) {
   // 1. PC: Chuyển trang luôn
   if (window.innerWidth > 1366) {
-    viewMovieDetail(movieId);
+    viewMovieIntro(movieId);
     return;
   }
 

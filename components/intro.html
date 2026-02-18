@@ -1,0 +1,84 @@
+<div class="intro-hero" id="introHero">
+    <!-- Nút Back -->
+    <button class="intro-back-btn" id="introBackBtn" onclick="goBackFromIntro()">
+        <i class="fas fa-arrow-left"></i> Quay lại
+    </button>
+    
+    <!-- Background Image -->
+    <div class="intro-bg-image" id="introBgImage"></div>
+    <div class="intro-overlay"></div>
+    
+    <div class="intro-container">
+        <!-- Poster (Left) -->
+        <div class="intro-poster-box box-animate">
+            <img id="introPoster" src="" alt="Movie Poster" class="intro-poster">
+        </div>
+
+        <!-- Content (Right) -->
+        <div class="intro-content box-animate">
+            <h1 class="intro-title" id="introTitle">Tên Phim</h1>
+            
+            <div class="intro-meta-row">
+                <span class="intro-match" id="introMatch">98% phù hợp</span>
+                <span id="introYear">2024</span>
+                <span id="introDuration">120p</span>
+                <span class="intro-age" id="introAge">T16</span>
+                <span class="intro-quality" id="introQuality">HD</span>
+            </div>
+
+            <div class="intro-info-grid">
+                <div class="info-item">
+                    <span class="info-label">Quốc gia:</span>
+                    <span class="info-value" id="introCountry">Việt Nam</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Thể loại:</span>
+                    <span class="info-value" id="introCategory">Hành động</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Đánh giá:</span>
+                    <span class="info-value">
+                        <i class="fas fa-star text-warning"></i> 
+                        <span id="introRating">8.5</span>
+                    </span>
+                </div>
+                 <div class="info-item full-width">
+                     <span class="info-label">Diễn viên:</span>
+                     <span class="info-value" id="introCast">Đang cập nhật...</span>
+                 </div>
+                 <div class="info-item full-width" style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <span class="info-label" style="margin-bottom: 8px;">Phiên bản:</span>
+                    <div id="introVersionList" class="version-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                         <span class="info-value">Đang cập nhật...</span>
+                    </div>
+                </div>
+            </div>
+
+            <p class="intro-desc" id="introDesc">Mô tả phim chưa cập nhật...</p>
+
+            <div class="intro-tags" id="introTags">
+                <!-- Tags will be injected here -->
+            </div>
+
+            <div class="intro-actions">
+                <button class="btn btn-primary btn-lg btn-play-intro" onclick="playMovieFromIntro()">
+                    <i class="fas fa-play"></i> Xem Ngay
+                </button>
+                <button class="btn btn-secondary btn-lg btn-icon-text" id="introLikeBtn" onclick="toggleFavoriteFromIntro()">
+                    <i class="far fa-heart"></i> Yêu thích
+                </button>
+                <button class="btn btn-secondary btn-lg btn-icon-text" onclick="shareMovieIntro()">
+                    <i class="fas fa-share-alt"></i> Chia sẻ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Comments Section (Separate from Hero) -->
+<div class="intro-comments-section container">
+    <h3 class="section-title"><i class="fas fa-comments"></i> Bình luận & Đánh giá</h3>
+    <div id="introCommentsContainer">
+        <!-- Comments will be loaded here via JS -->
+    </div>
+</div>

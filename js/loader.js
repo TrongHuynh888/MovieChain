@@ -6,6 +6,7 @@ async function loadComponent(elementId, filePath) {
   try {
     // Thêm timestamp để tránh cache
     const url = filePath + "?v=" + new Date().getTime();
+    console.log("📥 Đang tải:", url);
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Không thể tải ${filePath}`);
 
@@ -13,7 +14,7 @@ async function loadComponent(elementId, filePath) {
     const element = document.getElementById(elementId);
     if (element) {
       element.innerHTML = html;
-      console.log(`✅ Đã tải xong: ${filePath}`);
+      console.log(`✅ Đã tải xong: ${filePath} (${html.length} bytes)`);
     } else {
       console.error(`❌ Không tìm thấy chỗ gắn cho ${elementId}`);
     }
@@ -34,6 +35,7 @@ async function initApp() {
   await Promise.all([
     loadComponent("modals-container", "./components/modals.html"),
     loadComponent("admin-container", "./components/admin.html"),
+    loadComponent("movieIntroPage", "./components/intro.html"),
   ]);
 
   console.log("🎉 Giao diện đã tải xong! Khởi động logic...");

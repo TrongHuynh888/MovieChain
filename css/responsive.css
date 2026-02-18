@@ -56,75 +56,96 @@ body, .page, .section, .hero, .movie-grid, .footer, main {
   }
 
   /* --- FIX POPUP CHO TABLET (iPad) --- */
-  /* Ẩn popup hover mặc định (để dùng click) */
-  .movie-card-wrapper .movie-popup-nfx {
-    display: none !important;
-  }
+  /* CHỈ ÁP DỤNG TỪ 769px ĐẾN 1366px (Tablet) - KHÔNG ẢNH HƯỞNG MOBILE */
+  @media (min-width: 769px) {
+    /* Ẩn popup hover mặc định (để dùng click) */
+    .movie-card-wrapper .movie-popup-nfx {
+      display: none !important;
+    }
 
-  /* Class kích hoạt popup khi chạm */
-  .movie-card-wrapper.active-mobile {
-    z-index: 5000 !important;
-    position: relative;
-  }
+    /* Class kích hoạt popup khi chạm */
+    .movie-card-wrapper.active-mobile {
+      z-index: 5000 !important;
+      position: relative;
+    }
 
-  .movie-card-wrapper.active-mobile .movie-popup-nfx {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important; /* Cho phép bấm vào nút trong popup */
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
+    .movie-card-wrapper.active-mobile .movie-popup-nfx {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
 
-    /* Kích thước cho Tablet (Rộng hơn Mobile xíu) */
-    width: 240px !important;
-    height: auto;
-    z-index: 5001;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.95);
-    border: 1px solid var(--accent-primary);
-    background: #1f1f2e !important;
-    color: #fff !important;
-  }
+      /* Kích thước cho Tablet (Rộng hơn Mobile xíu) */
+      width: 450px !important; /* User thích 450px */
+      max-width: 90vw !important;
+      height: auto;
+      z-index: 5001;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.95);
+      border: 1px solid var(--accent-primary);
+      background: #1f1f2e !important;
+      color: #fff !important;
+    }
 
-  /* Font chữ Popup Tablet */
-  .movie-card-wrapper.active-mobile .popup-header-img {
-    height: 130px;
-  }
-  .movie-card-wrapper.active-mobile .popup-body {
-    padding: 12px;
-  }
-  .movie-card-wrapper.active-mobile .popup-title-new {
-    font-size: 15px;
-    margin-bottom: 6px;
-    line-height: 1.3;
-    color: #ffeb3b !important;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-    font-weight: 800 !important;
-  }
-  .movie-card-wrapper.active-mobile .popup-meta-row {
-    font-size: 11px;
-    gap: 6px;
-    margin-bottom: 10px;
-  }
-  .movie-card-wrapper.active-mobile .popup-meta-row span {
-    color: #0fceeb !important;
-  }
-  .movie-card-wrapper.active-mobile .btn-popup-play {
-    font-size: 13px !important;
-    padding: 8px 15px;
-    height: 34px;
-  }
-  .movie-card-wrapper.active-mobile .btn-popup-icon {
-    width: 34px;
-    height: 34px;
-    font-size: 13px;
-    background: rgba(255, 255, 255, 0.15) !important;
-    color: #fff !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  }
-  .movie-card-wrapper.active-mobile .popup-genres-row {
-    display: none;
+    /* Font chữ Popup Tablet */
+    .movie-card-wrapper.active-mobile .popup-header-img {
+      height: 250px !important;
+    }
+    .movie-card-wrapper.active-mobile .popup-body {
+      padding: 24px !important;
+    }
+    .movie-card-wrapper.active-mobile .popup-title-new {
+      font-size: 24px !important;
+      margin-bottom: 12px;
+      line-height: 1.3;
+      color: #ffeb3b !important;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+      font-weight: 800 !important;
+    }
+    .movie-card-wrapper.active-mobile .popup-meta-row {
+      font-size: 15px !important;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .movie-card-wrapper.active-mobile .popup-meta-row span {
+      color: #0fceeb !important;
+    }
+    .movie-card-wrapper.active-mobile .btn-popup-play {
+      font-size: 16px !important;
+      padding: 12px 24px;
+      height: 48px;
+    }
+    .movie-card-wrapper.active-mobile .btn-popup-icon {
+      width: 48px;
+      height: 48px;
+      font-size: 18px;
+      background: rgba(255, 255, 255, 0.15) !important;
+      color: #fff !important;
+      border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    }
+    
+    /* --- SMART POSITIONING (XỬ LÝ TRÀN MÀN HÌNH) --- */
+    /* 1. Mở sang phải (Khi thẻ ở lề trái) */
+    .movie-card-wrapper.active-mobile.popup-align-left .movie-popup-nfx {
+        left: 0 !important;
+        transform: translateX(0) !important;
+        transform-origin: left center;
+    }
+
+    /* 2. Mở sang trái (Khi thẻ ở lề phải) */
+    .movie-card-wrapper.active-mobile.popup-align-right .movie-popup-nfx {
+        left: auto !important;
+        right: 0 !important;
+        transform: translateX(0) !important;
+        transform-origin: right center;
+    }
+    
+    .movie-card-wrapper.active-mobile .popup-genres-row {
+      display: none;
+    }
   }
 
   /* FIX MENU TABLET: Scroll ngang mượt mà */
