@@ -433,6 +433,11 @@ async function handleCreateRoom(e) {
   const type = document.getElementById("roomType")?.value || "public";
   const password = document.getElementById("roomPassword")?.value || "";
   
+  if (type === "private" && !password.trim()) {
+    showNotification("Vui lòng nhập mật khẩu cho phòng riêng tư!", "warning");
+    return;
+  }
+  
   const movie = allMovies.find((m) => m.id === movieId);
   const episode = movie.episodes[epIndex];
   
