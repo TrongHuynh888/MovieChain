@@ -386,52 +386,59 @@
           <h2 class="admin-panel-title">Quản lý Tập Phim</h2>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Chọn phim:</label>
+        <!-- Vùng chọn phim trực quan -->
+        <div id="movieSelectionSection">
+          <div class="form-group">
+            <label class="form-label">Tìm và chọn phim để quản lý tập:</label>
 
-          <div style="position: relative; margin-bottom: 10px">
-            <i
-              class="fas fa-search"
-              style="position: absolute; left: 10px; top: 10px; color: #888"
-            ></i>
-            <input
-              type="text"
-              class="form-input"
-              id="episodeMovieSearch"
-              placeholder="Gõ tên phim để lọc nhanh..."
-              oninput="filterEpisodeMovies()"
-              style="padding-left: 35px"
-            />
-          </div>
+            <div style="position: relative; margin-bottom: 12px">
+              <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #888"></i>
+              <input
+                type="text"
+                class="form-input"
+                id="episodeMovieSearch"
+                placeholder="Gõ tên phim..."
+                oninput="filterEpisodeMovies()"
+                style="padding-left: 38px"
+              />
+            </div>
 
-          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <select class="form-select" id="episodeMovieSort" onchange="filterEpisodeMovies()" style="flex: 1;">
-              <option value="newest">Mới nhất</option>
-              <option value="oldest">Cũ nhất</option>
-            </select>
-            <select class="form-select" id="episodeMovieAlphabet" onchange="filterEpisodeMovies()" style="flex: 1;">
-              <option value="">Chữ cái (Tất cả)</option>
-              <option value="A-D">Vần A - D</option>
-              <option value="E-H">Vần E - H</option>
-              <option value="I-L">Vần I - L</option>
-              <option value="M-P">Vần M - P</option>
-              <option value="Q-T">Vần Q - T</option>
-              <option value="U-Z">Vần U - Z</option>
-              <option value="others">Khác (Số...)</option>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+              <select class="form-select" id="episodeMovieSort" onchange="filterEpisodeMovies()" style="flex: 1;">
+                <option value="newest">MỚI NHẤT</option>
+                <option value="oldest">CŨ NHẤT</option>
+              </select>
+              <select class="form-select" id="episodeMovieAlphabet" onchange="filterEpisodeMovies()" style="flex: 1;">
+                <option value="">CHỮ CÁI (TẤT CẢ)</option>
+                <option value="A-D">Vần A - D</option>
+                <option value="E-H">Vần E - H</option>
+                <option value="I-L">Vần I - L</option>
+                <option value="M-P">Vần M - P</option>
+                <option value="Q-T">Vần Q - T</option>
+                <option value="U-Z">Vần U - Z</option>
+                <option value="others">Khác (Số...)</option>
+              </select>
+            </div>
+            
+            <!-- Grid chọn phim -->
+            <div id="movieSelectionGrid" class="movie-selection-grid">
+               <!-- JS load phim vào đây -->
+               <div class="text-center py-5 w-100" style="grid-column: 1/-1; opacity: 0.5;">
+                  <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                  <p>Đang tải danh sách phim...</p>
+               </div>
+            </div>
+
+            <!-- Dropdown ẩn (vẫn giữ để tránh lỗi code cũ đang ref tới nó nếu có) -->
+            <select id="selectMovieForEpisodes" style="display: none;" onchange="loadEpisodesForMovie()">
+              <option value="">-- Chọn phim --</option>
             </select>
           </div>
-          <select
-            class="form-select"
-            id="selectMovieForEpisodes"
-            onchange="loadEpisodesForMovie()"
-          >
-            <option value="">-- Chọn phim --</option>
-          </select>
         </div>
 
         <div id="episodesManagement" class="hidden">
           <!-- Thanh Tổng số tập -->
-          <div style="display: flex; align-items: center; gap: 12px; background: rgba(78, 205, 196, 0.08); border: 1px solid rgba(78, 205, 196, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; flex-wrap: wrap;">
+          <div id="totalEpisodesContainer" style="display: flex; align-items: center; gap: 12px; background: rgba(78, 205, 196, 0.08); border: 1px solid rgba(78, 205, 196, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 8px;">
               <i class="fas fa-layer-group" style="color: #4ecdc4;"></i>
               <label style="font-weight: 600; white-space: nowrap;">Tổng số tập:</label>
@@ -444,9 +451,31 @@
             <span id="episodeStatusBadge" style="margin-left: auto; font-size: 0.85rem; font-weight: 600; padding: 4px 12px; border-radius: 6px; background: rgba(255,255,255,0.08);"></span>
           </div>
 
+          <!-- Thanh hành động hàng loạt (Bulk Actions) cho Tập phim -->
+          <div id="episodeBulkActionsBar" class="bulk-actions-bar">
+            <div class="bulk-info">
+              <input type="checkbox" id="episodeSelectAll" onclick="toggleAllEpisodes(this.checked)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-primary);">
+              <span class="selected-count"><span id="episodeSelectedCount">0</span> tập đã chọn</span>
+            </div>
+            <div class="bulk-buttons">
+              <button class="btn btn-sm btn-secondary" onclick="openBulkEpisodeEditModal()">
+                <i class="fas fa-edit"></i> Chỉnh sửa (Chất lượng/Thời lượng)
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="bulkDeleteEpisodes()">
+                <i class="fas fa-trash"></i> Xóa tập đã chọn
+              </button>
+              <button class="btn btn-sm" style="background: rgba(255,255,255,0.1); color: #fff;" onclick="clearEpisodeSelection()">
+                Bỏ chọn
+              </button>
+            </div>
+          </div>
+
           <div class="flex-between mb-3">
-            <h3>Danh sách tập</h3>
+            <h3 id="currentMovieEpisodesTitle">Danh sách tập</h3>
             <div style="display: flex; gap: 8px;">
+              <button class="btn" style="background: var(--accent-primary); color: #fff;" onclick="goBackToMovieSelection()">
+                <i class="fas fa-arrow-left"></i> Đổi phim khác
+              </button>
               <button class="btn btn-danger" onclick="deleteAllEpisodes()">
                 <i class="fas fa-trash-alt"></i> Xóa tất cả tập
               </button>
@@ -462,7 +491,9 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th>Tập</th>
+                <th style="width: 40px;"><input type="checkbox" id="episodeSelectAllHeader" onclick="toggleAllEpisodes(this.checked)" style="width: 16px; height: 16px; cursor: pointer;"></th> <!-- Checkbox column -->
+                <th style="width: 40px;" id="dragHeader"></th> <!-- Drag handle column -->
+                <th style="width: 80px;">Tập</th>
                 <th>YouTube ID</th>
                 <th>Thời lượng</th>
                 <th>Chất lượng</th>

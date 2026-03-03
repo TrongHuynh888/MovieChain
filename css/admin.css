@@ -832,6 +832,36 @@
   }
 }
 
+/* --- DRAG & DROP EPISODES --- */
+.drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+.sortable-ghost {
+  opacity: 0.4;
+  background: rgba(229, 9, 20, 0.1) !important;
+}
+.quick-edit-input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid transparent !important;
+  color: #fff !important;
+  width: 60px !important;
+  text-align: center;
+  padding: 4px !important;
+  border-radius: 4px;
+}
+.quick-edit-input:focus {
+  border-color: var(--accent-primary) !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+.quick-edit-input.is-single {
+  width: 100px !important;
+}
+
 /* --- COMPARE TABLE (API IMPORT) --- */
 .compare-table {
   width: 100%;
@@ -1091,4 +1121,95 @@
 .image-source-indicator:hover {
     background: rgba(0, 0, 0, 0.9);
     transform: scale(1.1);
+}
+
+/* --- MOVIE SELECTION GRID (EPISODE MANAGEMENT) --- */
+.movie-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 15px;
+    margin-top: 10px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 5px;
+}
+
+.movie-selection-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.movie-selection-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent-primary);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.movie-selection-card .poster-wrapper {
+    position: relative;
+    aspect-ratio: 2/3;
+    width: 100%;
+}
+
+.movie-selection-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.movie-selection-card .status-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    z-index: 2;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    text-transform: uppercase;
+}
+
+.status-badge.bg-danger { background: #ff4757; color: #fff; } /* Chưa có tập */
+.status-badge.bg-warning { background: #ffa502; color: #111; } /* Đang cập nhật */
+.status-badge.bg-success { background: #2ed573; color: #fff; } /* Hoàn tất */
+.status-badge.bg-info { background: #1e90ff; color: #fff; } /* Phim lẻ */
+
+.movie-selection-card .info {
+    padding: 8px;
+    flex: 1;
+}
+
+.movie-selection-card .title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: #eee;
+}
+
+.movie-selection-card .stats {
+    font-size: 11px;
+    color: #888;
+    margin-top: 4px;
+}
+
+/* Tablet/Mobile optimization */
+@media (max-width: 768px) {
+    .movie-selection-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 10px;
+    }
 }

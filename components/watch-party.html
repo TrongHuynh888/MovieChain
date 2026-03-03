@@ -183,65 +183,102 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="createRoomModal">
-  <div class="modal" style="max-width: 500px">
-    <div class="modal-header">
-      <h3>Tạo Phòng Xem Chung</h3>
-      <button class="modal-close" onclick="closeModal('createRoomModal')">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body">
-      <form onsubmit="handleCreateRoom(event)">
-        <div class="form-group">
-          <label>Tên phòng</label>
-          <input
-            type="text"
-            class="form-input"
-            id="roomNameInput"
-            required
-            placeholder="VD: Xem phim kinh dị..."
-          />
+<div class="modal-overlay" id="createWatchPartyModal">
+  <div class="modal wp-modal-premium-container">
+    <form onsubmit="handleCreateRoom(event)" class="wp-create-main-form">
+      <!-- HEADER -->
+      <div class="wp-modal-header">
+        <div class="wp-header-title">
+          <i class="fas fa-plus-circle" style="color: #00d4ff; font-size: 22px;"></i>
+          <h3>Tạo Phòng Xem Chung</h3>
         </div>
-        <div class="form-group">
-          <label>Chọn phim</label>
-          <select
-            class="form-select"
-            id="roomMovieSelect"
-            required
-            onchange="updateEpisodeSelect()"
-          >
-            <option value="">-- Chọn phim --</option>
-          </select>
-        </div>
-        <div class="form-group hidden" id="roomEpisodeGroup">
-          <label>Chọn tập</label>
-          <select class="form-select" id="roomEpisodeSelect"></select>
-        </div>
-        <div class="form-group">
-          <label>Loại phòng</label>
-          <select class="form-select" id="roomType" onchange="toggleRoomPass()">
-            <option value="public">Công khai</option>
-            <option value="private">Riêng tư (Mật khẩu)</option>
-          </select>
-        </div>
-        <div class="form-group hidden" id="roomPassGroup">
-          <label>Mật khẩu</label>
-          <div class="password-input-wrapper">
-            <input
-              type="password"
-              class="form-input"
-              id="roomPassword"
-              placeholder="Nhập mật khẩu..."
-              autocomplete="new-password"
-            />
-            <i class="fas fa-eye password-toggle-icon" onclick="togglePassword('roomPassword', this)"></i>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%">
-          Tạo & Vào Ngay 🚀
+        <button type="button" class="wp-close-btn" onclick="closeModal('createWatchPartyModal')">
+          <i class="fas fa-times"></i>
         </button>
-      </form>
-    </div>
+      </div>
+
+      <!-- BODY (SCROLLABLE) -->
+      <div class="wp-modal-body-scroll">
+          <!-- Bước 1: Chọn Phim -->
+          <section class="wp-form-step">
+            <div class="wp-step-header">
+              <span class="step-num">1</span>
+              <label>Chọn phim muốn xem</label>
+            </div>
+            
+            <div class="wp-movie-selection-area">
+              <div class="wp-search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="wpMovieSearchInput" placeholder="Tìm tên phim..." oninput="filterWPMovies()">
+              </div>
+              
+              <div class="wp-movie-grid-container" id="wpMovieGridContainer">
+                <div class="wp-movie-items" id="wpMovieGrid">
+                  <!-- JS render list phim -->
+                </div>
+              </div>
+            </div>
+            
+            <div id="wpSelectedPreview" class="wp-selected-preview hidden">
+              <!-- Hiện phim đang chọn -->
+            </div>
+            
+            <input type="hidden" id="roomMovieId" required />
+          </section>
+
+          <!-- Bước 2: Chọn Tập (Nếu là series) -->
+          <section class="wp-form-step hidden" id="roomEpisodeGroup">
+             <div class="wp-step-header">
+              <span class="step-num">2</span>
+              <label>Chọn tập phim</label>
+            </div>
+            <div class="wp-episode-grid" id="wpEpisodeGrid">
+              <!-- JS render tập -->
+            </div>
+            <input type="hidden" id="roomEpisodeIndex" value="0" />
+          </section>
+
+          <!-- Bước 3: Cấu hình phòng -->
+          <section class="wp-form-step" id="roomConfigStep">
+            <div class="wp-step-header">
+              <span class="step-num">3</span>
+              <label>Thông tin phòng</label>
+            </div>
+            
+            <div class="wp-inputs-stack">
+              <div class="wp-input-group">
+                <label>Tên phòng</label>
+                <input type="text" class="wp-super-input" id="roomNameInput" required placeholder="Ví dụ: Phim đêm khuya...">
+              </div>
+              
+              <div class="wp-input-group">
+                <label>Loại phòng</label>
+                <select class="wp-super-input" id="roomType" onchange="toggleRoomPass()">
+                  <option value="public">Công khai 🌍</option>
+                  <option value="private">Có Mật khẩu 🔒</option>
+                </select>
+              </div>
+
+              <div id="roomPassGroup" class="wp-input-group hidden">
+                <label>Mật khẩu phòng</label>
+                <div class="password-input-wrapper" style="position: relative; width: 100%;">
+                  <input type="password" class="wp-super-input" id="roomPassword" placeholder="Nhập mật khẩu..." autocomplete="new-password">
+                  <i class="fas fa-eye password-toggle-icon" onclick="togglePassword('roomPassword', this)" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.5);"></i>
+                </div>
+              </div>
+            </div>
+          </section>
+      </div>
+
+      <!-- FOOTER (FIXED) -->
+      <div class="wp-modal-footer-sticky">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('createWatchPartyModal')" style="border: 1px solid rgba(255,255,255,0.1); color: #ccc;">Hủy bỏ</button>
+        <button type="submit" class="wp-submit-btn-premium">
+          <span>Tạo &amp; Vào Ngay</span>
+          <i class="fas fa-rocket"></i>
+        </button>
+      </div>
+    </form>
   </div>
 </div>
+<!-- Updated: 2026-03-01 16:46:10 -->

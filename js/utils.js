@@ -164,8 +164,8 @@ function showPage(pageName, addToHistory = true) {
   if (pageName !== "watch" && pageName !== "movieDetail" && pageName !== "movieIntro") {
       if (typeof updatePageMetadata === "function") {
           updatePageMetadata(
-              "Trạm Phim - Rạp Chiếu Phim Blockchain",
-              "Rạp Chiếu Phim Blockchain - Xem phim trực tuyến, thanh toán bằng CRO Token",
+              "Trạm Phim - Trải Nghiệm Điện Ảnh Đẳng Cấp",
+              "Trạm Phim - Nền tảng xem phim Web3 tiên phong. Trải nghiệm điện ảnh đỉnh cao, bảo mật và tích hợp thanh toán Crypto.",
               "https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico",
               window.location.href
           );

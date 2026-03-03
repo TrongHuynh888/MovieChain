@@ -241,6 +241,7 @@
                 id="movieTitle"
                 placeholder="Nhập tên phim"
                 required
+                oninput="handleTitleInputForSeriesId(this.value)"
               />
             </div>
             <div class="form-group">
@@ -277,6 +278,26 @@
                     <!-- Nhập text cho loại Tùy chỉnh (ẩn mặc định) -->
                     <input type="text" id="moviePartCustom" class="form-input" placeholder="Nhập tên phần..." style="display: none;">
                 </div>
+            </div>
+            <div class="form-group" style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
+                <label class="form-label" style="color: #4db8ff; font-weight: 600;">Mã bộ phim (Series ID / Collection)</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  id="movieSeriesId"
+                  placeholder="Ví dụ: harry-potter, mcu-spiderman, doraemon-movies..."
+                  style="border-color: rgba(77, 184, 255, 0.3);"
+                  oninput="searchSeriesIdSuggestions(this.value)"
+                  onfocus="searchSeriesIdSuggestions(this.value)"
+                  onblur="setTimeout(() => closeSeriesIdSuggestions(), 200)"
+                  autocomplete="off"
+                />
+                <!-- Suggestion Dropdown - NEW -->
+                <div class="series-id-suggestions suggestions-list" id="seriesIdSuggestions"></div>
+                
+                <small class="text-muted" style="font-size: 11px; margin-top: 5px; display: block;">
+                  <i class="fas fa-info-circle"></i> Nhập mã chung cho các phim cùng bộ để hệ thống gom nhóm chính xác hơn.
+                </small>
             </div>
             <div class="form-group">
               <label class="form-label">Link ảnh Poster *</label>
@@ -1114,3 +1135,48 @@
         </div>
     </div>
 </div>
+    <!-- Bulk Episode Edit Modal -->
+    <div class="modal-overlay" id="bulkEpisodeEditModal">
+      <div class="modal" style="max-width: 500px">
+        <div class="modal-header">
+          <h3 class="modal-title">Chỉnh sửa hàng loạt tập phim</h3>
+          <button class="modal-close" onclick="closeModal('bulkEpisodeEditModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="bulkEditInfo" class="mb-3" style="font-weight: 600; color: var(--accent-primary);"></p>
+          <div class="form-group">
+            <label class="form-label">Đổi chất lượng (Tất cả)</label>
+            <select class="form-select" id="bulkEpisodeQuality">
+              <option value="">-- Giữ nguyên --</option>
+              <option value="HD">HD</option>
+              <option value="FHD">Full HD (1080p)</option>
+              <option value="2K">2K</option>
+              <option value="4K">4K</option>
+              <option value="SD">SD</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Đổi thời lượng (Tất cả)</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="input-with-label" style="position: relative;">
+                <input type="number" id="bulkEpisodeHour" class="form-input" placeholder="Giờ" min="0" style="padding-right: 35px;">
+                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none;">giờ</span>
+              </div>
+              <div class="input-with-label" style="position: relative;">
+                <input type="number" id="bulkEpisodeMinute" class="form-input" placeholder="Phút" min="0" style="padding-right: 45px;">
+                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none;">phút</span>
+              </div>
+            </div>
+            <small class="text-muted">* Để trống cả 2 ô nếu không muốn thay đổi thời lượng</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('bulkEpisodeEditModal')">Hủy</button>
+          <button class="btn btn-primary" onclick="saveBulkEpisodeChanges()">
+            <i class="fas fa-save"></i> Áp dụng cho tất cả
+          </button>
+        </div>
+      </div>
+    </div>

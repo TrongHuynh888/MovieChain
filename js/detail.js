@@ -1181,11 +1181,6 @@ function renderEpisodes(episodes) {
     return;
   }
 
-  // Sắp xếp tập phim theo thứ tự tự nhiên (Tập 1, Tập 2, ..., Tập 10)
-  episodes.sort((a, b) => {
-    return String(a.episodeNumber).localeCompare(String(b.episodeNumber), undefined, { numeric: true, sensitivity: 'base' });
-  });
-
   if (episodes.length <= 1) {
     if (pageSelect) pageSelect.style.display = "none";
   }
@@ -1238,6 +1233,18 @@ function renderEpisodes(episodes) {
       }
     )
     .join("");
+}
+
+/**
+ * Chuyển trang danh sách tập phim
+ */
+function changeEpisodePage(pageIndex) {
+    currentEpisodePage = parseInt(pageIndex);
+    const movieId = currentMovieId;
+    const movie = allMovies.find(m => m.id === movieId);
+    if (movie) {
+        renderEpisodes(movie.episodes || []);
+    }
 }
 
 /**
@@ -1481,11 +1488,36 @@ async function checkAndUpdateVideoAccess() {
                        handleInitialPlayback(html5Player);
                        populateQualityMenu(hls);
                    });
+                    // Bắt lỗi HLS (Mạng yếu, 404, CORS, Server sập)
+                    hls.on(Hls.Events.ERROR, function (event, data) {
+                        if (data.fatal) {
+                            switch (data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    console.error("HLS Network Error: " + data.details);
+                                    autoReportVideoError("HLS_NETWORK", data.details);
+                                    hls.startLoad(); 
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    console.error("HLS Media Error: " + data.details);
+                                    hls.recoverMediaError();
+                                    break;
+                                default:
+                                    console.error("HLS Fatal Error: " + data.details);
+                                    autoReportVideoError("HLS_FATAL", data.details);
+                                    hls.destroy();
+                                    break;
+                            }
+                        }
+                    });
                } else if (html5Player.canPlayType('application/vnd.apple.mpegurl')) {
                    html5Player.src = videoSource;
                    html5Player.addEventListener('loadedmetadata', function() {
                        handleInitialPlayback(html5Player);
                    }, { once: true });
+                    html5Player.onerror = function() {
+                        const err = html5Player.error;
+                        autoReportVideoError("NATIVE_HLS", `Error code: ${err ? err.code : 'unknown'}`);
+                    };
                }
            }
       } else if (videoType === "mp4") {
@@ -1508,6 +1540,57 @@ async function checkAndUpdateVideoAccess() {
           html5Player.addEventListener('loadedmetadata', function() {
               handleInitialPlayback(html5Player);
           }, { once: true });
+           html5Player.onerror = async function() {
+               const err = html5Player.error;
+               if (!currentMovie || !currentMovie.id) return;
+               
+               const episode = currentMovie.episodes && currentMovie.episodes[currentEpisode];
+               const epName = episode 
+                    ? (episode.name || episode.episodeNumber || `Tập ${currentEpisode + 1}`) 
+                    : "Full";
+               
+               const errorKey = `reported_error_${currentMovie.id}_${currentEpisode}`;
+               const lastReported = sessionStorage.getItem(errorKey);
+               if (lastReported && (Date.now() - parseInt(lastReported) < 5 * 60 * 1000)) {
+                   console.log("Đã báo lỗi MP4 gần đây, bỏ qua.");
+                   return;
+               }
+               
+               try {
+                   const mId = currentMovie.id || currentMovieId || "unknown";
+                   const eName = epName || "Full";
+ 
+                   const checkQuery = await db.collection("error_reports")
+                       .where("movieId", "==", mId)
+                       .where("episodeName", "==", eName)
+                       .where("status", "==", "pending")
+                       .get();
+                       
+                   if (!checkQuery.empty) {
+                       console.log("Tập phim này đã được báo lỗi MP4 và đang chờ xử lý. Bỏ qua.");
+                       sessionStorage.setItem(errorKey, Date.now());
+                       return;
+                   }
+ 
+                   const reportData = {
+                       movieId: mId,
+                       movieTitle: currentMovie.title || "Không rõ tên",
+                       episodeName: eName,
+                       errorType: "broken_link",
+                       description: `[AUTO-DETECT] Lỗi tải Video (MP4): Error code ${err ? err.code : 'unknown'}\nVideo URL: ${videoSource}`,
+                       userId: currentUser ? currentUser.uid : "anonymous",
+                       userName: currentUser ? (currentUser.displayName || currentUser.email) : "Hệ thống tự động",
+                       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                       status: "pending"
+                   };
+                   
+                   await db.collection("error_reports").add(reportData);
+                   sessionStorage.setItem(errorKey, Date.now());
+                   console.log("✅ Đã tự động báo lỗi link MP4 chết về Admin!");
+               } catch (error) {
+                   console.error("Lỗi auto-report MP4:", error);
+               }
+           };
       }
 
       const customControls = document.getElementById("customControls");
@@ -3731,20 +3814,35 @@ function renderRecommendedMovies(movie) {
   if (currentCategories.length === 0 && currentTags.length === 0) return;
 
   // Tiêu chí: có chung ít nhất 1 thể loại hoặc tag
-  let recommended = allMovies.filter(m => {
-      if (m.id === movie.id) return false;
+  let recommended = allMovies.reduce((acc, m) => {
+      if (m.id === movie.id) return acc;
       
       const mCategories = parseCategories(m.category);
       const mTags = parseTags(m.tags);
 
-      const hasCommonCategory = mCategories.some(c => currentCategories.includes(c));
-      const hasCommonTag = mTags.some(t => currentTags.includes(t));
+      // Đếm số lượng thể loại và tag trùng khớp
+      const commonCategoryCount = mCategories.filter(c => currentCategories.includes(c)).length;
+      const commonTagCount = mTags.filter(t => currentTags.includes(t)).length;
 
-      return hasCommonCategory || hasCommonTag;
+      const score = commonCategoryCount + commonTagCount;
+
+      if (score > 0) {
+          acc.push({ movie: m, score: score });
+      }
+      return acc;
+  }, []);
+
+  // Sắp xếp theo điểm số (nhiều điểm chung hơn sẽ lên đầu)
+  // Nếu điểm bằng nhau, xáo trộn ngẫu nhiên để danh sách đa dạng
+  recommended.sort((a, b) => {
+      if (b.score !== a.score) {
+          return b.score - a.score;
+      }
+      return 0.5 - Math.random();
   });
 
-  // Xáo trộn mảng (Shuffle) để luôn đưa ra gợi ý mới
-  recommended = recommended.sort(() => 0.5 - Math.random());
+  // Chỉ lấy đối tượng movie
+  recommended = recommended.map(item => item.movie);
 
   // Giới hạn số lượng hiển thị (VD: 15 phim)
   recommended = recommended.slice(0, 15);
@@ -3832,34 +3930,58 @@ function renderMoviePartsSeries(movie) {
     const menu = document.getElementById("partDropdownMenu");
     const currentName = document.getElementById("currentPartName");
     const chevron = document.getElementById("partChevron");
+    const partSelector = document.getElementById("partSelector");
+    const divider = document.querySelector(".divider-vertical");
     
     if (!row || !menu || !currentName) return;
 
     menu.innerHTML = "";
     if (chevron) chevron.style.display = "none";
     
-    // Tên phần hiện tại
+    // Kiểm tra xem phim có được set tên phần cụ thể không
+    const hasPartData = movie.part && movie.part !== "(Trống)" && movie.part.trim() !== "";
+    const hasSeriesId = movie.seriesId && movie.seriesId.trim() !== "";
+    
+    if (!hasPartData && !hasSeriesId) {
+        // Nếu không có cả tên phần lẫn mã bộ phim: Xóa tên hiển thị và tắt gom nhóm
+        currentName.textContent = ""; 
+        if (partSelector) partSelector.style.opacity = "0.5";
+        if (divider) divider.style.display = "none";
+        return;
+    }
+
+    // Hiển thị nhãn hiện tại
     currentName.textContent = movie.part || "Phần 1";
+    if (partSelector) partSelector.style.opacity = "1";
+    if (divider) divider.style.display = "block";
 
     if (!allMovies || allMovies.length === 0) return;
 
-    // Tìm các phim cùng bộ
-    let baseTitle = movie.title.split(":")[0].split("-")[0].trim();
-    baseTitle = baseTitle.replace(/(\s+)(\d+|I|II|III|IV|V)+$/i, "").trim();
-    
-    if (baseTitle.length < 2) return;
+    let seriesMovies = [];
 
-    const seriesMovies = allMovies.filter(m => 
-        m.title.toLowerCase().includes(baseTitle.toLowerCase())
-    );
+    if (hasSeriesId) {
+        // ƯU TIÊN 1: Gom nhóm theo Mã Bộ Phim (Chính xác tuyệt đối)
+        seriesMovies = allMovies.filter(m => m.seriesId === movie.seriesId);
+    } else {
+        // ƯU TIÊN 2: Logic cũ - Tìm theo tên gốc (Fallback)
+        let baseTitle = movie.title.split(":")[0].split("-")[0].trim();
+        baseTitle = baseTitle.replace(/(\s+)(\d+|I|II|III|IV|V)+$/i, "").trim();
+        
+        if (baseTitle.length >= 2) {
+            seriesMovies = allMovies.filter(m => 
+                m.title.toLowerCase().includes(baseTitle.toLowerCase())
+            );
+        }
+    }
 
-    // Chỉ hiện dropdown nếu có từ 2 phim trở lên
+    // Chỉ hiện dropdown nếu có từ 2 phim trở lên trong bộ
     if (seriesMovies.length > 1) {
         row.style.display = "block";
         if (chevron) chevron.style.display = "inline-block";
 
         seriesMovies.sort((a, b) => {
             const getPartNum = (m) => {
+                // Ưu tiên lấy số từ trường .part, nếu không có mới tìm trong .title
                 const match = (m.part || m.title).match(/\d+/);
                 return match ? parseInt(match[0]) : 0;
             };
@@ -3870,7 +3992,19 @@ function renderMoviePartsSeries(movie) {
             const item = document.createElement("div");
             item.className = `part-dropdown-item ${m.id === movie.id ? 'active' : ''}`;
             
-            const partText = m.part || m.title.replace(baseTitle, "").trim() || "Phần 1";
+            // Hiển thị tên phần: Ưu tiên .part, sau đó đến .title rút gọn
+            let partText = m.part;
+            if (!partText || partText === "(Trống)") {
+                // Nếu không có phần nhưng cùng seriesId, cố gắng lấy phần khác biệt của tiêu đề
+                partText = m.title;
+                if (!hasSeriesId) {
+                    // Nếu là lọc theo tên, xóa bớt tên gốc cho gọn
+                    let baseTitle = movie.title.split(":")[0].split("-")[0].trim();
+                    baseTitle = baseTitle.replace(/(\s+)(\d+|I|II|III|IV|V)+$/i, "").trim();
+                    partText = m.title.replace(baseTitle, "").trim() || "Phần 1";
+                }
+            }
+            
             item.textContent = partText;
             
             item.onclick = (e) => {

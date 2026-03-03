@@ -37,7 +37,8 @@ async function initWatchPartyModule() {
 
   if (!document.getElementById("watchPartyPage")) {
     try {
-      const response = await fetch("./components/watch-party.html");
+      // Viết lại thành thế này:
+const response = await fetch("./components/watch-party.html?v=" + new Date().getTime());
       if (!response.ok) throw new Error("Không tìm thấy file giao diện");
       const html = await response.text();
       document
@@ -155,73 +156,282 @@ async function deleteRoom(roomId, hostId) {
   }
 }
 
-function openCreateRoomModal() {
+async function openCreateRoomModal() {
   if (!currentUser) {
     showNotification("Vui lòng đăng nhập!", "warning");
     openAuthModal();
     return;
   }
-  document.getElementById("roomNameInput").value = "";
-  document.getElementById("roomPassword").value = "";
-  document.getElementById("roomType").value = "public";
-  toggleRoomPass();
+  console.log("DEBUG: openCreateRoomModal called");
+  
+  // Reset Form Inputs
+  const nameInput = document.getElementById("roomNameInput");
+  const passInput = document.getElementById("roomPassword");
+  const typeInput = document.getElementById("roomType");
+  const movieIdInput = document.getElementById("roomMovieId");
+  const epIndexInput = document.getElementById("roomEpisodeIndex");
+  const searchInput = document.getElementById("wpMovieSearchInput");
+  
+  if (nameInput) nameInput.value = "";
+  if (passInput) passInput.value = "";
+  if (typeInput) typeInput.value = "public";
+  if (movieIdInput) movieIdInput.value = "";
+  if (epIndexInput) epIndexInput.value = "0";
+  if (searchInput) searchInput.value = "";
+
+  // Reset UI Steps & Previews
+  const preview = document.getElementById('wpSelectedPreview');
+  const epGroup = document.getElementById('roomEpisodeGroup');
+  const passGroup = document.getElementById('roomPassGroup');
+  
+  if (preview) { preview.classList.add('hidden'); preview.innerHTML = ''; }
+  if (epGroup) epGroup.classList.add('hidden');
+  if (passGroup) passGroup.classList.add('hidden');
+
+  // Đảm bảo dữ liệu phim đã được tải
+  if (!allMovies || allMovies.length === 0) {
+    console.warn("DEBUG: allMovies empty, attempting to load...");
+    if (typeof loadMovies === 'function') {
+      await loadMovies();
+    }
+  }
+  
+  // FALLBACK: Nếu vẫn trống, dùng SAMPLE_MOVIES
+  if ((!allMovies || allMovies.length === 0) && typeof SAMPLE_MOVIES !== 'undefined') {
+    console.warn("DEBUG: Using SAMPLE_MOVIES as fallback");
+    allMovies = SAMPLE_MOVIES;
+  }
+  
+  if (!allMovies || allMovies.length === 0) {
+    console.error("DEBUG: Could not load any movies!");
+  }
 
   let allowedMovies = [];
   if (isAdmin || (currentUser && currentUser.isVip === true)) {
     allowedMovies = allMovies;
   } else {
-    const purchased = currentUser.purchasedMovies || [];
-    allowedMovies = allMovies.filter((movie) => {
-      return !movie.price || movie.price === 0 || purchased.includes(movie.id);
-    });
+    allowedMovies = allMovies.filter(m => !m.isVip);
   }
 
-  const uniqueMovies = [
-    ...new Map(allowedMovies.map((item) => [item.id, item])).values(),
-  ];
-  const select = document.getElementById("roomMovieSelect");
-  select.innerHTML =
-    uniqueMovies.length === 0
-      ? '<option value="">-- Bạn chưa sở hữu phim nào --</option>'
-      : '<option value="">-- Chọn phim --</option>' +
-        uniqueMovies
-          .map((m) => `<option value="${m.id}">${m.title}</option>`)
-          .join("");
+  // Loại bỏ trùng lặp nếu có
+  const uniqueMovies = Array.from(new Set(allowedMovies.map(m => m.id)))
+    .map(id => allowedMovies.find(m => m.id === id));
 
-  document.getElementById("roomEpisodeGroup").classList.add("hidden");
-  openModal("createRoomModal");
+  // Lưu để filter
+  window.allAllowedWPMovies = uniqueMovies;
+  console.log("DEBUG: Unique Movies for WP:", uniqueMovies.length, uniqueMovies);
+  
+  if (uniqueMovies.length > 0) {
+    renderWPMovies(uniqueMovies);
+  } else {
+    console.error("DEBUG: No movies to render!");
+  }
+
+  if (uniqueMovies.length === 0) {
+    console.warn("DEBUG: No movies allowed for current user");
+    showNotification("Hiện tại chưa có phim nào khả dụng cho bạn.", "warning");
+  }
+
+  // 1. Reset trạng thái Collapse khi mở modal
+  const selectionArea = document.querySelector('.wp-movie-selection-area');
+  if (selectionArea) selectionArea.classList.remove('wp-collapsed');
+  
+  openModal('createWatchPartyModal');
 }
 
-function updateEpisodeSelect() {
-  const movieId = document.getElementById("roomMovieSelect").value;
-  const epGroup = document.getElementById("roomEpisodeGroup");
-  const epSelect = document.getElementById("roomEpisodeSelect");
-  const movie = allMovies.find((m) => m.id === movieId);
-  if (movie && movie.episodes && movie.episodes.length > 0) {
-    epGroup.classList.remove("hidden");
-    epSelect.innerHTML = movie.episodes
-      .map(
-        (ep, idx) => `<option value="${idx}">Tập ${ep.episodeNumber}</option>`,
-      )
-      .join("");
-  } else {
-    epGroup.classList.add("hidden");
+function renderWPMovies(movies) {
+  console.log("DEBUG: Rendering movies, count:", movies.length);
+  const grid = document.getElementById("wpMovieGrid");
+  if (!grid) {
+      console.error("DEBUG: wpMovieGrid element not found!");
+      showNotification("Lỗi: Không tìm thấy khung danh sách phim!", "error");
+      return;
   }
+  
+  if (!movies || movies.length === 0) {
+    grid.innerHTML = `
+      <div class="wp-no-movies-msg">
+        <p>Không tìm thấy phim nào phù hợp.</p>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadMovies().then(() => openCreateRoomModal())">
+          Tải lại dữ liệu
+        </button>
+      </div>`;
+    return;
+  }
+
+  const selectedId = document.getElementById("roomMovieId")?.value;
+
+  grid.innerHTML = movies.map(m => {
+    const isSelected = String(m.id) === String(selectedId);
+    return `
+      <div class="wp-movie-card ${isSelected ? 'selected' : ''}" 
+           onclick="selectWPMovie('${m.id}')" 
+           title="${m.title}">
+        <img src="${m.posterUrl}" alt="${m.title}" loading="lazy">
+        <div class="wp-movie-card-info">
+          <div class="title">${m.title}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function filterWPMovies() {
+  const searchInput = document.getElementById("wpMovieSearchInput");
+  if (!searchInput) return;
+  const val = searchInput.value.toLowerCase().trim();
+  if (!window.allAllowedWPMovies) return;
+  
+  if (val === '') {
+    renderWPMovies(window.allAllowedWPMovies);
+    return;
+  }
+  
+  const filtered = window.allAllowedWPMovies.filter(m => 
+    m.title.toLowerCase().includes(val) || 
+    (m.originTitle && m.originTitle.toLowerCase().includes(val))
+  );
+  renderWPMovies(filtered);
+}
+
+function selectWPMovie(id) {
+  console.log("DEBUG: selectWPMovie called with ID:", id);
+  
+  // Tìm phim trong dữ liệu
+  const movie = allMovies.find(m => String(m.id) === String(id)) || 
+                (window.allAllowedWPMovies && window.allAllowedWPMovies.find(m => String(m.id) === String(id)));
+
+  if (!movie) {
+    console.error("DEBUG: Movie not found for ID:", id);
+    showNotification("Không tìm thấy thông tin phim!", "error");
+    return;
+  }
+
+  // Cập nhật giá trị ẩn
+  const movieIdInput = document.getElementById('roomMovieId');
+  if (movieIdInput) movieIdInput.value = id;
+
+  // Hiển thị Preview và Thu gọn danh sách phim
+  const preview = document.getElementById('wpSelectedPreview');
+  const selectionArea = document.querySelector('.wp-movie-selection-area');
+  
+  if (preview) {
+    preview.classList.remove('hidden');
+    preview.innerHTML = `
+      <div class="selected-movie-info-wrap">
+        <img src="${movie.posterUrl}" alt="${movie.title}">
+        <div class="selected-info">
+          <label>Đã chọn phim:</label>
+          <h4>${movie.title}</h4>
+          <p>${movie.type === 'series' ? 'Phim bộ' : 'Phim lẻ'} • ${movie.year || 'N/A'}</p>
+        </div>
+      </div>
+      <button type="button" class="wp-change-movie-btn" onclick="undoMovieSelection()">
+        <i class="fas fa-edit"></i> Đổi phim
+      </button>
+    `;
+  }
+
+  // 🔥 Smart Collapse: Thu gọn grid phim
+  if (selectionArea) {
+    selectionArea.classList.add('wp-collapsed');
+  }
+
+  // Highlight card đã chọn
+  document.querySelectorAll('.wp-movie-card').forEach(card => card.classList.remove('selected'));
+  const selectedCard = document.querySelector(`.wp-movie-card[onclick*="'${id}'"]`);
+  if (selectedCard) selectedCard.classList.add('selected');
+
+  // Xử lý tập phim
+  const epGroup = document.getElementById('roomEpisodeGroup');
+  const epGrid = document.getElementById('wpEpisodeGrid');
+  const epIndexInput = document.getElementById('roomEpisodeIndex');
+
+  if (movie.type === 'series' && movie.episodes && movie.episodes.length > 0) {
+    if (epGroup) epGroup.classList.remove('hidden');
+    if (epIndexInput) epIndexInput.value = "0";
+
+    if (epGrid) {
+      epGrid.innerHTML = movie.episodes.map((ep, idx) => `
+        <button type="button" class="wp-ep-btn ${idx === 0 ? 'active' : ''}" 
+                onclick="selectWPEpisode(${idx}, this)">
+          ${idx + 1}
+        </button>
+      `).join("");
+    }
+    showNotification(`Đã chọn: ${movie.title}. Vui lòng chọn tập.`, "success");
+  } else {
+    if (epGroup) epGroup.classList.add('hidden');
+    if (epIndexInput) epIndexInput.value = "0";
+    showNotification(`Đã chọn: ${movie.title}`, "success");
+  }
+
+  // 🚀 Auto Scroll xuống cuối để thấy Step 3 và Nút xác nhận
+  setTimeout(() => {
+    const bodyScroll = document.querySelector('.wp-modal-body-scroll');
+    if (bodyScroll) {
+      bodyScroll.scrollTo({
+        top: bodyScroll.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, 300);
+}
+
+function undoMovieSelection() {
+  const selectionArea = document.querySelector('.wp-movie-selection-area');
+  const preview = document.getElementById('wpSelectedPreview');
+  const movieIdInput = document.getElementById('roomMovieId');
+  const epGroup = document.getElementById('roomEpisodeGroup');
+
+  if (selectionArea) selectionArea.classList.remove('wp-collapsed');
+  if (preview) {
+    preview.classList.add('hidden');
+    preview.innerHTML = '';
+  }
+  if (movieIdInput) movieIdInput.value = '';
+  if (epGroup) epGroup.classList.add('hidden');
+
+  // Reset highlight cards
+  document.querySelectorAll('.wp-movie-card').forEach(card => card.classList.remove('selected'));
+  
+  showNotification("Mời bạn chọn lại phim", "info");
+}
+
+function selectWPEpisode(index, btnElement) {
+  const epIndexInput = document.getElementById("roomEpisodeIndex");
+  if(epIndexInput) epIndexInput.value = index;
+  // Bỏ active tất cả nút
+  const grid = document.getElementById("wpEpisodeGrid");
+  if(grid) {
+      const btns = grid.querySelectorAll('.wp-ep-btn');
+      btns.forEach(btn => btn.classList.remove('active'));
+  }
+  // Đánh dấu nút vừa bấm
+  if(btnElement) btnElement.classList.add('active');
 }
 
 function toggleRoomPass() {
-  const type = document.getElementById("roomType").value;
+  const typeEl = document.getElementById("roomType");
   const passGroup = document.getElementById("roomPassGroup");
-  passGroup.classList.toggle("hidden", type !== "private");
+  
+  if (!typeEl || !passGroup) return;
+  
+  passGroup.classList.toggle("hidden", typeEl.value !== "private");
 }
 
 async function handleCreateRoom(e) {
   e.preventDefault();
-  const name = document.getElementById("roomNameInput").value;
-  const movieId = document.getElementById("roomMovieSelect").value;
-  const epIndex = document.getElementById("roomEpisodeSelect").value || 0;
-  const type = document.getElementById("roomType").value;
-  const password = document.getElementById("roomPassword").value;
+  const name = document.getElementById("roomNameInput")?.value || "";
+  const movieId = document.getElementById("roomMovieId")?.value;
+  const epIndex = document.getElementById("roomEpisodeIndex")?.value || 0;
+  
+  if (!movieId) {
+    showNotification("Vui lòng chọn phim!", "warning");
+    return;
+  }
+  const type = document.getElementById("roomType")?.value || "public";
+  const password = document.getElementById("roomPassword")?.value || "";
   
   const movie = allMovies.find((m) => m.id === movieId);
   const episode = movie.episodes[epIndex];
@@ -251,7 +461,7 @@ async function handleCreateRoom(e) {
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       bannedUsers: [],
     });
-    closeModal("createRoomModal");
+    closeModal("createWatchPartyModal");
     showLoading(false);
     joinRoom(roomRef.id, type, password);
   } catch (error) {

@@ -834,7 +834,7 @@ function renderAdminMoviesList(movies) {
                     <td>${movie.categories || movie.category || "N/A"}</td>
                     <td>
                         <span style="font-weight: 600; color: ${statusColor};">
-                            ${currentEps}/${totalEps} tập
+                            ${movie.type === 'single' && currentEps > 0 ? (movie.episodes[0].episodeNumber || "Full") : `${currentEps}/${totalEps} tập`}
                         </span>
                     </td>
                     <td>${movie.price}</td>
@@ -1190,6 +1190,14 @@ async function fetchMovieFromAPI() {
         
         // --- 9. COPY LINK TỪ FETCH XUỐNG DỰ PHÒNG ---
         document.getElementById("movieApiUrlBackup").value = url;
+        
+        // --- 10. TỰ SINH MÃ BỘ PHIM TỪ TÊN (MỚI) ---
+        const seriesIdInput = document.getElementById("movieSeriesId");
+        if (seriesIdInput && (seriesIdInput.value === "" || !movieId)) {
+            const autoId = generateSeriesIdFromTitle(movieData.name);
+            seriesIdInput.value = autoId;
+            seriesIdInput.setAttribute("data-last-auto-title", movieData.name);
+        }
             
         
     } catch (err) {
@@ -1349,6 +1357,9 @@ function openMovieModal(movieId = null) {
       );
       document.getElementById("movieStatus").value = movie.status || "public";
       
+      // Series ID - NEW
+      document.getElementById("movieSeriesId").value = movie.seriesId || "";
+
       // Xử lý Radio Button Free/Paid
       const priceVal = parseFloat(movie.price || 0);
       if (priceVal === 0) {
@@ -1395,6 +1406,7 @@ function openMovieModal(movieId = null) {
     // Reset new fields default
     document.getElementById("movieBackground").value = "";
     document.getElementById("movieCast").value = "";
+    document.getElementById("movieSeriesId").value = ""; // Reset Series ID
     document.getElementById("movieApiUrlBackup").value = "";
     if (typeof initSmartActorsFromCastString === "function") {
         initSmartActorsFromCastString("");
@@ -1503,6 +1515,7 @@ async function handleMovieSubmit(event) {
       .map((t) => t.trim())
       .filter((t) => t),
     status: document.getElementById("movieStatus").value,
+    seriesId: document.getElementById("movieSeriesId").value.trim(), // Mã bộ phim
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   };
 
@@ -1554,6 +1567,105 @@ async function handleMovieSubmit(event) {
 }
 
 /**
+ * [NEW] Tìm kiếm gợi ý Mã bộ phim (Series ID) từ danh sách phim có sẵn
+ */
+function searchSeriesIdSuggestions(query) {
+    const dropdown = document.getElementById("seriesIdSuggestions");
+    if (!dropdown) return;
+
+    if (!allAdminMovies || allAdminMovies.length === 0) {
+        dropdown.style.display = "none";
+        return;
+    }
+
+    // Lấy danh sách các seriesId duy nhất, không trống
+    const uniqueSeriesIds = [...new Set(
+        allAdminMovies
+            .map(m => m.seriesId)
+            .filter(id => id && id.trim() !== "")
+    )];
+
+    const searchText = query.toLowerCase().trim();
+    
+    // Lọc theo query (nếu query trống thì hiện tất cả tối đa 10 cái gần nhất)
+    const matches = uniqueSeriesIds.filter(id => 
+        id.toLowerCase().includes(searchText)
+    ).slice(0, 10);
+
+    if (matches.length > 0) {
+        dropdown.innerHTML = matches.map(id => `
+            <div class="suggestion-item" onclick="selectSeriesIdSuggestion('${id}')">
+                <i class="fas fa-layer-group"></i> ${id}
+            </div>
+        `).join("");
+        dropdown.style.display = "block";
+    } else {
+        dropdown.style.display = "none";
+    }
+}
+
+/**
+ * [NEW] Chọn một gợi ý Mã bộ phim
+ */
+function selectSeriesIdSuggestion(id) {
+    const input = document.getElementById("movieSeriesId");
+    if (input) {
+        input.value = id;
+        closeSeriesIdSuggestions();
+    }
+}
+
+/**
+ * [NEW] Đóng danh sách gợi ý
+ */
+function closeSeriesIdSuggestions() {
+    const dropdown = document.getElementById("seriesIdSuggestions");
+    if (dropdown) dropdown.style.display = "none";
+}
+
+/**
+ * [NEW] Chuyển đổi Tiếng Việt có dấu sang không dấu, viết liền (Dùng cho Series ID)
+ */
+function generateSeriesIdFromTitle(title) {
+    if (!title) return "";
+    
+    // Tách lấy phần tên gốc trước dấu : hoặc -
+    let baseTitle = title.split(":")[0].split("-")[0].trim();
+    
+    // Loại bỏ các chữ số La Mã và số thường ở cuối (Phần 1, Season II, ...)
+    baseTitle = baseTitle.replace(/(\s+)(\d+|I|II|III|IV|V)+$/i, "").trim();
+
+    return baseTitle
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Xóa dấu
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "d")
+        .replace(/[^a-z0-9]/g, "") // Xóa ký tự đặc biệt và khoảng trắng
+        .trim();
+}
+
+/**
+ * [NEW] Xử lý sự kiện nhập tên phim để tự sinh mã bộ phim
+ */
+function handleTitleInputForSeriesId(title) {
+    const seriesIdInput = document.getElementById("movieSeriesId");
+    if (!seriesIdInput) return;
+
+    // Chỉ tự động điền nếu ô mã đang trống hoặc mã đó khớp với mã cũ được sinh từ tên cũ
+    const currentId = seriesIdInput.value;
+    const oldTitle = seriesIdInput.getAttribute("data-last-auto-title") || "";
+    const expectedOldId = generateSeriesIdFromTitle(oldTitle);
+
+    if (currentId === "" || currentId === expectedOldId) {
+        const newId = generateSeriesIdFromTitle(title);
+        seriesIdInput.value = newId;
+        seriesIdInput.setAttribute("data-last-auto-title", title);
+    }
+}
+
+
+/**
  * Sửa phim
  */
 function editMovie(movieId) {
@@ -1589,24 +1701,25 @@ async function deleteMovie(movieId) {
 /**
  * Lọc phim trong dropdown chọn phim (Quản lý Tập)
  */
+/**
+ * Lọc phim và hiển thị Grid chọn phim (Quản lý Tập)
+ */
 function filterEpisodeMovies() {
   const searchInput = document.getElementById("episodeMovieSearch");
-  const select = document.getElementById("selectMovieForEpisodes");
   const sortSelect = document.getElementById("episodeMovieSort");
   const alphabetSelect = document.getElementById("episodeMovieAlphabet");
+  const grid = document.getElementById("movieSelectionGrid");
   
-  if (!searchInput || !select) return;
+  if (!searchInput || !grid) return;
 
   const searchText = searchInput.value.toLowerCase().trim();
   const sortOrder = sortSelect ? sortSelect.value : "newest";
   const alphabetFilter = alphabetSelect ? alphabetSelect.value : "";
   
-  // Lọc phim từ allAdminMovies (đầy đủ nhất)
+  // Lọc phim từ allAdminMovies
   let filteredMovies = (allAdminMovies || []).filter(m => {
-    // 1. Lọc theo text
     const matchText = m.title.toLowerCase().includes(searchText);
     
-    // 2. Lọc theo chữ cái
     let matchAlphabet = true;
     if (alphabetFilter) {
         const firstChar = m.title.trim().charAt(0).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -1622,7 +1735,7 @@ function filterEpisodeMovies() {
     return matchText && matchAlphabet;
   });
 
-  // 3. Sắp xếp
+  // Sắp xếp
   filteredMovies.sort((a, b) => {
     const timeA = a.createdAt ? (a.createdAt.seconds || new Date(a.createdAt).getTime() / 1000 || 0) : 0;
     const timeB = b.createdAt ? (b.createdAt.seconds || new Date(b.createdAt).getTime() / 1000 || 0) : 0;
@@ -1632,43 +1745,103 @@ function filterEpisodeMovies() {
     return 0;
   });
 
-  // Render lại dropdown
-  if (filteredMovies.length === 0) {
-    select.innerHTML = '<option value="">-- Không tìm thấy phim --</option>';
-    select.size = 1;
-  } else {
-    // Luôn sử dụng hàm helper để có Badge
-    select.innerHTML = renderEpisodeMovieOptions(filteredMovies);
-    
-    if (searchText || alphabetFilter) {
-      select.size = Math.min(filteredMovies.length + 1, 10);
-      
-      // Tự động chọn kết quả đầu tiên để load dữ liệu ngay khi tìm kiếm
-      if (filteredMovies.length > 0) {
-          select.value = filteredMovies[0].id;
-          loadEpisodesForMovie();
-      }
-    } else {
-      select.size = 1;
+  // Render Grid
+  renderMovieSelectionGrid(filteredMovies);
+}
+
+/**
+ * Render Grid danh sách phim để chọn
+ */
+function renderMovieSelectionGrid(movies) {
+    const grid = document.getElementById("movieSelectionGrid");
+    if (!grid) return;
+
+    if (!movies || movies.length === 0) {
+        grid.innerHTML = `
+            <div class="text-center py-5 w-100" style="grid-column: 1/-1; opacity: 0.6;">
+                <i class="fas fa-search fa-2x mb-2"></i>
+                <p>Không tìm thấy phim nào khớp với bộ lọc.</p>
+            </div>
+        `;
+        return;
     }
-  }
+
+    grid.innerHTML = movies.map(m => {
+        const currentEps = (m.episodes || []).length;
+        const totalEps = parseInt(m.totalEpisodes) || 0;
+        
+        let statusHtml = "";
+        let badgeClass = "";
+        let badgeText = "";
+
+        if (currentEps === 0) {
+            badgeClass = "bg-danger";
+            badgeText = "CHƯA CÓ TẬP";
+        } else if (m.type === 'series' && currentEps < totalEps) {
+            badgeClass = "bg-warning text-dark";
+            badgeText = `ĐANG CẬP NHẬT (${currentEps}/${totalEps})`;
+        } else if (m.type === 'series' && currentEps >= totalEps) {
+            badgeClass = "bg-success";
+            badgeText = `HOÀN TẤT (${currentEps}/${totalEps})`;
+        } else if (m.type === 'single') {
+            badgeClass = "bg-info text-dark";
+            badgeText = "PHIM LẺ";
+        }
+
+        if (badgeText) {
+            statusHtml = `<span class="status-badge ${badgeClass}">${badgeText}</span>`;
+        }
+
+        return `
+            <div class="movie-selection-card" onclick="loadEpisodesForMovie('${m.id}')">
+                <div class="poster-wrapper">
+                    ${statusHtml}
+                    <img src="${m.posterUrl}" alt="${m.title}" loading="lazy" onerror="this.src='https://placehold.co/200x300?text=No+Poster'">
+                </div>
+                <div class="info">
+                    <div class="title" title="${m.title}">${m.title}</div>
+                    <div class="stats">
+                        <i class="fas fa-calendar-alt"></i> ${m.year || 'N/A'} • 
+                        <i class="fas fa-eye"></i> ${formatNumber(m.views || 0)}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+/**
+ * Quay lại bảng chọn phim
+ */
+function goBackToMovieSelection() {
+    selectedMovieForEpisodes = null;
+    document.getElementById("movieSelectionSection").classList.remove("hidden");
+    document.getElementById("episodesManagement").classList.add("hidden");
+    
+    // Refresh grid để đảm bảo data mới nhất
+    filterEpisodeMovies();
 }
 
 /**
  * Load tập phim cho phim đã chọn
  */
-async function loadEpisodesForMovie() {
-  const movieId = document.getElementById("selectMovieForEpisodes").value;
+async function loadEpisodesForMovie(movieIdFromGrid) {
+  const movieId = movieIdFromGrid || document.getElementById("selectMovieForEpisodes").value;
   const management = document.getElementById("episodesManagement");
+  const selectionSection = document.getElementById("movieSelectionSection");
   const tbody = document.getElementById("adminEpisodesTable");
 
   if (!movieId) {
     management.classList.add("hidden");
+    selectionSection.classList.remove("hidden");
     return;
   }
 
   selectedMovieForEpisodes = movieId;
+  
+  // Hiển thị panel quản lý tập, ẩn panel chọn phim
   management.classList.remove("hidden");
+  selectionSection.classList.add("hidden");
 
   // Fetch fresh data from Firebase to ensure episode count is correct
   try {
@@ -1684,10 +1857,24 @@ async function loadEpisodesForMovie() {
               allMovies.push(freshMovie);
           }
           
+          // Cập nhật tên phim lên tiêu đề bảng tập
+          const titleEl = document.getElementById("currentMovieEpisodesTitle");
+          if (titleEl) titleEl.textContent = `Danh sách tập: ${freshMovie.title}`;
+
           const episodes = freshMovie.episodes || [];
           
           // Load tổng số tập
           const totalEpisodesInput = document.getElementById("totalEpisodesInput");
+          const totalEpisodesContainer = document.getElementById("totalEpisodesContainer");
+          const badge = document.getElementById("episodeStatusBadge");
+          
+          if (totalEpisodesContainer) {
+              totalEpisodesContainer.style.display = freshMovie.type === 'single' ? 'none' : 'flex';
+          }
+          if (badge) {
+              badge.style.display = freshMovie.type === 'single' ? 'none' : 'inline-block';
+          }
+
           if (totalEpisodesInput) {
               totalEpisodesInput.value = freshMovie.totalEpisodes || "";
           }
@@ -1699,11 +1886,24 @@ async function loadEpisodesForMovie() {
             return;
           }
 
+          const isSingle = freshMovie.type === 'single';
+          
           tbody.innerHTML = episodes
             .map(
               (ep, index) => `
-                <tr>
-                    <td>${ep.episodeNumber}</td>
+                <tr data-index="${index}">
+                    <td>
+                        <input type="checkbox" class="episode-checkbox" data-index="${index}" onclick="updateEpisodeSelection()">
+                    </td>
+                    <td class="drag-handle-cell">
+                        ${!isSingle ? '<i class="fas fa-grip-lines drag-handle"></i>' : ""}
+                    </td>
+                    <td>
+                        <input type="text" class="quick-edit-input ${isSingle ? 'is-single' : ''}" 
+                          value="${ep.episodeNumber}" 
+                          onblur="saveQuickEditEpisodeNumber(${index}, this.value)"
+                          title="Sửa nhanh số tập">
+                    </td>
                     <td>${ep.youtubeId || (ep.sources ? ep.sources.length + " sources" : "N/A")}</td>
                     <td>${ep.duration || "N/A"}</td>
                     <td>${ep.quality || "HD"}</td>
@@ -1719,6 +1919,14 @@ async function loadEpisodesForMovie() {
             `,
             )
             .join("");
+
+          // Khởi tạo kéo thả cho Phim Bộ
+          if (!isSingle) {
+              initEpisodesSortable();
+          }
+          
+          // Reset bulk actions bar
+          clearEpisodeSelection();
       }
   } catch (error) {
       console.error("Error loading episodes:", error);
@@ -2178,7 +2386,13 @@ function openEpisodeModal(index = null) {
   const movie = allMovies.find((m) => m.id === movieId);
   const isSingle = movie && movie.type === "single";
 
-  if (epNumGroup) epNumGroup.style.display = isSingle ? "none" : "block";
+  if (epNumGroup) {
+      epNumGroup.style.display = "block";
+      const label = epNumGroup.querySelector(".form-label");
+      if (label) {
+          label.textContent = isSingle ? "Nhãn hiển thị (VD: FULL, HD-Full) *" : "Số tập *";
+      }
+  }
 
   if (index !== null) {
     // === EDIT ===
@@ -2230,7 +2444,7 @@ function openEpisodeModal(index = null) {
     indexInput.value = "";
 
     if (isSingle) {
-      document.getElementById("episodeNumber").value = "1";
+      document.getElementById("episodeNumber").value = "FULL";
     } else {
       // FIX: Tìm số tập lớn nhất thay vì đếm số lượng (tránh trùng khi xóa tập giữa)
       let maxEp = 0;
@@ -2852,11 +3066,31 @@ async function handleCategorySubmit(event) {
   event.preventDefault(); // Chặn load lại trang
 
   const categoryId = document.getElementById("categoryId").value;
-  const name = document.getElementById("categoryName").value;
-  let slug = document.getElementById("categorySlug").value;
+  const name = document.getElementById("categoryName").value.trim();
+  let slug = document.getElementById("categorySlug").value.trim();
+
+  if (!name) {
+    showNotification("Vui lòng nhập tên thể loại!", "warning");
+    return;
+  }
 
   // Nếu không nhập slug thì tự tạo từ tên
   if (!slug) slug = createSlug(name);
+
+  // Chống trùng lặp (chỉ kiểm tra khi thêm mới - không có categoryId)
+  if (!categoryId) {
+    const isDuplicateName = allCategories.some(c => c.name.toLowerCase() === name.toLowerCase());
+    const isDuplicateSlug = allCategories.some(c => c.slug === slug || c.id === slug);
+
+    if (isDuplicateName) {
+      showNotification(`Thể loại "${name}" đã tồn tại!`, "warning");
+      return;
+    }
+    if (isDuplicateSlug) {
+      showNotification(`Mã slug "${slug}" đã được sử dụng!`, "warning");
+      return;
+    }
+  }
 
   const categoryData = { name, slug };
 
@@ -6260,3 +6494,220 @@ async function adminDeleteAvatarCategory(id, name) {
 
 
 // Bổ sung vào showAdminPanel (Hook) - ĐÃ DỜI VÀO index.html
+// Bổ sung vào showAdminPanel (Hook) - ĐÃ DỜI VÀO index.html
+
+/**
+ * QUẢN LÝ TẬP PHIM: BULK ACTIONS & DRAG & DROP
+ */
+
+// Chọn tất cả / Bỏ chọn tất cả tập phim
+function toggleAllEpisodes(checked) {
+    const checkboxes = document.querySelectorAll(".episode-checkbox");
+    checkboxes.forEach(cb => cb.checked = checked);
+    updateEpisodeSelection();
+}
+
+// Cập nhật trạng thái thanh công cụ bulk actions
+function updateEpisodeSelection() {
+    const checkboxes = document.querySelectorAll(".episode-checkbox:checked");
+    const bar = document.getElementById("episodeBulkActionsBar");
+    const countSpan = document.getElementById("episodeSelectedCount");
+    const selectAllBar = document.getElementById("episodeSelectAll");
+    const selectAllHeader = document.getElementById("episodeSelectAllHeader");
+
+    const totalCount = document.querySelectorAll(".episode-checkbox").length;
+    
+    if (checkboxes.length > 0) {
+        bar.classList.add("active");
+        countSpan.textContent = checkboxes.length;
+    } else {
+        bar.classList.remove("active");
+    }
+
+    const isAllSelected = (checkboxes.length === totalCount && totalCount > 0);
+    if (selectAllBar) selectAllBar.checked = isAllSelected;
+    if (selectAllHeader) selectAllHeader.checked = isAllSelected;
+}
+
+// Bỏ chọn tất cả
+function clearEpisodeSelection() {
+    toggleAllEpisodes(false);
+}
+
+// Xóa hàng loạt tập phim
+async function bulkDeleteEpisodes() {
+    const selectedCheckboxes = document.querySelectorAll(".episode-checkbox:checked");
+    const indicesToDelete = Array.from(selectedCheckboxes)
+        .map(cb => parseInt(cb.getAttribute("data-index")))
+        .sort((a, b) => b - a); // Sắp xếp giảm dần để xóa không bị lệch index
+
+    if (indicesToDelete.length === 0) return;
+
+    const confirmed = await customConfirm(`Bạn có chắc muốn xóa ${indicesToDelete.length} tập phim đã chọn?`, {
+        title: "Xóa tập hàng loạt",
+        type: "danger",
+        confirmText: "Xóa tất cả"
+    });
+
+    if (!confirmed) return;
+
+    try {
+        showLoading(true, "Đang xóa các tập đã chọn...");
+        const movieId = selectedMovieForEpisodes;
+        const movieDoc = await db.collection("movies").doc(movieId).get();
+        if (!movieDoc.exists) return;
+
+        let episodes = movieDoc.data().episodes || [];
+        indicesToDelete.forEach(index => {
+            episodes.splice(index, 1);
+        });
+
+        await db.collection("movies").doc(movieId).update({
+            episodes: episodes,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showNotification(`Đã xóa thành công ${indicesToDelete.length} tập phim.`, "success");
+        loadEpisodesForMovie();
+    } catch (error) {
+        console.error("Lỗi xóa hàng loạt:", error);
+        showNotification("Lỗi khi xóa tập phim.", "error");
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Mở modal sửa hàng loạt
+function openBulkEpisodeEditModal() {
+    const selectedCount = document.querySelectorAll(".episode-checkbox:checked").length;
+    document.getElementById("bulkEditInfo").textContent = `Đang chỉnh sửa cho ${selectedCount} tập phim đã chọn`;
+    
+    // Reset form
+    document.getElementById("bulkEpisodeQuality").value = "";
+    document.getElementById("bulkEpisodeHour").value = "";
+    document.getElementById("bulkEpisodeMinute").value = "";
+    
+    openModal("bulkEpisodeEditModal");
+}
+
+// Lưu thay đổi hàng loạt
+async function saveBulkEpisodeChanges() {
+    const selectedCheckboxes = document.querySelectorAll(".episode-checkbox:checked");
+    const indicesToUpdate = Array.from(selectedCheckboxes).map(cb => parseInt(cb.getAttribute("data-index")));
+    
+    const newQuality = document.getElementById("bulkEpisodeQuality").value;
+    const h = parseInt(document.getElementById("bulkEpisodeHour").value);
+    const m = parseInt(document.getElementById("bulkEpisodeMinute").value);
+    
+    let newDuration = null;
+    if (!isNaN(h) || !isNaN(m)) {
+        newDuration = formatDuration(h || 0, m || 0);
+    }
+
+    if (!newQuality && !newDuration) {
+        showNotification("Bạn chưa thay đổi thông tin nào!", "warning");
+        return;
+    }
+
+    try {
+        showLoading(true, "Đang áp dụng thay đổi...");
+        const movieId = selectedMovieForEpisodes;
+        const movieDoc = await db.collection("movies").doc(movieId).get();
+        if (!movieDoc.exists) return;
+
+        let episodes = movieDoc.data().episodes || [];
+        indicesToUpdate.forEach(index => {
+            if (newQuality) episodes[index].quality = newQuality;
+            if (newDuration) episodes[index].duration = newDuration;
+        });
+
+        await db.collection("movies").doc(movieId).update({
+            episodes: episodes,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showNotification(`Đã cập nhật thành công ${indicesToUpdate.length} tập phim.`, "success");
+        closeModal("bulkEpisodeEditModal");
+        loadEpisodesForMovie();
+    } catch (error) {
+        console.error("Lỗi cập nhật hàng loạt:", error);
+        showNotification("Lỗi khi cập nhật tập phim.", "error");
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Khởi tạo kéo thả SortableJS
+let episodesSortable = null;
+function initEpisodesSortable() {
+    const tbody = document.getElementById("adminEpisodesTable");
+    if (!tbody || typeof Sortable === "undefined") return;
+
+    if (episodesSortable) {
+        episodesSortable.destroy();
+    }
+
+    episodesSortable = new Sortable(tbody, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        onEnd: async function() {
+            // Lấy thứ tự mới từ DOM
+            const newOrder = Array.from(tbody.querySelectorAll("tr")).map(tr => parseInt(tr.getAttribute("data-index")));
+            
+            // So sánh xem thứ tự có thực sự thay đổi không
+            const isChanged = newOrder.some((val, idx) => val !== idx);
+            if (!isChanged) return;
+
+            try {
+                showLoading(true, "Đang cập nhật vị trí tập phim...");
+                const movieId = selectedMovieForEpisodes;
+                const movieDoc = await db.collection("movies").doc(movieId).get();
+                if (!movieDoc.exists) return;
+
+                const oldEpisodes = movieDoc.data().episodes || [];
+                const newEpisodes = newOrder.map(oldIndex => oldEpisodes[oldIndex]);
+
+                await db.collection("movies").doc(movieId).update({
+                    episodes: newEpisodes,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showNotification("Đã cập nhật vị trí tập phim qua kéo thả!", "success");
+                loadEpisodesForMovie(); // Reload để reset index trong DOM
+            } catch (error) {
+                console.error("Lỗi cập nhật vị trí:", error);
+                showNotification("Lỗi khi đổi vị trí tập phim.", "error");
+                loadEpisodesForMovie(); // Revert UI
+            } finally {
+                showLoading(false);
+            }
+        }
+    });
+}
+
+// Sửa nhanh số tập (Quick Edit)
+async function saveQuickEditEpisodeNumber(index, newNumber) {
+    const movieId = selectedMovieForEpisodes;
+    const movie = allMovies.find(m => m.id === movieId);
+    if (!movie || !movie.episodes) return;
+
+    const oldNumber = movie.episodes[index].episodeNumber;
+    if (oldNumber === newNumber) return;
+
+    try {
+        // Cập nhật local trước cho nhanh
+        movie.episodes[index].episodeNumber = newNumber;
+
+        await db.collection("movies").doc(movieId).update({
+            episodes: movie.episodes,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showNotification(`Đã sửa tập ${oldNumber} thành ${newNumber}`, "success");
+    } catch (error) {
+        console.error("Lỗi sửa nhanh số tập:", error);
+        showNotification("Lỗi khi sửa số tập.", "error");
+        loadEpisodesForMovie(); // Revert UI
+    }
+}

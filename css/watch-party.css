@@ -734,6 +734,521 @@
 }
 
 /* =========================================
-   CUSTOM LOADING SPINNER ANIMATION
+   VISUAL MOVIE SELECTOR IN CREATE ROOM MODAL
    ========================================= */
-/* End of watch-party.css */
+.wp-movie-selector {
+    position: relative;
+    width: 100%;
+}
+
+/* Cho phép Modal tràn nội dung khi đang mở lưới phim */
+.modal.wp-selector-open {
+    overflow: visible !important;
+}
+.wp-movie-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 15px;
+    background: var(--bg-tertiary, #2a2a35);
+    border: 1px solid var(--border-color, #444);
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    user-select: none;
+}
+.wp-movie-trigger:hover {
+    border-color: var(--accent-primary, #e50914);
+}
+.wp-movie-trigger-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.wp-movie-trigger-poster {
+    width: 32px;
+    height: 48px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: #111;
+    display: none; /* Ẩn khi chưa chọn */
+}
+.wp-movie-trigger-poster.active {
+    display: block;
+}
+.wp-movie-trigger-text {
+    font-size: 14px;
+    color: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+@media (max-width: 600px) {
+    .wp-movie-trigger-text { max-width: 180px; }
+}
+
+/* --- PREMIUM MODAL STRUCTURE OVERHAUL --- */
+.wp-modal-premium-container {
+    background: linear-gradient(135deg, rgba(15, 15, 25, 0.98), rgba(5, 5, 10, 1)) !important;
+    backdrop-filter: blur(30px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(200%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.9) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 95% !important;
+    max-width: 650px !important;
+    height: 90vh !important;
+    max-height: 850px !important;
+    overflow: hidden !important;
+    position: relative !important;
+    margin: auto !important;
+    animation: wpModalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes wpModalSlideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.wp-create-main-form {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+.wp-modal-header {
+    flex: 0 0 auto !important;
+    padding: 24px 30px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.wp-header-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+.wp-header-title i {
+    font-size: 20px !important;
+    color: var(--accent-secondary, #00d4ff) !important;
+}
+
+.wp-header-title h3 {
+    font-size: 22px !important;
+    font-weight: 900 !important;
+    margin: 0 !important;
+    color: #ffffff !important;
+    letter-spacing: -0.5px !important;
+}
+
+.wp-close-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #fff !important;
+    opacity: 0.5 !important;
+    cursor: pointer !important;
+    font-size: 18px !important;
+    transition: all 0.2s ease !important;
+}
+
+.wp-close-btn:hover {
+    opacity: 1 !important;
+    transform: rotate(90deg) !important;
+}
+
+/* Body Section (SCROLLABLE) */
+.wp-modal-body-scroll {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    padding: 30px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 40px !important;
+    min-height: 0 !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: #00d4ff transparent !important;
+    scroll-behavior: smooth;
+}
+
+/* Thêm khoảng cách ở cuối để không bị Footer che khuất nội dung cuối cùng */
+.wp-modal-body-scroll .wp-form-step:last-child {
+    padding-bottom: 30px !important;
+}
+
+/* Movie Selection Area */
+.wp-movie-selection-area {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+    background: rgba(0, 0, 0, 0.2) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    overflow: hidden !important;
+}
+
+.wp-movie-selection-area.wp-collapsed {
+    display: none !important;
+}
+
+.wp-search-wrapper {
+    position: relative !important;
+    padding: 12px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.wp-search-wrapper i {
+    position: absolute !important;
+    left: 22px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.wp-search-wrapper input {
+    width: 100% !important;
+    background: rgba(0, 0, 0, 0.3) !important; /* Tối hơn chút */
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 20px !important;
+    padding: 10px 15px 10px 40px !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    outline: none !important;
+}
+
+.wp-movie-grid-container {
+    max-height: 250px !important;
+    overflow-y: auto !important;
+    padding: 15px !important;
+}
+
+.wp-movie-items {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important;
+    gap: 12px !important;
+}
+
+.wp-movie-card {
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    border: 2px solid transparent !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.wp-movie-card:hover { transform: scale(1.05) !important; }
+.wp-movie-card.selected { border-color: #00d4ff !important; box-shadow: 0 0 15px rgba(0, 212, 255, 0.3) !important; }
+
+.wp-movie-card img { width: 100% !important; aspect-ratio: 2/3 !important; object-fit: cover !important; }
+.wp-movie-card-info { padding: 5px !important; text-align: center !important; }
+.wp-movie-card-info .title { font-size: 10px !important; color: #fff !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+
+/* Selected Preview Area - Cải tiến Layout */
+.wp-selected-preview {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    padding: 16px !important;
+    background: rgba(0, 212, 255, 0.1) !important;
+    border: 2px solid rgba(0, 212, 255, 0.3) !important;
+    border-radius: 16px !important;
+    margin-bottom: 20px !important;
+    animation: fadeInStep 0.4s ease !important;
+}
+
+.selected-movie-info-wrap {
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+}
+
+.wp-selected-preview img { 
+    width: 50px !important; 
+    height: 75px !important; 
+    object-fit: cover !important; 
+    border-radius: 8px !important; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+}
+
+.selected-info label {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    color: rgba(0, 212, 255, 0.8) !important;
+    font-weight: 800 !important;
+    display: block !important;
+    margin-bottom: 4px !important;
+}
+
+.selected-info h4 { margin: 0 !important; font-size: 17px !important; color: #fff !important; }
+.selected-info p { margin: 2px 0 0 !important; font-size: 13px !important; color: rgba(255,255,255,0.5) !important; }
+
+/* Nút thay đổi phim */
+.wp-change-movie-btn {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #fff !important;
+    padding: 8px 14px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+}
+
+.wp-change-movie-btn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: #fff !important;
+}
+
+/* Custom scrollbar for Body */
+.wp-modal-body-scroll::-webkit-scrollbar { width: 6px; }
+.wp-modal-body-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+/* Step Styles */
+.wp-form-step {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+    opacity: 1 !important;
+    transform: none !important;
+    flex-shrink: 0 !important;
+}
+
+/* FIX: Đảm bảo khi có class .hidden thì phải mất hoàn toàn display */
+.wp-form-step.hidden {
+    display: none !important;
+}
+
+@keyframes fadeInStep {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.wp-step-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+.step-num {
+    width: 24px !important;
+    height: 24px !important;
+    background: var(--accent-secondary, #00d4ff) !important;
+    color: #000 !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+}
+
+.wp-step-header label {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+}
+
+/* Input Styles - RESTORED */
+.wp-inputs-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+}
+
+.wp-input-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.wp-input-group label {
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    margin-bottom: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    margin-left: 4px !important;
+}
+
+.wp-super-input {
+    display: block !important;
+    width: 100% !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    background: #0a0a0f !important; /* Nền đen sâu hoàn toàn */
+    border: 1px solid rgba(255, 255, 255, 0.2) !important; /* Viền sáng hơn */
+    border-radius: 16px !important;
+    padding: 0 22px !important;
+    color: #ffffff !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5) !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+select.wp-super-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2300d4ff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 20px center !important;
+    background-size: 18px !important;
+    padding-right: 50px !important;
+    cursor: pointer !important;
+}
+
+.wp-super-input:focus {
+    border-color: #00d4ff !important;
+    background: #000 !important;
+    box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.1), inset 0 2px 4px rgba(0,0,0,0.6) !important;
+    transform: translateY(-1px) !important;
+}
+
+.wp-step-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+    margin-bottom: 20px !important;
+}
+
+.step-num {
+    width: 28px !important;
+    height: 28px !important;
+    background: #00d4ff !important;
+    color: #000 !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 900 !important;
+    font-size: 14px !important;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4) !important;
+}
+
+/* Password Toggle icon restored */
+.password-input-wrapper {
+    position: relative !important;
+    width: 100% !important;
+}
+
+.password-toggle-icon {
+    position: absolute !important;
+    right: 15px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    cursor: pointer !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    z-index: 5 !important;
+}
+
+/* Footer Section (FIXED BOTTOM) */
+.wp-modal-footer-sticky {
+    flex: 0 0 auto !important;
+    padding: 20px 30px !important;
+    background: rgba(10, 10, 15, 0.98) !important;
+    backdrop-filter: blur(15px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 15px !important;
+    z-index: 100 !important;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5) !important;
+}
+
+.wp-submit-btn-premium {
+    flex: 1 !important;
+    max-width: 220px !important;
+    background: var(--accent-gradient, linear-gradient(90deg, #00d4ff, #0072ff)) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 12px 25px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3) !important;
+}
+
+.wp-submit-btn-premium:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5) !important;
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 10px 20px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.btn-ghost:hover {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+}
+
+/* Episode Grid */
+.wp-episode-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 5px;
+}
+
+.wp-ep-btn {
+    background: var(--bg-tertiary, #2a2a35);
+    border: 1px solid var(--border-color, #444);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 40px;
+    text-align: center;
+}
+
+.wp-ep-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-secondary);
+}
+
+.wp-ep-btn.active {
+    background: var(--accent-secondary, #00d4ff);
+    border-color: var(--accent-secondary, #00d4ff);
+    color: #000;
+    font-weight: bold;
+}
+
+.wp-no-movies-msg {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
