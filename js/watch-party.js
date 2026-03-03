@@ -119,31 +119,73 @@ async function loadRooms() {
             deleteBtn = `<button class="btn-delete-room" onclick="event.stopPropagation(); deleteRoom('${doc.id}', '${room.hostId}')" title="Xóa phòng"><i class="fas fa-trash"></i></button>`;
           }
 
+          // Format ngày tạo phòng
+          const createdDate = formatRoomDate(room.createdAt);
+          // Tên tập phim (nếu có)
+          const epText = (room.episodeIndex !== undefined && room.episodeIndex !== null) 
+            ? `Tập ${parseInt(room.episodeIndex) + 1}` 
+            : 'Phim lẻ';
+          // Loại phòng
+          const typeText = isPrivate ? 'Riêng tư' : 'Công khai';
+          const typeIcon = isPrivate ? 'fa-lock' : 'fa-globe-asia';
+
           const html = `
-            <div class="wp-room-card" onclick="joinRoom('${doc.id}', '${room.type}')">
-              ${deleteBtn}
-              <img class="wp-room-poster" src="${posterUrl}" alt="${room.movieTitle}" loading="lazy">
-              <div class="wp-room-overlay"></div>
-              <div class="wp-room-badges">
-                <span class="wp-badge-live"><i class="fas fa-circle"></i> LIVE</span>
-                ${isPrivate ? '<span class="wp-badge-private"><i class="fas fa-lock"></i></span>' : '<span class="wp-badge-public"><i class="fas fa-globe-asia"></i></span>'}
-              </div>
-              <div class="wp-room-content">
-                <h4 class="wp-room-name">${room.name}</h4>
-                <p class="wp-room-movie"><i class="fas fa-film"></i> ${room.movieTitle}</p>
-                <div class="wp-room-footer">
-                  <div class="wp-room-meta">
-                    <span class="wp-room-host"><i class="fas fa-crown"></i> ${room.hostName || 'Host'}</span>
-                    <span class="wp-room-count"><i class="fas fa-users"></i> ${count}</span>
-                  </div>
-                  <button class="wp-room-join-btn" onclick="event.stopPropagation(); joinRoom('${doc.id}', '${room.type}')">
-                    Vào xem <i class="fas fa-play"></i>
-                  </button>
+            <div class="wp-room-card-wrapper" data-room-id="${doc.id}" data-room-type="${room.type}">
+              <div class="wp-room-card">
+                ${deleteBtn}
+                <img class="wp-room-poster" src="${posterUrl}" alt="${room.movieTitle}" loading="lazy">
+                <div class="wp-room-overlay"></div>
+                <div class="wp-room-badges">
+                  <span class="wp-badge-live"><i class="fas fa-circle"></i> LIVE</span>
+                  ${isPrivate ? '<span class="wp-badge-private"><i class="fas fa-lock"></i></span>' : '<span class="wp-badge-public"><i class="fas fa-globe-asia"></i></span>'}
                 </div>
+                <div class="wp-room-content">
+                  <h4 class="wp-room-name">${room.name}</h4>
+                  <p class="wp-room-movie"><i class="fas fa-film"></i> ${room.movieTitle}</p>
+                  <div class="wp-room-footer">
+                    <div class="wp-room-meta">
+                      <span class="wp-room-host"><i class="fas fa-crown"></i> ${room.hostName || 'Host'}</span>
+                      <span class="wp-room-count"><i class="fas fa-users"></i> ${count}</span>
+                    </div>
+                    <button class="wp-room-join-btn" onclick="event.stopPropagation(); joinRoom('${doc.id}', '${room.type}')">
+                      Vào xem <i class="fas fa-play"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- Popup chi tiết phòng -->
+              <div class="wp-room-popup">
+                <button class="wp-popup-hide-btn" onclick="event.stopPropagation(); hideRoomPopup(this)" title="Ẩn chi tiết">
+                  <i class="fas fa-eye-slash"></i>
+                </button>
+                <h4 class="wp-popup-title">${room.name}</h4>
+                <ul class="wp-popup-info">
+                  <li class="wp-popup-marquee-li"><i class="fas fa-film"></i> 
+                    <div class="wp-marquee-container">
+                      <div class="wp-marquee-content">
+                        <span>${room.movieTitle || 'Chưa chọn phim'}</span>
+                        <span class="wp-marquee-duplicate">${room.movieTitle || 'Chưa chọn phim'}</span>
+                      </div>
+                    </div>
+                  </li>
+                  <li><i class="fas fa-tv"></i> <span>${epText}</span></li>
+                  <li><i class="fas fa-crown"></i> <span>${room.hostName || 'Host'}</span></li>
+                  <li><i class="fas ${typeIcon}"></i> <span>${typeText}</span></li>
+                  <li><i class="fas fa-users"></i> <span>${count} người đang xem</span></li>
+                  <li><i class="fas fa-calendar-alt"></i> <span>${createdDate}</span></li>
+                </ul>
+                <div class="wp-popup-divider"></div>
+                <div class="wp-popup-status"><i class="fas fa-circle"></i> Đang phát trực tiếp</div>
+                <button class="wp-popup-join-btn" onclick="event.stopPropagation(); joinRoom('${doc.id}', '${room.type}')">
+                  Vào xem ngay <i class="fas fa-play"></i>
+                </button>
               </div>
             </div>`;
           container.innerHTML += html;
         });
+
+        // Sau khi render xong, gắn event listeners cho popup mobile
+        initRoomPopupEvents();
       }, (error) => {
         console.error("Lỗi realtime load phòng:", error);
         container.innerHTML = '<p class="text-center text-danger">Lỗi kết nối máy chủ.</p>';
@@ -151,6 +193,99 @@ async function loadRooms() {
   } catch (error) {
     console.error("Lỗi load phòng:", error);
   }
+}
+
+/* Format ngày giờ tạo phòng thành dạng tiếng Việt */
+function formatRoomDate(timestamp) {
+  if (!timestamp) return 'Không rõ';
+  try {
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+
+    // Nếu dưới 1 phút
+    if (diffMins < 1) return 'Vừa mới tạo';
+    // Nếu dưới 60 phút
+    if (diffMins < 60) return `${diffMins} phút trước`;
+    // Nếu dưới 24 giờ
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    // Ngày cụ thể
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const mins = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month} lúc ${hours}:${mins}`;
+  } catch (e) {
+    return 'Không rõ';
+  }
+}
+
+/* Gắn event listener cho popup thẻ phòng (mobile: touch, PC: hover tự CSS xử lý) */
+function initRoomPopupEvents() {
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  if (!isTouchDevice) return; // PC dùng CSS :hover, không cần JS
+
+  const wrappers = document.querySelectorAll('.wp-room-card-wrapper');
+
+  wrappers.forEach(wrapper => {
+    const card = wrapper.querySelector('.wp-room-card');
+    if (!card) return;
+
+    // Xóa onclick mặc định trên card (mobile sẽ dùng popup)
+    card.removeAttribute('onclick');
+
+    // Chạm vào card → toggle popup
+    card.addEventListener('click', function(e) {
+      // Nếu bấm nút xóa hoặc nút join → không toggle popup
+      if (e.target.closest('.btn-delete-room') || e.target.closest('.wp-room-join-btn')) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isActive = wrapper.classList.contains('popup-active');
+      
+      // Đóng tất cả popup khác
+      document.querySelectorAll('.wp-room-card-wrapper.popup-active').forEach(w => {
+        w.classList.remove('popup-active');
+      });
+
+      // Toggle popup hiện tại
+      if (!isActive) {
+        wrapper.classList.add('popup-active');
+      }
+    });
+  });
+
+  // Chạm ra ngoài → đóng tất cả popup
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.wp-room-card-wrapper')) {
+      document.querySelectorAll('.wp-room-card-wrapper.popup-active').forEach(w => {
+        w.classList.remove('popup-active');
+      });
+    }
+  }, { capture: true });
+}
+
+/* Ẩn popup chi tiết phòng (Hỗ trợ cả PC & Mobile) */
+function hideRoomPopup(btn) {
+  const wrapper = btn.closest('.wp-room-card-wrapper');
+  if (!wrapper) return;
+
+  // 1. Reset class cho Mobile
+  wrapper.classList.remove('popup-active');
+
+  // 2. Thêm class ẩn để override hover trên PC
+  wrapper.classList.add('popup-hidden');
+
+  // 3. Tự động xóa class ẩn khi di chuột ra ngoài để lần sau hover lại vẫn hiện
+  const resetHidden = () => {
+    wrapper.classList.remove('popup-hidden');
+    wrapper.removeEventListener('mouseleave', resetHidden);
+  };
+  wrapper.addEventListener('mouseleave', resetHidden);
 }
 
 async function deleteRoom(roomId, hostId) {
@@ -466,6 +601,35 @@ async function handleCreateRoom(e) {
 
   try {
     showLoading(true);
+
+    // --- KIỂM TRA GIỚI HẠN PHÒNG (TRỪ ADMIN) ---
+    if (typeof isAdmin === 'undefined' || !isAdmin) {
+      const configDoc = await db.collection("configs").doc("watchParty").get();
+      const config = configDoc.exists ? configDoc.data() : {};
+      
+      const userLimit = config.userRoomLimit || 3;
+      const totalLimit = config.totalRoomLimit || 50;
+
+      // 1. Kiểm tra tổng số phòng toàn hệ thống
+      const allRooms = await db.collection("watchRooms").get();
+      if (allRooms.size >= totalLimit) {
+        showLoading(false);
+        showNotification(`Hệ thống đã đạt giới hạn tối đa ${totalLimit} phòng. Vui lòng quay lại sau!`, "warning");
+        return;
+      }
+      
+      // 2. Kiểm tra giới hạn của từng User
+      const userRooms = await db.collection("watchRooms")
+        .where("hostId", "==", currentUser.uid)
+        .get();
+      
+      if (userRooms.size >= userLimit) {
+        showLoading(false);
+        showNotification(`Bạn đã đạt giới hạn tối đa ${userLimit} phòng. Vui lòng giải tán phòng cũ trước khi tạo mới!`, "warning");
+        return;
+      }
+    }
+
     const roomRef = await db.collection("watchRooms").add({
       name,
       hostId: currentUser.uid,

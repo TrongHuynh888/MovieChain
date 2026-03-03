@@ -1414,9 +1414,13 @@ body, .page, .section, .hero-banner, .movie-grid, .footer, main {
     font-weight: 800 !important;
   }
 
-  .party-grid,
   .stats-grid {
     grid-template-columns: 1fr !important;
+  }
+  /* Thẻ phòng watch party: 2 cột trên mobile */
+  .party-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
   }
   .party-container {
     padding: 15px !important;
@@ -1727,9 +1731,15 @@ body[data-theme="light"] .chat-msg .author {
     position: static !important;
     width: 100% !important;
   }
-  .party-container,
   .main-content {
     padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  /* Thẻ phòng cần padding nhỏ hai bên */
+  .party-container {
+    padding: 10px !important;
     margin: 0 !important;
     width: 100% !important;
     max-width: none !important;

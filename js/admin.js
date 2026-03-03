@@ -6711,3 +6711,461 @@ async function saveQuickEditEpisodeNumber(index, newNumber) {
         loadEpisodesForMovie(); // Revert UI
     }
 }
+
+/* ============================================
+   QUẢN LÝ PHÒNG XEM CHUNG (ADMIN WATCH PARTY)
+   ============================================ */
+
+let allAdminWatchRooms = [];
+let roomTypeChart = null;
+let popularMoviesChart = null;
+
+async function loadAdminWatchRooms() {
+    const tableBody = document.getElementById("adminWatchRoomsTable");
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '<tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải danh sách phòng...</td></tr>';
+
+    try {
+        // Tải cấu hình giới hạn phòng trước
+        loadUserRoomLimit();
+
+        const snapshot = await db.collection("watchRooms")
+            .orderBy("createdAt", "desc")
+            .get();
+
+        allAdminWatchRooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        renderAdminWatchRooms(allAdminWatchRooms);
+        updateWatchPartyStats(allAdminWatchRooms);
+    } catch (error) {
+        console.error("Lỗi tải danh sách phòng (Admin):", error);
+        if (tableBody) {
+            tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Lỗi khi tải dữ liệu.</td></tr>';
+        }
+    }
+}
+
+function updateWatchPartyStats(rooms) {
+    const totalRooms = rooms.length;
+    let totalViewers = 0;
+    let publicCount = 0;
+    let privateCount = 0;
+    const movieCounts = {};
+
+    rooms.forEach(room => {
+        totalViewers += (room.memberCount || 0);
+        if (room.type === 'public') publicCount++;
+        else privateCount++;
+        
+        const title = room.movieTitle || 'Chưa chọn phim';
+        movieCounts[title] = (movieCounts[title] || 0) + 1;
+    });
+
+    // Sắp xếp top phim
+    const sortedMovies = Object.entries(movieCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    // Lấy giới hạn hệ thống từ input để tính %
+    const totalLimitInput = document.getElementById('totalRoomLimitInput');
+    const totalLimit = totalLimitInput ? parseInt(totalLimitInput.value) || 50 : 50;
+    const roomPercent = Math.min((totalRooms / totalLimit) * 100, 100);
+
+    // Cập nhật các số liệu văn bản
+    const elTotalRooms = document.getElementById('statTotalRooms');
+    const elRoomProgress = document.getElementById('statRoomProgress');
+    const elTotalViewers = document.getElementById('statTotalViewers');
+    const elPublicRatio = document.getElementById('statPublicRatio');
+    const elPublicCount = document.getElementById('statPublicCount');
+
+    if (elTotalRooms) elTotalRooms.textContent = `${totalRooms} / ${totalLimit}`;
+    if (elRoomProgress) elRoomProgress.style.width = `${roomPercent}%`;
+    if (elTotalViewers) elTotalViewers.textContent = totalViewers.toLocaleString();
+    
+    if (elPublicRatio) {
+        const ratio = totalRooms > 0 ? Math.round((publicCount / totalRooms) * 100) : 0;
+        elPublicRatio.textContent = `${ratio}%`;
+    }
+    if (elPublicCount) elPublicCount.textContent = `${publicCount} phòng công khai`;
+
+    // 2. Cập nhật các biểu đồ
+    initOrUpdateCharts(publicCount, privateCount, sortedMovies);
+}
+
+function initOrUpdateCharts(publicCount, privateCount, topMovies) {
+    if (typeof Chart === 'undefined') {
+        console.warn("Chart.js chưa sẵn sàng, đang thử lại sau 500ms...");
+        setTimeout(() => initOrUpdateCharts(publicCount, privateCount, topMovies), 500);
+        return;
+    }
+
+    // 1. Biểu đồ Room Type
+    const ctxType = document.getElementById('roomTypeChart');
+    if (ctxType) {
+        try {
+            if (!roomTypeChart) {
+                roomTypeChart = new Chart(ctxType, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Công khai', 'Riêng tư'],
+                        datasets: [{
+                            data: [publicCount, privateCount],
+                            backgroundColor: ['#33cf66', '#ff4444'],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        cutout: '70%',
+                        plugins: { 
+                            legend: { display: false }, 
+                            tooltip: { 
+                                enabled: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` ${context.label}: ${context.raw} phòng`;
+                                    }
+                                }
+                            } 
+                        },
+                        maintainAspectRatio: false,
+                        responsive: true
+                    }
+                });
+            } else {
+                roomTypeChart.data.datasets[0].data = [publicCount, privateCount];
+                roomTypeChart.update();
+            }
+        } catch (e) {
+            console.error("Lỗi khởi tạo biểu đồ tròn:", e);
+        }
+    }
+
+    // 2. Biểu đồ Top Movies (Chart.js)
+    const ctxMovies = document.getElementById('popularMoviesChart');
+    if (ctxMovies) {
+        try {
+            const labels = topMovies.map(m => {
+                let title = m[0] || 'Phòng không tên';
+                if (title.startsWith(':')) title = title.substring(1).trim();
+                // Tăng lên 50 ký tự vì tên phim nằm trên thanh bar nên có nhiều diện tích
+                return title.length > 50 ? title.substring(0, 48) + '...' : title;
+            });
+            const data = topMovies.map(m => m[1]);
+
+            if (!popularMoviesChart) {
+                popularMoviesChart = new Chart(ctxMovies, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Số phòng',
+                            data: data,
+                            backgroundColor: '#fcd535',
+                            borderRadius: 4,
+                            barThickness: 8 // Giảm độ dày thanh bar để tăng khoảng trống
+                        }]
+                    },
+                    plugins: [{
+                        id: 'customLabels',
+                        afterDatasetsDraw(chart) {
+                            const {ctx, data, chartArea: {left}, scales: {y}} = chart;
+                            ctx.save();
+                            ctx.font = '500 11px Montserrat';
+                            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                            ctx.textAlign = 'left';
+                            ctx.textBaseline = 'bottom';
+                            data.labels.forEach((label, index) => {
+                                const yPos = y.getPixelForTick(index);
+                                // Vẽ tên phim phía trên thanh bar
+                                ctx.fillText(label, left, yPos - 6);
+                            });
+                            ctx.restore();
+                        }
+                    }],
+                    options: {
+                        indexAxis: 'y',
+                        layout: {
+                            padding: { left: 0, right: 30, top: 25, bottom: 0 }
+                        },
+                        scales: {
+                            x: { 
+                                display: false, 
+                                grid: { display: false },
+                                beginAtZero: true,
+                                ticks: { stepSize: 1 }
+                            },
+                            y: { 
+                                ticks: { 
+                                    display: false 
+                                }, 
+                                grid: { display: false },
+                                // Tăng khoảng cách giữa các category
+                                categoryPercentage: 0.8,
+                                barPercentage: 0.9
+                            }
+                        },
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: { 
+                                enabled: true,
+                                callbacks: {
+                                    title: function(context) {
+                                        return topMovies[context[0].dataIndex][0];
+                                    }
+                                }
+                            }
+                        },
+                        maintainAspectRatio: false,
+                        responsive: true
+                    }
+                });
+            } else {
+                popularMoviesChart.data.labels = labels;
+                popularMoviesChart.data.datasets[0].data = data;
+                popularMoviesChart.update();
+            }
+        } catch (e) {
+            console.error("Lỗi khởi tạo biểu đồ cột:", e);
+        }
+    }
+}
+
+function renderAdminWatchRooms(rooms) {
+    const tableBody = document.getElementById("adminWatchRoomsTable");
+    if (!tableBody) return;
+
+    if (rooms.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Không có phòng nào đang hoạt động.</td></tr>';
+        return;
+    }
+
+    tableBody.innerHTML = rooms.map(room => {
+        const createdDate = room.createdAt ? (room.createdAt.toDate ? room.createdAt.toDate().toLocaleString('vi-VN') : new Date(room.createdAt).toLocaleString('vi-VN')) : 'N/A';
+        const typeBadge = room.type === 'private' 
+            ? '<span class="badge bg-danger"><i class="fas fa-lock"></i> Riêng tư</span>' 
+            : '<span class="badge bg-success"><i class="fas fa-globe"></i> Công khai</span>';
+        
+        // Poster phim
+        const posterUrl = room.moviePoster || 'https://via.placeholder.com/40x60/1a1a2e/ffffff?text=No+Img';
+
+        return `
+            <tr>
+                <td><img src="${posterUrl}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></td>
+                <td><strong>${room.name || 'Phòng không tên'}</strong></td>
+                <td>${room.movieTitle || 'Chưa chọn phim'}</td>
+                <td>${room.hostName || 'Ẩn danh'}</td>
+                <td><span class="badge bg-info">${room.memberCount || 0}</span></td>
+                <td>${typeBadge}</td>
+                <td><small>${createdDate}</small></td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn btn-sm btn-action-glass" onclick="adminJoinRoom('${room.id}', '${room.type}')" title="Vào xem">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-action-glass text-danger" onclick="adminDeleteRoom('${room.id}')" title="Xóa phòng">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+// --- Cấu hình giới hạn phòng ---
+function toggleRoomLimitSettings() {
+    const el = document.getElementById('roomLimitSettings');
+    if (el) el.classList.toggle('hidden');
+}
+
+async function loadUserRoomLimit() {
+    try {
+        const doc = await db.collection("configs").doc("watchParty").get();
+        if (doc.exists) {
+            const data = doc.data();
+            const userLimit = data.userRoomLimit || 3;
+            const totalLimit = data.totalRoomLimit || 50;
+
+            const userInput = document.getElementById('userRoomLimitInput');
+            const totalInput = document.getElementById('totalRoomLimitInput');
+
+            if (userInput) userInput.value = userLimit;
+            if (totalInput) totalInput.value = totalLimit;
+        }
+    } catch (error) {
+        console.error("Lỗi tải giới hạn phòng:", error);
+    }
+}
+
+async function saveUserRoomLimit() {
+    const userInput = document.getElementById('userRoomLimitInput');
+    const totalInput = document.getElementById('totalRoomLimitInput');
+    
+    if (!userInput || !totalInput) return;
+    
+    const userLimit = parseInt(userInput.value);
+    const totalLimit = parseInt(totalInput.value);
+
+    if (isNaN(userLimit) || userLimit < 1 || isNaN(totalLimit) || totalLimit < 1) {
+        showNotification("Giới hạn phải là số dương!", "error");
+        return;
+    }
+
+    try {
+        showLoading(true);
+        await db.collection("configs").doc("watchParty").set({
+            userRoomLimit: userLimit,
+            totalRoomLimit: totalLimit,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: currentUser.uid
+        }, { merge: true });
+        showNotification("Đã lưu cấu hình giới hạn phòng mới!", "success");
+        toggleRoomLimitSettings();
+    } catch (error) {
+        console.error("Lỗi lưu giới hạn phòng:", error);
+        showNotification("Lỗi khi lưu cấu hình.", "error");
+    } finally {
+        showLoading(false);
+    }
+}
+
+function filterAdminWatchRooms() {
+    const searchTerm = document.getElementById("adminSearchRooms").value.toLowerCase().trim();
+    const filterType = document.getElementById("adminFilterRoomType") ? document.getElementById("adminFilterRoomType").value : 'all';
+    const sortBy = document.getElementById("adminSortRooms") ? document.getElementById("adminSortRooms").value : 'newest';
+    
+    let filtered = [...allAdminWatchRooms];
+
+    // 1. Phân loại theo text
+    if (searchTerm) {
+        filtered = filtered.filter(room => {
+            return (room.name && room.name.toLowerCase().includes(searchTerm)) ||
+                   (room.movieTitle && room.movieTitle.toLowerCase().includes(searchTerm)) ||
+                   (room.hostName && room.hostName.toLowerCase().includes(searchTerm));
+        });
+    }
+
+    // 2. Phân loại theo loại phòng
+    if (filterType !== 'all') {
+        filtered = filtered.filter(room => room.type === filterType);
+    }
+
+    // 3. Sắp xếp
+    filtered.sort((a, b) => {
+        if (sortBy === 'newest') {
+            const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : 0;
+            const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : 0;
+            return dateB - dateA;
+        } else if (sortBy === 'oldest') {
+            const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : 0;
+            const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : 0;
+            return dateA - dateB;
+        } else if (sortBy === 'members') {
+            return (b.memberCount || 0) - (a.memberCount || 0);
+        }
+        return 0;
+    });
+
+    renderAdminWatchRooms(filtered);
+}
+
+// Chức năng xóa tất cả phòng (Bulk Delete)
+async function deleteAllAdminWatchRooms(e) {
+    if (allAdminWatchRooms.length === 0) {
+        showNotification("Không có phòng nào để xóa!", "info");
+        return;
+    }
+
+    const confirm1 = await customConfirm(
+        `CẢNH BÁO: Bạn có chắc chắn muốn xóa TẤT CẢ ${allAdminWatchRooms.length} phòng đang hoạt động? Hành động này không thể hoàn tác!`,
+        { title: "Xác nhận xóa hàng loạt", type: "danger", confirmText: "Xác nhận xóa sạch" }
+    );
+    if (!confirm1) return;
+
+    const confirm2 = await customConfirm(
+        "XÁC NHẬN CUỐI CÙNG: Bạn thực sự muốn giải tán toàn bộ phòng xem chung trên hệ thống?",
+        { title: "Cảnh báo bảo mật", type: "danger", confirmText: "Tôi chắc chắn" }
+    );
+    if (!confirm2) return;
+
+    // Hiển thị trạng thái đang xử lý
+    const btn = e && e.target ? e.target.closest('button') : null;
+    let originalText = "";
+    if (btn) {
+        originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xóa...';
+    }
+
+    try {
+        const batch = db.batch();
+        allAdminWatchRooms.forEach(room => {
+            const roomRef = db.collection("watchRooms").doc(room.id);
+            batch.delete(roomRef);
+        });
+
+        await batch.commit();
+        
+        showNotification("Đã xóa toàn bộ phòng thành công!", "success");
+        // Firebase listener (nếu có) sẽ tự động cập nhật, 
+        // nhưng ta có thể gọi lại local để đồng bộ ngay lập tức
+        allAdminWatchRooms = [];
+        filterAdminWatchRooms();
+    } catch (error) {
+        console.error("Lỗi khi xóa hàng loạt:", error);
+        showNotification("Có lỗi xảy ra khi xóa toàn bộ phòng!", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+/**
+ * Hàm xóa phòng dành riêng cho Admin (Có cập nhật UI ngay lập tức)
+ * @param {string} roomId 
+ */
+async function adminDeleteRoom(roomId) {
+    const confirmDelete = await customConfirm(
+        "Bạn có chắc chắn muốn xóa phòng này không? Hành động này sẽ giải tán toàn bộ thành viên trong phòng.",
+        { title: "Xác nhận xóa phòng", type: "danger", confirmText: "Xóa ngay" }
+    );
+    
+    if (!confirmDelete) return;
+
+    try {
+        showLoading(true, "Đang xóa phòng...");
+        await db.collection("watchRooms").doc(roomId).delete();
+        
+        // Cập nhật mảng local nhanh chóng
+        allAdminWatchRooms = allAdminWatchRooms.filter(r => r.id !== roomId);
+        
+        // Render lại bảng và cập nhật biểu đồ
+        filterAdminWatchRooms();
+        updateWatchPartyStats(allAdminWatchRooms);
+        
+        showNotification("Đã xóa phòng thành công!", "success");
+    } catch (error) {
+        console.error("Lỗi xóa phòng (Admin):", error);
+        showNotification("Không thể xóa phòng. Vui lòng thử lại!", "error");
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Hàm hỗ trợ admin vào phòng 
+async function adminJoinRoom(roomId, type) {
+    if (typeof joinRoom === 'function') {
+        const adminPage = document.getElementById('adminPage');
+        if (adminPage) adminPage.classList.remove('active');
+        
+        const homePage = document.getElementById('homePage');
+        if (homePage) homePage.classList.add('active');
+
+        showPage('watchParty');
+        setTimeout(() => {
+            joinRoom(roomId, type);
+        }, 100);
+    }
+}

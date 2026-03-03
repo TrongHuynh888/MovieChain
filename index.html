@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/responsive.css?v=158" />
     <link rel="stylesheet" href="css/detail-redesign.css?v=3" />
     <link rel="stylesheet" href="css/intro.css?v=3" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!--<link rel="stylesheet" href="css/style.css" />-->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -960,9 +961,12 @@
           }
         });
 
-        // Tự động tải dữ liệu nếu chuyển sang tab cụ thể
+        // 4. [NEW] Tự động tải dữ liệu cho các tab cụ thể
         if (panelName === "errorReports" && typeof loadErrorReports === "function") {
             loadErrorReports();
+        }
+        if (panelName === "watchRooms" && typeof loadAdminWatchRooms === "function") {
+            loadAdminWatchRooms();
         }
 
         // 4. [NEW] Tự động đóng menu trên Mobile sau khi chọn

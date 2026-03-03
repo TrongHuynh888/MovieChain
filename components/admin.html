@@ -109,6 +109,14 @@
           <i class="fas fa-images" style="color: #fcd535;"></i>
           <span>Kho Avatar</span>
         </div>
+        <div
+          class="admin-nav-item"
+          data-panel="watchRooms"
+          onclick="showAdminPanel('watchRooms')"
+        >
+          <i class="fas fa-users-viewfinder" style="color: #ff9ff3;"></i>
+          <span>Quản lý Phòng</span>
+        </div>
       </nav>
     </aside>
 
@@ -1139,20 +1147,150 @@
 
       </div>
 
-    </div>
-  </div>
-</div>
+      <!-- Watch Party Rooms Panel -->
+      <div class="admin-panel" id="watchRoomsPanel">
+        <div class="admin-panel-header">
+          <button class="admin-mobile-toggle" onclick="toggleSidebar()">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+          <h2 class="admin-panel-title">Quản lý Phòng Xem Chung</h2>
+          <div class="header-actions">
+            <button class="btn btn-secondary" onclick="toggleRoomLimitSettings()">
+              <i class="fas fa-cog"></i> Cấu hình
+            </button>
+            <button class="btn btn-primary" onclick="openCreateRoomModal()">
+              <i class="fas fa-plus"></i> Tạo phòng mới
+            </button>
+          </div>
+        </div>
 
-<!-- Modal Xem Ảnh Bill Lớn (Dành cho Admin) -->
-<div class="modal-overlay" id="billViewportModal" style="z-index: 99999;">
-  <div class="modal" style="max-width: 800px; width: 95vw; background: transparent; box-shadow: none;">
-    <div style="text-align: right; margin-bottom: 10px;">
-      <button class="btn btn-danger" onclick="closeModal('billViewportModal')" style="border-radius: 50%; width: 40px; height: 40px; padding: 0;">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body" style="padding: 0; text-align: center;">
-      <img id="billViewportImage" src="" alt="Bill View" style="max-width: 100%; max-height: 85vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+        <!-- Room Limit Settings (Hidden by default) -->
+        <div id="roomLimitSettings" class="admin-settings-card hidden mb-3" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="color: var(--text-muted); font-size: 0.9rem;">Giới hạn/User:</label>
+                    <input type="number" id="userRoomLimitInput" class="form-input" style="width: 70px;" min="1" value="3">
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="color: var(--text-muted); font-size: 0.9rem;">Tổng giới hạn hệ thống:</label>
+                    <input type="number" id="totalRoomLimitInput" class="form-input" style="width: 80px;" min="1" value="50">
+                </div>
+                <button class="btn btn-sm btn-primary" onclick="saveUserRoomLimit()">Lưu cấu hình</button>
+            </div>
+            <small class="text-muted" style="display: block; margin-top: 5px;">* Giới hạn số lượng phòng tối đa một người dùng có thể tạo và tổng số phòng toàn hệ thống (Admin được miễn trừ).</small>
+        </div>
+
+        <!-- Watch Party Statistics & Charts -->
+        <div class="admin-wp-overview mb-4" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px;">
+            <!-- Left: Text Stats -->
+            <div class="admin-stats-grid" id="watchPartyStatsGrid" style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(77, 171, 247, 0.1); color: #4dabf7;">
+                        <i class="fas fa-door-open"></i>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">Tổng số phòng</span>
+                        <h3 class="stat-value" id="statTotalRooms">0</h3>
+                        <div class="stat-progress-container" style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 8px; overflow: hidden;">
+                            <div id="statRoomProgress" class="stat-progress-bar" style="width: 0%; height: 100%; background: #4dabf7; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(51, 207, 102, 0.1); color: #33cf66;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">Tổng người xem</span>
+                        <h3 class="stat-value" id="statTotalViewers">0</h3>
+                        <span class="stat-subtext">Đang trong các phòng</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(255, 146, 43, 0.1); color: #ff922b;">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">Tỷ lệ Công khai</span>
+                        <h3 class="stat-value" id="statPublicRatio">0%</h3>
+                        <span class="stat-subtext" id="statPublicCount">0 phòng</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Charts -->
+            <div class="admin-charts-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="stat-card chart-card" style="padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <span class="stat-label mb-2" style="font-size: 0.8rem;">Phân loại phòng</span>
+                    <div style="width: 100%; height: 140px; position: relative;">
+                        <canvas id="roomTypeChart"></canvas>
+                    </div>
+                </div>
+                <div class="stat-card chart-card" style="padding: 15px; display: flex; flex-direction: column;">
+                    <span class="stat-label mb-2" style="font-size: 0.8rem;">Top phim được xem nhiều</span>
+                    <div style="width: 100%; height: 140px; position: relative;">
+                        <canvas id="popularMoviesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-filter-wrapper mb-3" style="display: flex; gap: 12px; flex-wrap: wrap; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
+          <div class="search-box" style="flex: 2; min-width: 250px;">
+            <i class="fas fa-search"></i>
+            <input
+              type="text"
+              class="form-input"
+              id="adminSearchRooms"
+              placeholder="Tìm tên phòng, chủ phòng, tên phim..."
+              oninput="filterAdminWatchRooms()"
+            />
+          </div>
+          
+          <div class="filter-group" style="flex: 1; min-width: 150px; display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 0.8rem; color: rgba(255,255,255,0.6); white-space: nowrap;"><i class="fas fa-filter"></i> Loại:</label>
+            <select id="adminFilterRoomType" class="form-input" style="padding: 6px 12px;" onchange="filterAdminWatchRooms()">
+              <option value="all">Tất cả phòng</option>
+              <option value="public">Công khai</option>
+              <option value="private">Riêng tư</option>
+            </select>
+          </div>
+
+          <div class="filter-group" style="flex: 1; min-width: 150px; display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 0.8rem; color: rgba(255,255,255,0.6); white-space: nowrap;"><i class="fas fa-sort-amount-down"></i> Xếp:</label>
+            <select id="adminSortRooms" class="form-input" style="padding: 6px 12px;" onchange="filterAdminWatchRooms()">
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="members">Đông người nhất</option>
+            </select>
+          </div>
+
+          <div class="filter-group" style="display: flex; align-items: center; justify-content: flex-end;">
+            <button class="btn btn-outline-danger" onclick="deleteAllAdminWatchRooms(event)" style="padding: 6px 15px; font-size: 0.8rem; white-space: nowrap;">
+              <i class="fas fa-trash-sweep"></i> Xóa tất cả
+            </button>
+          </div>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">Poster</th>
+              <th>Phòng (Tên)</th>
+              <th>Phim đang phát</th>
+              <th>Chủ phòng</th>
+              <th>Số người</th>
+              <th>Loại phòng</th>
+              <th>Ngày tạo</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="adminWatchRoomsTable">
+            <!-- Dữ liệu được load động -->
+          </tbody>
+        </table>
+      </div>
+
     </div>
   </div>
 </div>
