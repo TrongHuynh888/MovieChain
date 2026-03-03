@@ -8,10 +8,267 @@
 }
 .party-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
   margin-top: 20px;
 }
+
+/* =========================================
+   ROOM CARD - PREMIUM DESIGN (Poster BG)
+   ========================================= */
+.wp-room-card {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 2 / 3;
+  cursor: pointer;
+  background: var(--bg-card, #1a1a2e);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 0.35s ease,
+              border-color 0.3s ease;
+}
+.wp-room-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5),
+              0 0 20px rgba(229, 9, 20, 0.15);
+  border-color: rgba(229, 9, 20, 0.4);
+}
+
+/* Poster nền */
+.wp-room-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease, filter 0.4s ease;
+  z-index: 1;
+}
+.wp-room-card:hover .wp-room-poster {
+  transform: scale(1.08);
+  filter: brightness(0.7);
+}
+
+/* Gradient overlay */
+.wp-room-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.6) 35%,
+    rgba(0, 0, 0, 0.15) 60%,
+    transparent 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Badges (LIVE + loại phòng) */
+.wp-room-badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+}
+.wp-badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #e50914;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  animation: wp-live-pulse 2s infinite;
+}
+.wp-badge-live i {
+  font-size: 7px;
+  animation: wp-blink 1.2s infinite;
+}
+@keyframes wp-live-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(229, 9, 20, 0.4); }
+  50% { box-shadow: 0 0 14px rgba(229, 9, 20, 0.7); }
+}
+@keyframes wp-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.wp-badge-private,
+.wp-badge-public {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 11px;
+  backdrop-filter: blur(8px);
+}
+.wp-badge-private {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.4);
+}
+.wp-badge-public {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+/* Nội dung card (nửa dưới) */
+.wp-room-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wp-room-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.wp-room-movie {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.wp-room-movie i {
+  margin-right: 4px;
+  color: var(--accent-primary, #e50914);
+}
+
+/* Footer: meta + nút vào */
+.wp-room-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  gap: 8px;
+}
+.wp-room-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.wp-room-host,
+.wp-room-count {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wp-room-host i {
+  color: #ffc107;
+  margin-right: 3px;
+  font-size: 10px;
+}
+.wp-room-count i {
+  color: #00d4ff;
+  margin-right: 3px;
+  font-size: 10px;
+}
+
+/* Nút vào xem */
+.wp-room-join-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, #e50914, #b20710);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+}
+.wp-room-join-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(229, 9, 20, 0.5);
+  background: linear-gradient(135deg, #ff1a25, #e50914);
+}
+.wp-room-join-btn i {
+  font-size: 10px;
+}
+
+/* Nút xóa phòng - nằm trên card mới */
+.wp-room-card .btn-delete-room {
+  z-index: 10;
+}
+
+/* =========================================
+   ROOM CARD - RESPONSIVE
+   ========================================= */
+@media (max-width: 768px) {
+  .party-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .wp-room-card {
+    aspect-ratio: 2 / 3;
+  }
+  .wp-room-content {
+    padding: 10px;
+  }
+  .wp-room-name {
+    font-size: 13px;
+  }
+  .wp-room-movie {
+    font-size: 11px;
+  }
+  .wp-room-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .wp-room-join-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 7px 12px;
+  }
+  .wp-badge-live {
+    font-size: 9px;
+    padding: 3px 8px;
+  }
+  .wp-badge-private,
+  .wp-badge-public {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+  }
+}
+
 
 /* Room Layout */
 .room-layout {

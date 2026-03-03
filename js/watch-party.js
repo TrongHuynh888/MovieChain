@@ -81,54 +81,73 @@ initWatchPartyModule();
 // ==========================================
 // 2. CORE LOGIC (ROOMS)
 // ==========================================
+// Biến để lưu listener của room list
+let roomsUnsubscribe = null;
+
 async function loadRooms() {
   const container = document.getElementById("roomList");
   if (!container) return;
   container.innerHTML = '<div class="loading-spinner"></div>';
 
   try {
-    const snapshot = await db
+    // Hủy listener cũ nếu có
+    if (roomsUnsubscribe) {
+        roomsUnsubscribe();
+    }
+
+    roomsUnsubscribe = db
       .collection("watchRooms")
       .orderBy("createdAt", "desc")
       .limit(20)
-      .get();
-    container.innerHTML = "";
-    if (snapshot.empty) {
-      container.innerHTML =
-        '<p class="text-center text-muted">Chưa có phòng nào. Hãy tạo phòng mới!</p>';
-      return;
-    }
+      .onSnapshot((snapshot) => {
+        container.innerHTML = "";
+        if (snapshot.empty) {
+          container.innerHTML =
+            '<p class="text-center text-muted">Chưa có phòng nào. Hãy tạo phòng mới!</p>';
+          return;
+        }
 
-    snapshot.forEach((doc) => {
-      const room = doc.data();
-      const isPrivate = room.type === "private";
-      const count = room.memberCount || 0;
+        snapshot.forEach((doc) => {
+          const room = doc.data();
+          const isPrivate = room.type === "private";
+          const count = room.memberCount || 0;
+          // Lấy poster từ Firestore hoặc dùng placeholder
+          const posterUrl = room.moviePoster || 'https://via.placeholder.com/400x600/1a1a2e/ffffff?text=No+Poster';
 
-      let deleteBtn = "";
-      if (currentUser && (currentUser.uid === room.hostId || isAdmin)) {
-        deleteBtn = `<button class="btn-delete-room" onclick="event.stopPropagation(); deleteRoom('${doc.id}', '${room.hostId}')"><i class="fas fa-trash"></i></button>`;
-      }
+          let deleteBtn = "";
+          if (currentUser && (currentUser.uid === room.hostId || (typeof isAdmin !== 'undefined' && isAdmin))) {
+            deleteBtn = `<button class="btn-delete-room" onclick="event.stopPropagation(); deleteRoom('${doc.id}', '${room.hostId}')" title="Xóa phòng"><i class="fas fa-trash"></i></button>`;
+          }
 
-      const html = `
-                <div class="card" style="position:relative; min-height: 180px; display:flex; flex-direction:column; justify-content:space-between;">
-                    ${deleteBtn}
-                    <div class="card-body">
-                        <div class="mb-2" style="display:flex; align-items:center; gap:10px;">
-                            <span class="status-badge active" style="background:#e50914">LIVE</span>
-                            ${isPrivate ? '<i class="fas fa-lock text-warning"></i>' : '<i class="fas fa-globe-asia text-success"></i>'}
-                        </div>
-                        <h4 style="margin-bottom:5px; font-size:16px; padding-right: 25px;">${room.name}</h4>
-                        <p class="text-muted" style="font-size:13px; margin-bottom:10px;">
-                            <i class="fas fa-film"></i> ${room.movieTitle}
-                        </p>
-                        <div class="flex-between" style="margin-top:auto;">
-                            <span class="text-muted" style="font-size:12px"><i class="fas fa-user"></i> ${count} người</span>
-                            <button class="btn btn-primary btn-sm" onclick="joinRoom('${doc.id}', '${room.type}')">Vào xem <i class="fas fa-sign-in-alt"></i></button>
-                        </div>
-                    </div>
-                </div>`;
-      container.innerHTML += html;
-    });
+          const html = `
+            <div class="wp-room-card" onclick="joinRoom('${doc.id}', '${room.type}')">
+              ${deleteBtn}
+              <img class="wp-room-poster" src="${posterUrl}" alt="${room.movieTitle}" loading="lazy">
+              <div class="wp-room-overlay"></div>
+              <div class="wp-room-badges">
+                <span class="wp-badge-live"><i class="fas fa-circle"></i> LIVE</span>
+                ${isPrivate ? '<span class="wp-badge-private"><i class="fas fa-lock"></i></span>' : '<span class="wp-badge-public"><i class="fas fa-globe-asia"></i></span>'}
+              </div>
+              <div class="wp-room-content">
+                <h4 class="wp-room-name">${room.name}</h4>
+                <p class="wp-room-movie"><i class="fas fa-film"></i> ${room.movieTitle}</p>
+                <div class="wp-room-footer">
+                  <div class="wp-room-meta">
+                    <span class="wp-room-host"><i class="fas fa-crown"></i> ${room.hostName || 'Host'}</span>
+                    <span class="wp-room-count"><i class="fas fa-users"></i> ${count}</span>
+                  </div>
+                  <button class="wp-room-join-btn" onclick="event.stopPropagation(); joinRoom('${doc.id}', '${room.type}')">
+                    Vào xem <i class="fas fa-play"></i>
+                  </button>
+                </div>
+              </div>
+            </div>`;
+          container.innerHTML += html;
+        });
+      }, (error) => {
+        console.error("Lỗi realtime load phòng:", error);
+        container.innerHTML = '<p class="text-center text-danger">Lỗi kết nối máy chủ.</p>';
+      });
   } catch (error) {
     console.error("Lỗi load phòng:", error);
   }
@@ -453,10 +472,11 @@ async function handleCreateRoom(e) {
       hostName: currentUser.displayName || "User",
       movieId,
       movieTitle: movie.title,
+      moviePoster: movie.posterUrl || '', // Lưu poster để hiển thị card
       episodeIndex: parseInt(epIndex),
-      videoType,   // Thêm trường này
-      videoSource, // Thêm trường này
-      videoId: videoType === 'youtube' ? videoSource : '', // Giữ lại để tương thích cũ
+      videoType,
+      videoSource,
+      videoId: videoType === 'youtube' ? videoSource : '',
       type,
       password,
       status: "paused",
