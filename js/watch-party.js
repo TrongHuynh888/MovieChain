@@ -26,12 +26,31 @@ let globalAudioContext = null;
 // QUẢN LÝ ÂM THANH
 let isDeafened = false; // Mặc định nghe được
 let localMutedPeers = new Set();
+let peerVolumeLevels = {}; // Lưu mức âm lượng tùy chỉnh cho từng peer (0-2, mặc định 1)
+let globalVoiceVolume = 1; // Âm lượng tổng cho tất cả mic (0-2, mặc định 1 = 100%)
 let scheduleSyncInterval = null;
 let currentScheduledTime = null;
 
 // API KEY CỦA BẠN (Đã điền sẵn)
 const METERED_API_KEY = "Tp6L8mYZolvVJ2ZwHQnmnZpt3kYvU8uEHJOozyjQtdT15XPE";
 const APP_NAME = "tramphim";
+
+// --- iOS Audio Ducking Workaround ---
+function handleiOSAudio() {
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
+    if (!globalAudioContext) globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (globalAudioContext.state === 'suspended') {
+      globalAudioContext.resume().catch(() => {});
+    }
+    // Boost volume nội bộ nếu đang có player
+    if (player && player.tagName === "VIDEO") {
+        player.volume = 1; 
+    }
+  }
+}
+document.addEventListener('touchstart', handleiOSAudio, { once: true });
+document.addEventListener('click', handleiOSAudio, { once: true });
+// -------------------------------------
 
 // ==========================================
 // 1. MODULE LOADER
@@ -1091,7 +1110,18 @@ function renderMembersList(snapshot) {
     let actionButtons = "";
     if (!isMe) {
       const isMuted = localMutedPeers.has(uid);
-      actionButtons += `<button class="btn-icon-small ${isMuted ? "active" : ""}" onclick="toggleLocalVolume('${uid}')"><i class="fas ${isMuted ? "fa-volume-mute" : "fa-volume-up"}"></i></button>`;
+      const currentVol = peerVolumeLevels[uid] !== undefined ? peerVolumeLevels[uid] : 1;
+      const volPercent = Math.round(currentVol * 100);
+      actionButtons += `
+        <div class="peer-volume-control">
+          <button class="btn-icon-small ${isMuted ? "active" : ""}" onclick="toggleLocalVolume('${uid}')" title="${isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng'}">
+            <i class="fas ${isMuted ? "fa-volume-mute" : (currentVol > 1 ? "fa-volume-up" : currentVol > 0 ? "fa-volume-down" : "fa-volume-off")}"></i>
+          </button>
+          <input type="range" min="0" max="200" value="${volPercent}" class="peer-vol-slider" 
+                 oninput="setPeerVolume('${uid}', this.value)" 
+                 title="Âm lượng: ${volPercent}%">
+          <span class="peer-vol-label">${volPercent}%</span>
+        </div>`;
     }
 
     if ((isHost || (typeof isAdmin !== "undefined" && isAdmin)) && !isMe) {
@@ -1147,6 +1177,36 @@ function toggleLocalVolume(peerId) {
     .then(renderMembersList);
 }
 
+// Chỉnh âm lượng loa của một peer cụ thể (0-200%)
+window.setPeerVolume = function(peerId, value) {
+  const vol = parseInt(value) / 100; // 0 -> 2.0
+  peerVolumeLevels[peerId] = vol;
+  
+  const audio = document.getElementById("audio-" + peerId);
+  if (audio) {
+    audio.volume = Math.min(vol, 1); // HTML audio chỉ hỗ trợ 0-1
+  }
+  
+  // Nếu muốn vượt 100%, dùng Web Audio API GainNode
+  const gainNode = window[`gainNode_${peerId}`];
+  if (gainNode) {
+    gainNode.gain.value = vol; // GainNode hỗ trợ > 1 = khuếch đại
+  }
+
+  // Cập nhật label
+  const row = document.getElementById(`member-row-${peerId}`);
+  if (row) {
+    const label = row.querySelector('.peer-vol-label');
+    if (label) label.textContent = Math.round(vol * 100) + '%';
+    
+    // Cập nhật icon
+    const icon = row.querySelector('.peer-volume-control .btn-icon-small i');
+    if (icon && !localMutedPeers.has(peerId)) {
+      icon.className = `fas ${vol > 1 ? 'fa-volume-up' : vol > 0 ? 'fa-volume-down' : 'fa-volume-off'}`;
+    }
+  }
+};
+
 function toggleDeafen() {
   isDeafened = !isDeafened;
   document.getElementById("myDeafenBtn").innerHTML = isDeafened
@@ -1160,6 +1220,48 @@ function toggleDeafen() {
     if (!a.muted) a.play().catch((e) => {});
   });
 }
+
+// Bật/Tắt popup chỉnh âm lượng Voice tổng
+window.toggleVoiceVolumePopup = function() {
+  const popup = document.getElementById('voiceVolPopup');
+  if (popup) popup.classList.toggle('hidden');
+};
+
+// Chỉnh âm lượng tổng cho tất cả mic (0-200%)
+window.setGlobalVoiceVolume = function(value) {
+  globalVoiceVolume = parseInt(value) / 100; // 0.0 -> 2.0
+  
+  // Cập nhật label hiển thị
+  const label = document.getElementById('globalVoiceLabel');
+  if (label) label.textContent = Math.round(globalVoiceVolume * 100) + '%';
+  
+  // Cập nhật icon nút
+  const btnIcon = document.querySelector('.btn-voice-vol i');
+  if (btnIcon) {
+    if (globalVoiceVolume === 0) btnIcon.className = 'fas fa-volume-mute';
+    else if (globalVoiceVolume < 1) btnIcon.className = 'fas fa-volume-down';
+    else btnIcon.className = 'fas fa-volume-up';
+  }
+  
+  // Áp dụng cho tất cả audio đang phát
+  document.querySelectorAll('#audioContainer audio').forEach(a => {
+    const peerId = a.id.replace('audio-', '');
+    const gainNode = window[`gainNode_${peerId}`];
+    if (gainNode) {
+      gainNode.gain.value = globalVoiceVolume;
+    }
+    a.volume = Math.min(globalVoiceVolume, 1);
+  });
+};
+
+// Đóng popup khi click ra ngoài
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('voiceVolBtnWrap');
+  const popup = document.getElementById('voiceVolPopup');
+  if (wrap && popup && !wrap.contains(e.target)) {
+    popup.classList.add('hidden');
+  }
+});
 
 function initVoiceChat() {
   if (typeof Peer === "undefined") {
@@ -1195,55 +1297,17 @@ async function getTurnCredentials() {
 async function startPeerConnection() {
   addMicButtonToUI();
   if (!globalAudioContext)
-    globalAudioContext = new (
-      window.AudioContext || window.webkitAudioContext
-    )();
+    globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
   if (globalAudioContext.state === "suspended") globalAudioContext.resume();
 
-  // Kiểm tra HTTPS - getUserMedia yêu cầu Secure Context trên mobile
-  const isSecure = location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
-  if (!isSecure) {
-    console.warn("⚠️ Không phải HTTPS - Mic có thể bị block trên mobile!");
-    showNotification("⚠️ Voice Chat cần HTTPS để hoạt động trên mobile. Hãy dùng HTTPS hoặc localhost!", "warning");
-  }
-
   try {
-    // Kiểm tra trình duyệt có hỗ trợ getUserMedia không
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showNotification("Trình duyệt không hỗ trợ Voice Chat!", "error");
-      return;
-    }
+    // Chỉ lấy ICE Server Token, KHÔNG gọi getUserMedia ở đây để tránh ducking âm thanh sớm
+    const iceServers = await getTurnCredentials();
 
-    // 🔥 CHẠY SONG SONG: Vừa xin Mic, vừa lấy Server (Không chờ nhau -> Không lag)
-    const streamPromise = navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: /iPad|iPhone|iPod/.test(navigator.userAgent) ? false : true, // Tắt trên iOS để tránh ducking quá mạnh
-        noiseSuppression: true,
-        autoGainControl: false, // Tắt tự động giảm âm lượng video nền
-      },
-      video: false,
-    });
-
-    const serverPromise = getTurnCredentials();
-
-    // Đợi cả 2 xong
-    const [stream, iceServers] = await Promise.all([
-      streamPromise,
-      serverPromise,
-    ]);
-
-    myStream = stream;
-    isMicEnabled = false;
-    if (myStream.getAudioTracks()[0])
-      myStream.getAudioTracks()[0].enabled = false;
-    updateMicUI(false);
-
-    monitorAudioLevel(stream, currentUser.uid);
-
-    // Tạo Peer với Server xịn vừa lấy được
+    // Khởi tạo Peer Connection
     myPeer = new Peer(currentUser.uid, {
       config: {
-        iceServers: iceServers, // 👉 Đây là chìa khóa để xem từ xa
+        iceServers: iceServers,
         iceTransportPolicy: "all",
       },
       debug: 1,
@@ -1252,11 +1316,24 @@ async function startPeerConnection() {
     myPeer.on("open", (id) => {
       console.log("✅ Kết nối Peer thành công:", id);
       showNotification("Đã kết nối Voice Chat", "success");
+      // Mặc định kết nối tới mọi người để LẮNG NGHE (Nhận âm thanh)
       connectToAllPeers();
     });
 
     myPeer.on("call", (call) => {
-      call.answer(myStream);
+      // Phải có luồng giả hoặc gọi answer. Nếu không có Mic (chưa getUserMedia), answer bằng stream rỗng hoặc không truyền thông số.
+      if (myStream) {
+          call.answer(myStream);
+      } else {
+          // Fake audio track to answer calls even if muted
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = ctx.createOscillator();
+          const dst = ctx.createMediaStreamDestination();
+          oscillator.connect(dst);
+          // Không bật oscillator để nó không kêu, chỉ đưa track rỗng
+          call.answer(dst.stream);
+      }
+      
       call.on("stream", (remoteStream) => {
         addAudioStream(remoteStream, call.peer);
       });
@@ -1270,22 +1347,10 @@ async function startPeerConnection() {
         }, 3000);
       }
     });
+
   } catch (err) {
-    console.error("Lỗi Mic:", err);
-    // Thông báo chi tiết hơn tùy loại lỗi
-    if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-      if (!isSecure) {
-        showNotification("Mic bị chặn vì không dùng HTTPS! Hãy truy cập qua https:// hoặc localhost", "error");
-      } else {
-        showNotification("Bạn đã từ chối quyền Micro. Vui lòng cấp quyền trong cài đặt trình duyệt!", "error");
-      }
-    } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-      showNotification("Không tìm thấy Micro trên thiết bị!", "error");
-    } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-      showNotification("Micro đang được ứng dụng khác sử dụng!", "error");
-    } else {
-      showNotification("Lỗi kết nối Micro: " + (err.message || err.name), "error");
-    }
+    console.error("Lỗi khởi tạo Voice Chat Server:", err);
+    showNotification("Lỗi kết nối máy chủ Voice Chat. Vui lòng thử lại sau.", "error");
   }
 }
 
@@ -1329,6 +1394,28 @@ function addAudioStream(stream, peerId) {
     document.body.appendChild(container);
   }
   container.appendChild(audio);
+
+  // 🔊 Tạo Web Audio API GainNode để khuếch đại vượt 100%
+  try {
+    if (!globalAudioContext)
+      globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (globalAudioContext.state === 'suspended') globalAudioContext.resume().catch(()=>{});
+    
+    const source = globalAudioContext.createMediaElementSource(audio);
+    const gainNode = globalAudioContext.createGain();
+    
+    // Áp dụng mức âm lượng đã lưu (nếu có)
+    const savedVol = peerVolumeLevels[peerId] !== undefined ? peerVolumeLevels[peerId] : 1;
+    gainNode.gain.value = savedVol;
+    
+    source.connect(gainNode);
+    gainNode.connect(globalAudioContext.destination);
+    
+    // Lưu GainNode để setPeerVolume() truy cập được
+    window[`gainNode_${peerId}`] = gainNode;
+  } catch(e) {
+    console.warn('⚠️ Không thể tạo GainNode cho peer:', peerId, e);
+  }
 
   monitorAudioLevel(stream, peerId);
 
@@ -1400,7 +1487,7 @@ function addMicButtonToUI() {
 
   const micBtn = document.createElement("button");
   micBtn.id = "myMicBtn";
-  micBtn.className = "btn-mic-toggle active";
+  micBtn.className = "btn-mic-toggle active"; // Mặc định tắt (đỏ)
   micBtn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
   micBtn.onclick = toggleMyMic;
 
@@ -1410,19 +1497,108 @@ function addMicButtonToUI() {
   deafenBtn.innerHTML = '<i class="fas fa-headphones"></i>';
   deafenBtn.onclick = toggleDeafen;
 
+  // Nút âm lượng tổng cho Voice Chat
+  const volBtn = document.createElement("div");
+  volBtn.id = "voiceVolBtnWrap";
+  volBtn.className = "voice-vol-btn-wrap";
+  volBtn.innerHTML = `
+    <button class="btn-voice-vol" onclick="toggleVoiceVolumePopup()" title="Âm lượng Voice Chat">
+      <i class="fas fa-volume-up"></i>
+    </button>
+    <div class="voice-vol-popup hidden" id="voiceVolPopup">
+      <div class="voice-vol-popup-header">
+        <i class="fas fa-users"></i> Âm lượng Voice
+      </div>
+      <div class="voice-vol-popup-body">
+        <i class="fas fa-volume-down"></i>
+        <input type="range" min="0" max="200" value="${Math.round(globalVoiceVolume * 100)}" 
+               class="voice-vol-slider" id="globalVoiceSlider" 
+               oninput="setGlobalVoiceVolume(this.value)">
+        <i class="fas fa-volume-up"></i>
+      </div>
+      <div class="voice-vol-popup-label" id="globalVoiceLabel">${Math.round(globalVoiceVolume * 100)}%</div>
+    </div>
+  `;
+
+  header.insertBefore(volBtn, header.firstChild);
   header.insertBefore(deafenBtn, header.firstChild);
   header.insertBefore(micBtn, header.firstChild);
 }
 
-function toggleMyMic() {
-  if (globalAudioContext?.state === "suspended") globalAudioContext.resume();
+async function toggleMyMic() {
+  if (globalAudioContext?.state === "suspended") globalAudioContext.resume().catch(()=>{});
+  
+  // NGUYÊN TẮC: Nếu chưa có luồng thực tế -> Yêu cầu xin quyền (getUserMedia)
   if (!myStream) {
-    showNotification("Đang kết nối Mic...", "info");
-    return;
+      showNotification("Đang yêu cầu quyền Micro...", "info");
+      
+      const isSecure = location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      if (!isSecure) {
+          showNotification("⚠️ Voice Chat cần HTTPS để cấp quyền Micro. Hãy dùng HTTPS hoặc localhost!", "error");
+          return;
+      }
+
+      try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                  echoCancellation: /iPad|iPhone|iPod/.test(navigator.userAgent) ? false : true, // Tắt trên iOS để tránh ducking quá mạnh
+                  noiseSuppression: true,
+                  autoGainControl: false, // Tắt tự động giảm âm lượng video nền
+              },
+              video: false,
+          });
+          
+          myStream = stream;
+          isMicEnabled = true;
+          myStream.getAudioTracks()[0].enabled = true;
+          
+          updateMicUI(true);
+          monitorAudioLevel(myStream, currentUser.uid);
+
+          // Cập nhật Database
+          db.collection("watchRooms")
+            .doc(currentRoomId)
+            .collection("members")
+            .doc(currentUser.uid)
+            .update({ isMicMuted: false });
+          
+          // Gửi luồng âm thanh mới này cho tất cả những người trong phòng
+          if (myPeer && !myPeer.destroyed) {
+              connectToAllPeers();
+          }
+
+          showNotification("Micro đã được bật!", "success");
+
+          // Bắt đầu boost âm lượng video khi mic bật để chống ducking
+          if (player && player.tagName === "VIDEO" && !player.muted) {
+              player.volume = 1;
+              player.muted = false; // Đảm bảo tiếng không bị vô tình ngắt bởi OS
+          }
+
+      } catch (err) {
+          console.error("Lỗi Mic:", err);
+          if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+              showNotification("Bạn đã từ chối quyền Micro. Lấy lại quyền trên ổ khóa cạnh thanh địa chỉ URL!", "error");
+          } else {
+              showNotification("Lỗi kết nối Micro: " + (err.message || err.name), "error");
+          }
+      }
+      return;
   }
+
+  // NẾU ĐÃ CÓ LUỒNG SẴN (Bật/Tắt bình thường)
   isMicEnabled = !isMicEnabled;
-  if (myStream.getAudioTracks()[0])
-    myStream.getAudioTracks()[0].enabled = isMicEnabled;
+  if (myStream.getAudioTracks()[0]) {
+      myStream.getAudioTracks()[0].enabled = isMicEnabled;
+  }
+  
+  // NẾU BẬT MIC -> Boost âm lượng video. NẾU TẮT MIC -> Phục hồi
+  if (player && player.tagName === "VIDEO" && !player.muted) {
+      if (isMicEnabled) {
+          player.volume = 1; 
+      }
+  }
+
   updateMicUI(isMicEnabled);
   db.collection("watchRooms")
     .doc(currentRoomId)

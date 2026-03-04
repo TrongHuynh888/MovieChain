@@ -1246,6 +1246,109 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
   animation: pulse-red 2s infinite;
 }
 
+/* --- Nút Âm lượng Voice Chat Tổng --- */
+.voice-vol-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-right: 6px;
+}
+
+.btn-voice-vol {
+  background: #333;
+  color: #00d4ff;
+  border: 1px solid #555;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+.btn-voice-vol:hover {
+  background: #444;
+  border-color: #00d4ff;
+}
+
+/* Popup chỉnh âm lượng Voice */
+.voice-vol-popup {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  background: rgba(30, 30, 40, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-width: 200px;
+  z-index: 5000;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: wpFadeInUp 0.2s ease-out;
+}
+.voice-vol-popup.hidden {
+  display: none;
+}
+
+.voice-vol-popup-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #00d4ff;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.voice-vol-popup-header i {
+  margin-right: 5px;
+}
+
+.voice-vol-popup-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+}
+
+.voice-vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+.voice-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00d4ff;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(0,212,255,0.5);
+}
+.voice-vol-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00d4ff;
+  cursor: pointer;
+  border: none;
+}
+
+.voice-vol-popup-label {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 6px;
+}
+
 /* Controls quản trị viên trong danh sách thành viên */
 .member-controls {
   display: flex;
@@ -1317,6 +1420,64 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
 
 .member-item:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- Per-peer Volume Control Slider --- */
+.peer-volume-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.peer-vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 70px;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.peer-vol-slider:hover {
+  background: rgba(255,255,255,0.35);
+}
+
+.peer-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #00d4ff;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0,212,255,0.5);
+  transition: transform 0.15s;
+}
+
+.peer-vol-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.peer-vol-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #00d4ff;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 4px rgba(0,212,255,0.5);
+}
+
+.peer-vol-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  min-width: 32px;
+  text-align: center;
+  font-weight: 500;
 }
 
 /* QUAN TRỌNG: Định cỡ ảnh đại diện để không bị to đùng */
