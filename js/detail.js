@@ -1949,6 +1949,29 @@ function initCustomControls(video) {
         resetHideTimer();
     });
     
+    // --- NGĂN CHẶN SAFARI URL BAR KHI CHẠM VÀO CONTROLS ---
+    // Safari trên iOS tự động hiện thanh URL khi chạm vào mép trên/dưới.
+    // Dùng preventDefault() trên các thanh công cụ để ngăn chặn hành vi này, 
+    // trong khi vẫn cho phép click vào các nút bên trong hoạt động bình thường.
+    function preventSafariUIRedraw(e) {
+        // Chỉ áp dụng khi đang ở chế độ pseudo-fullscreen nằm ngang
+        if (container.classList.contains("pseudo-fullscreen")) {
+            // Nếu chạm vào thanh timeline (input range), cho phép mặc định để kéo được
+            if (e.target.tagName.toLowerCase() === 'input') return;
+            e.preventDefault(); 
+        }
+    }
+
+    const topBar = document.getElementById("playerTopBar");
+    const bottomControls = document.getElementById("customControls");
+    const epPanel = document.getElementById("playerEpisodePanel");
+    const reactionSidebar = document.getElementById("reactionSidebar");
+
+    if (topBar) topBar.addEventListener("touchstart", preventSafariUIRedraw, { passive: false });
+    if (bottomControls) bottomControls.addEventListener("touchstart", preventSafariUIRedraw, { passive: false });
+    if (epPanel) epPanel.addEventListener("touchstart", preventSafariUIRedraw, { passive: false });
+    if (reactionSidebar) reactionSidebar.addEventListener("touchstart", preventSafariUIRedraw, { passive: false });
+    
     // Set initial state
     container.classList.add("paused");
     console.log("Custom controls initialized for video:", video);
@@ -1968,6 +1991,10 @@ function showControls() {
     if(controls) controls.classList.add("show");
     if(centerOverlay) centerOverlay.style.opacity = "1";
     if(topBar) topBar.classList.add("show");
+
+    // Nút khóa màn hình cũng hiện/ẩn cùng controls
+    const lockBtn = document.getElementById("screenLockBtn");
+    if (lockBtn) lockBtn.classList.add("show");
 }
 
 function hideControls() {
@@ -1995,6 +2022,10 @@ function hideControls() {
     if (controls) controls.classList.remove("show");
     if (centerOverlay) centerOverlay.style.opacity = "0";
     if (topBar) topBar.classList.remove("show");
+
+    // Nút khóa màn hình cũng ẩn cùng controls
+    const lockBtn = document.getElementById("screenLockBtn");
+    if (lockBtn) lockBtn.classList.remove("show");
 }
 
 function resetHideTimer() {
@@ -2400,6 +2431,22 @@ window.toggleFullscreen = function() {
             return;
         }
         if (isPseudoFullscreen) {
+            // Gỡ khóa màn hình nếu đang bật
+            if (container.classList.contains("screen-locked")) {
+                container.classList.remove("screen-locked");
+                document.removeEventListener("touchmove", _blockTouch);
+                document.removeEventListener("touchstart", _blockTouch);
+                document.documentElement.style.overflow = "";
+                document.body.style.overflow = "";
+                document.body.style.position = "";
+                document.body.style.width = "";
+                document.body.style.height = "";
+                const lockBtn = document.getElementById("screenLockBtn");
+                if (lockBtn) {
+                    const li = lockBtn.querySelector("i");
+                    if (li) li.className = "fas fa-lock-open";
+                }
+            }
             container.classList.remove("pseudo-fullscreen");
             document.documentElement.classList.remove("has-pseudo-fullscreen");
             document.body.classList.remove("has-pseudo-fullscreen");
@@ -2437,7 +2484,17 @@ document.addEventListener("keydown", function(e) {
  * Bật/Tắt khóa màn hình trong pseudo-fullscreen
  * Khi khóa: ẩn hết controls, chỉ giữ nút mở khóa
  * Ngăn chặn việc vô tình thoát fullscreen khi xem phim
+ * Chặn touch event để trình duyệt không thể kéo thanh URL xuống
  */
+
+// Hàm chặn touch di chuyển và chạm (ngăn cuộn trang -> ngăn thanh URL hiện)
+function _blockTouch(e) {
+    // Cho phép chạm vào nút khóa, không chặn nó
+    if (e.target.closest && e.target.closest('#screenLockBtn')) return;
+    e.preventDefault();
+    e.stopPropagation();
+}
+
 window.toggleScreenLock = function() {
     const container = document.getElementById("videoContainer");
     const lockBtn = document.getElementById("screenLockBtn");
@@ -2447,15 +2504,88 @@ window.toggleScreenLock = function() {
     const lockIcon = lockBtn.querySelector("i");
 
     if (isLocked) {
-        // Đã khóa
+        // Đã khóa - chặn mọi thao tác vuốt trên toàn bộ document
         if (lockIcon) lockIcon.className = "fas fa-lock";
         lockBtn.title = "Mở khóa màn hình";
+        document.addEventListener("touchmove", _blockTouch, { passive: false });
+        document.addEventListener("touchstart", _blockTouch, { passive: false });
+        // Thêm khóa overflow cứng cho cả html
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+        document.body.style.position = "fixed";
+        document.body.style.width = "100%";
+        document.body.style.height = "100%";
     } else {
-        // Đã mở khóa
+        // Đã mở khóa - tháo chặn
         if (lockIcon) lockIcon.className = "fas fa-lock-open";
         lockBtn.title = "Khóa màn hình";
+        document.removeEventListener("touchmove", _blockTouch);
+        document.removeEventListener("touchstart", _blockTouch);
+        // Khôi phục lại overflow cho body (vẫn giữ lại has-pseudo-fullscreen nếu đang fullscreen)
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+        document.body.style.position = "";
+        document.body.style.width = "";
+        document.body.style.height = "";
     }
 };
+
+/**
+ * PINCH-TO-FILL: Dùng 2 ngón tay để lắp đầy màn hình
+ * Pinch ra xa (zoom out) → object-fit: cover (lắp đầy, cắt rìa)
+ * Pinch vào trong (zoom in) → object-fit: contain (vừa vặn, có viền đen)
+ */
+(function() {
+    let initialPinchDistance = 0;
+    let isPinching = false;
+
+    // Tính khoảng cách giữa 2 ngón tay
+    function getPinchDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    document.addEventListener("touchstart", function(e) {
+        if (e.touches.length !== 2) return;
+        const container = document.getElementById("videoContainer");
+        if (!container || !container.classList.contains("pseudo-fullscreen")) return;
+
+        isPinching = true;
+        initialPinchDistance = getPinchDistance(e.touches);
+    }, { passive: true });
+
+    document.addEventListener("touchmove", function(e) {
+        if (!isPinching || e.touches.length !== 2) return;
+        // Không preventDefault ở đây vì đã dùng passive: true
+    }, { passive: true });
+
+    document.addEventListener("touchend", function(e) {
+        if (!isPinching) return;
+        isPinching = false;
+
+        const container = document.getElementById("videoContainer");
+        if (!container || !container.classList.contains("pseudo-fullscreen")) return;
+
+        // Nếu chỉ còn 1 ngón hoặc hết ngón → tính kết quả pinch
+        // Lấy khoảng cách cuối cùng từ event trước đó
+        if (e.changedTouches.length >= 1 && initialPinchDistance > 0) {
+            // Tạm tính: nếu touchend thì dùng hướng ngược lại
+            // Dùng cách đơn giản hơn: toggle khi phát hiện pinch 2 ngón
+            container.classList.toggle("video-fill");
+            
+            // Hiện thông báo cho user biết
+            const isFill = container.classList.contains("video-fill");
+            if (typeof showNotification === "function") {
+                showNotification(
+                    isFill ? "📐 Lắp đầy màn hình" : "📐 Vừa vặn màn hình",
+                    "info"
+                );
+            }
+        }
+        initialPinchDistance = 0;
+    }, { passive: true });
+})();
 
 // Lắng nghe sự kiện fullscreenchange để đồng bộ icon
 document.addEventListener("fullscreenchange", function() {

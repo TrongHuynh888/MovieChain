@@ -2326,6 +2326,13 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
   height: 100% !important;
   flex: 1 !important;
   object-fit: contain !important;
+  transition: object-fit 0.2s;
+}
+
+/* Khi pinch-to-fill: lắp đầy màn hình, cắt bớt rìa video */
+.video-container.pseudo-fullscreen.video-fill iframe,
+.video-container.pseudo-fullscreen.video-fill video {
+  object-fit: cover !important;
 }
 
 /* Kích hoạt top bar (chứa tên, số tập) ở chế độ pseudo-fullscreen */
@@ -2405,20 +2412,56 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
 
 /* ============================================================
    TRẠNG THÁI KHÓA MÀN HÌNH (screen-locked)
-   Ẩn hết controls + top-bar, chỉ giữ nút mở khóa
+   - Ẩn top-bar, center play, và hàng nút điều khiển
+   - GIỮ NGUYÊN thanh thời gian (timeline) để user theo dõi phút xem
+   - Nút khóa + timeline auto-hide cùng controls (theo class .show)
    ============================================================ */
-.video-container.pseudo-fullscreen.screen-locked .player-top-bar,
-.video-container.pseudo-fullscreen.screen-locked .center-controls-overlay,
-.video-container.pseudo-fullscreen.screen-locked .custom-video-controls {
+
+/* Ẩn top bar (tên phim) khi khóa */
+.video-container.pseudo-fullscreen.screen-locked .player-top-bar {
   display: none !important;
-  opacity: 0 !important;
+}
+
+/* Ẩn center play/skip overlay khi khóa */
+.video-container.pseudo-fullscreen.screen-locked .center-controls-overlay {
+  display: none !important;
+}
+
+/* Ẩn hàng nút điều khiển (play, skip, volume, settings, pip, fullscreen) khi khóa */
+.video-container.pseudo-fullscreen.screen-locked .video-controls-row {
+  display: none !important;
+}
+
+/* GIỮ thanh timeline (time-row + progress bar) — custom-video-controls vẫn hiện */
+/* (Không ẩn .custom-video-controls nữa, chỉ ẩn .video-controls-row bên trong) */
+
+/* Vô hiệu hóa tương tác (bấm nhầm tua video) khi khóa màn hình */
+.video-container.pseudo-fullscreen.screen-locked .video-progress-container {
   pointer-events: none !important;
 }
 
-/* Nút khóa vẫn hiện khi đã khóa, nhưng mờ đi */
+/* Nút khóa - mặc định ẩn, hiện cùng lúc với controls (JS thêm class .show) */
+.screen-lock-float {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+/* Khi JS thêm class .show hoặc video đang tạm dừng thì nút khóa hiện */
+.screen-lock-float.show,
+.video-container.pseudo-fullscreen.paused .screen-lock-float {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Khi đã khóa, nút khóa sẽ ẩn/hiện hoàn toàn theo class .show */
 .video-container.pseudo-fullscreen.screen-locked .screen-lock-float {
-  display: flex !important;
-  opacity: 0.4;
+  opacity: 0;
+  pointer-events: none;
+}
+.video-container.pseudo-fullscreen.screen-locked .screen-lock-float.show {
+  opacity: 0.7;
+  pointer-events: auto;
 }
 .video-container.pseudo-fullscreen.screen-locked .screen-lock-float:active {
   opacity: 1;
