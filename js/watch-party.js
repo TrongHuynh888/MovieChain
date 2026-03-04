@@ -1780,7 +1780,7 @@ function initHTML5Player(type, source, initialData) {
     container.appendChild(video);
     player = video; // Gán vào biến toàn cục
     player.videoType = type; // Đánh dấu loại
-    video.controls = false; // Tắt native controls, dùng custom
+    video.controls = false; // [QUAN TRỌNG] Luôn tắt native controls để dùng custom UI
 
     // Xác định phòng có lên lịch chiếu hay không
     const isScheduledRoom = !!(initialData.scheduledTime);
@@ -2833,25 +2833,50 @@ window.wpSetSubtitleColor = function(color) {
 // --- Fullscreen (All users) ---
 window.wpToggleFullscreen = function() {
     const container = document.getElementById("wpVideoContainer");
+    if (!container) return;
     const icon = document.querySelector("#wpFullscreenBtn i");
-    let isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    
+    // Kiểm tra xem có đang ở chế độ Fullscreen thật (PC/Tablet) hay Pseudo Fullscreen (Mobile) không
+    let isNativeFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    let isPseudoFS = container.classList.contains('is-wp-pseudo-fs');
+    
+    // Phát hiện thiết bị di động (Mobile/iPhone)
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0);
 
-    if (!isFullscreen) {
-        if (container.requestFullscreen) {
-            container.requestFullscreen();
-        } else if (container.webkitRequestFullscreen) {
-            container.webkitRequestFullscreen(); // Safari desktop/Android
-        } else if (player && player.tagName === "VIDEO" && player.webkitEnterFullscreen) {
-            // Cứu cánh cho iOS Safari (chỉ cho phép video fullscreen, không cho div)
-            player.webkitEnterFullscreen();
-            return;
+    if (isMobile) {
+        // --- CHẾ ĐỘ PSEUDO FULLSCREEN CHO MOBILE ---
+        if (!isPseudoFS) {
+            container.classList.add('is-wp-pseudo-fs');
+            document.body.classList.add('is-wp-pseudo-fs');
+            if (icon) icon.className = "fas fa-compress";
+            
+            // Cố gắng xoay màn hình nếu trình duyệt hỗ trợ (Android Chrome)
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+        } else {
+            container.classList.remove('is-wp-pseudo-fs');
+            document.body.classList.remove('is-wp-pseudo-fs');
+            if (icon) icon.className = "fas fa-expand";
+            
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+            }
         }
-        if (icon) icon.className = "fas fa-compress";
     } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
+        // --- CHẾ ĐỘ NATIVE FULLSCREEN CHO PC ---
+        if (!isNativeFS) {
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            } else if (container.webkitRequestFullscreen) {
+                container.webkitRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
         }
     }
 };
