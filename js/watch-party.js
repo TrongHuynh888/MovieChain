@@ -174,7 +174,7 @@ function renderWatchRooms(rooms) {
     return;
   }
 
-  container.innerHTML = "";
+  let htmlContent = "";
   rooms.forEach((room) => {
     const isPrivate = room.type === "private";
     const count = room.memberCount || 0;
@@ -271,8 +271,11 @@ function renderWatchRooms(rooms) {
           </button>
         </div>
       </div>`;
-    container.innerHTML += html;
+    
+    htmlContent += html;
   });
+
+  container.innerHTML = htmlContent;
 
   initRoomPopupEvents();
 }
@@ -1604,11 +1607,16 @@ function initHTML5Player(type, source, initialData) {
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
             if (isScheduledRoom) {
-                // Phòng hẹn giờ: HLS.js đã load đúng segment, chỉ cần play
-                video.play().catch(e => console.log("Auto-play blocked", e));
+                video.play().catch(e => {
+                    console.log("Auto-play blocked (Scheduled HLS)", e);
+                    showMobilePlayOverlay();
+                });
             } else if (initialData.status === "playing") {
                 video.currentTime = initialData.currentTime || 0;
-                video.play().catch(e => console.log("Auto-play blocked", e));
+                video.play().catch(e => {
+                    console.log("Auto-play blocked (Playing HLS)", e);
+                    showMobilePlayOverlay();
+                });
             }
             wpPopulateQuality(hls);
         });
@@ -1619,10 +1627,16 @@ function initHTML5Player(type, source, initialData) {
         video.src = source;
         if (isScheduledRoom && hlsStartPosition > 0) {
             video.currentTime = hlsStartPosition;
-            video.play().catch(e => console.log("Auto-play blocked", e));
+            video.play().catch(e => {
+                console.log("Auto-play blocked (Scheduled MP4)", e);
+                showMobilePlayOverlay();
+            });
         } else if (initialData.status === "playing") {
              video.currentTime = initialData.currentTime || 0;
-             video.play().catch(e => console.log("Auto-play blocked", e));
+             video.play().catch(e => {
+                 console.log("Auto-play blocked (Playing MP4)", e);
+                 showMobilePlayOverlay();
+             });
         }
     }
 
@@ -1839,7 +1853,10 @@ function handleSync(data) {
       }
       
       if (data.status === "playing" && player.paused) {
-          player.play().catch(e => console.log("Sync play failed:", e));
+          player.play().catch(e => {
+              console.log("Sync play failed (Autoplay block):", e);
+              showMobilePlayOverlay();
+          });
       } else if (data.status === "paused" && !player.paused) {
           player.pause();
       }
@@ -2228,7 +2245,10 @@ window.syncPlay = function () {
     player.playVideo();
     updateRoomState("playing", player.getCurrentTime());
   } else { // HTML5
-    player.play().catch(e=>{});
+    player.play().catch(e => {
+        console.log("SyncPlay Error:", e);
+        showMobilePlayOverlay();
+    });
   }
 };
 
@@ -2652,6 +2672,26 @@ window.syncPlay = function() {
     }
 };
 
+// --- MOBILE AUTOPLAY FIX ---
+window.showMobilePlayOverlay = function() {
+    const overlay = document.getElementById("wpMobilePlayOverlay");
+    if (overlay) overlay.classList.remove("hidden");
+};
+
+window.wpInteractToPlay = function() {
+    const overlay = document.getElementById("wpMobilePlayOverlay");
+    if (overlay) overlay.classList.add("hidden");
+    
+    if (!player) return;
+    
+    // Phát video sau khi có tương tác
+    if (player.tagName === "VIDEO") {
+        player.play().catch(e => console.error("Still blocked after tap:", e));
+    } else if (typeof player.playVideo === "function") {
+        player.playVideo();
+    }
+};
+
 /* ==========================================
    SCHEDULED ROOMS LOGIC (Hẹn giờ)
    ========================================== */
@@ -2793,7 +2833,10 @@ function startScheduleSync(roomData) {
                 isBufferingState = (player.readyState < 3);
 
                 if (!isPlaying && !isBufferingState) {
-                    player.play().catch(e => console.log("Schedule auto-play blocked", e));
+                    player.play().catch(e => {
+                        console.log("Schedule auto-play blocked", e);
+                        showMobilePlayOverlay();
+                    });
                 }
             }
 
