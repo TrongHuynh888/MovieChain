@@ -2355,41 +2355,33 @@ window.togglePiP = async function() {
 window.toggleFullscreen = function() {
     const container = document.getElementById("videoContainer");
     const icon = document.querySelector("#fullscreenBtn i");
+    let video = document.getElementById("html5Player"); 
     if (!container) return;
 
-    // Kiểm tra đang fullscreen chưa (cả chuẩn lẫn webkit)
-    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    // Check if the HTML5 video player is actually active
+    const isHtml5Active = video && !video.classList.contains('hidden');
+    let isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
 
     if (!isFullscreen) {
-        // Vào fullscreen
-        try {
-            if (container.requestFullscreen) {
-                container.requestFullscreen().catch(err => {
-                    console.warn("Fullscreen API error:", err.message);
-                });
-            } else if (container.webkitRequestFullscreen) {
-                container.webkitRequestFullscreen(); // Safari desktop/Android
-            } else if (videoEl && videoEl.webkitEnterFullscreen) {
-                // Cứu cánh cho iOS Safari (chỉ cho phép video fullscreen, không cho div)
-                videoEl.webkitEnterFullscreen();
-                return;
-            }
-            if (icon) icon.className = "fas fa-compress";
-        } catch (err) {
-            console.error("Fullscreen error:", err);
+        if (container.requestFullscreen) {
+            container.requestFullscreen().catch(err => {
+                console.warn("Fullscreen API error:", err);
+            });
+        } else if (container.webkitRequestFullscreen) {
+            container.webkitRequestFullscreen(); // Safari desktop/Android
+        } else if (isHtml5Active && video.webkitEnterFullscreen) {
+            // Cứu cánh cho iOS Safari (chỉ cho phép video fullscreen, không cho div)
+            video.webkitEnterFullscreen();
+            return;
         }
+        if (icon) icon.className = "fas fa-compress";
     } else {
-        // Thoát fullscreen
-        try {
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch(e => console.log("Exit fullscreen:", e));
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
-            if (icon) icon.className = "fas fa-expand";
-        } catch (err) {
-            console.error("Exit fullscreen error:", err);
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(e => console.log("Exit fullscreen:", e));
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
         }
+        if (icon) icon.className = "fas fa-expand";
     }
 };
 
