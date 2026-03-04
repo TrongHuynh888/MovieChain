@@ -2565,24 +2565,3 @@ select.wp-super-input {
   background: var(--accent-secondary);
   transform: translateY(-2px);
 }
-
-/* =========================================
-   WATCH PARTY - MOBILE/TABLET FULLSCREEN FIX
-   ========================================= */
-
-/* Chỉ áp dụng trên Mobile và Tablet (max-width: 1024px) */
-@media screen and (max-width: 1024px) {
-    /* Khi ở chế độ toàn màn hình, ẩn các nút điều khiển phát và thanh thời gian */
-    .video-container.is-wp-fullscreen .wp-center-overlay,
-    .video-container.is-wp-fullscreen .wp-progress-container,
-    .video-container.is-wp-fullscreen #wpPlayPauseBtn {
-        display: none !important;
-        pointer-events: none !important;
-        opacity: 0 !important;
-    }
-
-    /* Đảm bảo khung video chiếm trọn không gian nhưng vẫn cho phép các controls khác hiển thị nếu cần */
-    .video-container.is-wp-fullscreen {
-        background: #000;
-    }
-}

@@ -2853,29 +2853,9 @@ window.wpToggleFullscreen = function() {
         } else if (document.webkitExitFullscreen) {
             document.webkitExitFullscreen();
         }
-    }
-};
-
-// --- Lắng nghe sự kiện Fullscreen Change để quản lý UI ---
-document.addEventListener('fullscreenchange', wpOnFullscreenChange);
-document.addEventListener('webkitfullscreenchange', wpOnFullscreenChange);
-document.addEventListener('mozfullscreenchange', wpOnFullscreenChange);
-document.addEventListener('msfullscreenchange', wpOnFullscreenChange);
-
-function wpOnFullscreenChange() {
-    const container = document.getElementById("wpVideoContainer");
-    if (!container) return;
-    const icon = document.querySelector("#wpFullscreenBtn i");
-    const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-    
-    if (isFS) {
-        container.classList.add('is-wp-fullscreen');
-        if (icon) icon.className = "fas fa-compress";
-    } else {
-        container.classList.remove('is-wp-fullscreen');
         if (icon) icon.className = "fas fa-expand";
     }
-}
+};
 
 // Update syncPlay to also toggle pause (for center button)
 const _originalSyncPlay = window.syncPlay;
