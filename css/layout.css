@@ -2274,15 +2274,14 @@ video::-webkit-media-controls-enclosure {
    Ngăn chặn chặn custom control list của Apple Native Player
    ============================================================ */
 .video-container.pseudo-fullscreen {
-  position: fixed !important;
+  /* Chuyển từ fixed sang absolute để nội dung thực sự có thể cuộn chìm xuống dưới */
+  position: absolute !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  bottom: 0 !important;
   width: 100vw !important;
-  height: 100dvh !important;
-  max-width: 100vw !important;
-  max-height: 100dvh !important;
+  /* Dùng min-height thay vì fix height cứng để cho phép không gian cuộn */
+  min-height: 120vh !important;
   border-radius: 0 !important;
   background: #000 !important;
   display: flex !important;
@@ -2295,10 +2294,10 @@ video::-webkit-media-controls-enclosure {
 }
 
 body.has-pseudo-fullscreen {
-  /* Ép chiều cao nền dài ra để trình duyệt luôn CÓ KHOẢNG TRỐNG cuộn trang.
-     Nếu độ dài trang chỉ vừa đúng 100vh, lệnh auto-scroll sẽ bị vô hiệu hóa 
-     khiến thanh URL không thể tự ẩn được chừng nào chưa vuốt tay */
+  /* Cần đảm bảo body không bị khóa và đủ độ dài để vuốt */
+  overflow: visible !important;
   min-height: 150vh !important;
+  background-color: #000 !important; 
 }
 
 /* Ẩn thanh cuộn nếu có để trông sạch hơn, 
