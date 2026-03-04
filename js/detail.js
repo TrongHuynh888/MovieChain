@@ -1918,9 +1918,13 @@ function initCustomControls(video) {
         resetHideTimer();
         
         if (!isControlBtn && !isSettingsMenu && !isProgressContainer) {
-            console.log("Calling togglePlay from container click");
-            if (typeof togglePlay === 'function') togglePlay();
-            else if (window.togglePlay) window.togglePlay();
+            // THEO YÊU CẦU: Chỉ cho phép chạm vào màn hình để play/pause KHI ĐANG KHÓA.
+            // Khi không khóa, chạm vào màn hình chỉ để hiện controls.
+            if (container.classList.contains("screen-locked")) {
+                console.log("Calling togglePlay from container click (Screen Locked)");
+                if (typeof togglePlay === 'function') togglePlay();
+                else if (window.togglePlay) window.togglePlay();
+            }
         }
     });
     
@@ -1956,8 +1960,42 @@ function initCustomControls(video) {
     function preventSafariUIRedraw(e) {
         // Chỉ áp dụng khi đang ở chế độ pseudo-fullscreen nằm ngang
         if (container.classList.contains("pseudo-fullscreen")) {
-            // Nếu chạm vào thanh timeline (input range), cho phép mặc định để kéo được
-            if (e.target.tagName.toLowerCase() === 'input') return;
+            const target = e.target;
+            const tagName = target.tagName.toLowerCase();
+            
+            // Nếu chạm vào thẻ input (ví dụ thanh tiến trình), để mặc định
+            if (tagName === 'input') return;
+            // BỎ QUA không chặn các phần tử có tương tác (nút bấm, link, thẻ input)
+            let curr = target;
+            let isInteractive = false;
+            while (curr && curr !== e.currentTarget && curr !== document.body) {
+                const tag = curr.tagName ? curr.tagName.toLowerCase() : '';
+                if (
+                    tag === 'button' || 
+                    tag === 'a' || 
+                    tag === 'input' ||
+                    (curr.classList && (
+                        curr.classList.contains('control-btn') ||
+                        curr.classList.contains('episode-btn') ||
+                        curr.classList.contains('settings-item') ||
+                        curr.classList.contains('submenu-item') ||
+                        curr.classList.contains('submenu-header') ||
+                        curr.classList.contains('video-progress-container') ||
+                        curr.classList.contains('ep-panel-item') ||
+                        curr.classList.contains('episode-panel-close')
+                    ))
+                ) {
+                    isInteractive = true;
+                    break;
+                }
+                curr = curr.parentNode;
+            }
+
+            if (isInteractive) {
+                return; // Cho phép trình duyệt tạo sự kiện click
+            }
+
+            // Chỉ chặn hành vi mặc định khi chạm vào khoảng trống/viền đen của thanh công cụ
             e.preventDefault(); 
         }
     }
@@ -2489,8 +2527,25 @@ document.addEventListener("keydown", function(e) {
 
 // Hàm chặn touch di chuyển và chạm (ngăn cuộn trang -> ngăn thanh URL hiện)
 function _blockTouch(e) {
-    // Cho phép chạm vào nút khóa, không chặn nó
-    if (e.target.closest && e.target.closest('#screenLockBtn')) return;
+    // Cho phép chạm vào nút khóa và nút danh sách tập, không chặn
+    if (e.target.closest) {
+        if (e.target.closest('#screenLockBtn')) return;
+        if (e.target.closest('#episodeListBtn')) return;
+        // Cho phép tương tác bên trong bảng chọn tập luôn
+        if (e.target.closest('.player-episode-panel')) return;
+        // Cho phép tương tác bên trong menu cài đặt
+        if (e.target.closest('.settings-menu')) return;
+    }
+    
+    // Nếu chạm vào màn hình đen hoặc video (không trúng các phần tử trên),
+    // THEO YÊU CẦU: cho phép play/pause khi khóa màn hình bằng cách gọi luôn hàm
+    // Chú ý: Chỉ phát/dừng khi chạm 1 ngón tay (không phải pinch-to-zoom)
+    if (e.type === 'touchstart' && e.touches && e.touches.length === 1) {
+        console.log("Tap to play/pause in locked mode");
+        if (typeof togglePlay === 'function') togglePlay();
+        else if (window.togglePlay) window.togglePlay();
+    }
+    
     e.preventDefault();
     e.stopPropagation();
 }

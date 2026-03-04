@@ -2417,9 +2417,16 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
    - Nút khóa + timeline auto-hide cùng controls (theo class .show)
    ============================================================ */
 
-/* Ẩn top bar (tên phim) khi khóa */
-.video-container.pseudo-fullscreen.screen-locked .player-top-bar {
-  display: none !important;
+/* GIỮ NGUYÊN toàn bộ top bar (tiến trình, tên phim, nút danh sách tập) */
+/* Vô hiệu hóa tương tác phần tiêu đề phim bên trái khi khóa màn hình, chỉ cho bấm nút bên phải */
+.video-container.pseudo-fullscreen.screen-locked .player-top-bar .top-bar-left {
+  pointer-events: none !important;
+}
+.video-container.pseudo-fullscreen.screen-locked .player-top-bar .top-bar-right {
+  pointer-events: auto !important;
+}
+.video-container.pseudo-fullscreen.screen-locked .player-episode-panel {
+  pointer-events: auto !important;
 }
 
 /* Ẩn center play/skip overlay khi khóa */
