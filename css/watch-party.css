@@ -1012,28 +1012,63 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
 /* Landscape mode mobile - member list compact */
 @media screen and (max-height: 500px) and (orientation: landscape) {
   .member-item {
-    padding: 6px 8px;
-    gap: 3px;
+    padding: 5px 8px;
+    gap: 2px;
+  }
+  .member-main-row {
+    gap: 4px;
+  }
+  .member-identity {
+    gap: 6px;
   }
   .member-avatar {
-    width: 28px !important;
-    height: 28px !important;
+    width: 26px !important;
+    height: 26px !important;
+    border-width: 1.5px;
   }
   .member-name {
-    font-size: 12px;
+    font-size: 11px;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .member-role {
+    font-size: 9px;
+  }
+  .member-name-row {
+    gap: 3px;
+  }
+  .member-name-row i {
     font-size: 10px;
   }
-  .peer-volume-row {
-    padding-left: 0;
+  .member-actions {
+    gap: 2px;
   }
-  .peer-vol-slider {
-    height: 5px;
+  .admin-actions {
+    gap: 2px;
+    margin-left: 2px;
   }
-  .peer-vol-label {
+  .btn-icon-small {
+    width: 24px;
+    height: 24px;
     font-size: 10px;
-    min-width: 28px;
+  }
+  /* Popup volume trong landscape - hiện bên trái thay vì bên dưới */
+  .peer-vol-popup {
+    top: 0;
+    right: calc(100% + 6px);
+    min-width: 150px;
+    padding: 8px 10px;
+  }
+  .peer-vol-popup-inner {
+    gap: 5px;
+    font-size: 10px;
+  }
+  .peer-vol-mute-btn {
+    font-size: 10px;
+    padding: 3px 0;
+    margin-top: 5px;
   }
 }
 
@@ -1504,20 +1539,6 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
   flex-shrink: 0;
 }
 
-/* Hàng Volume Slider (dưới avatar) */
-.peer-volume-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 4px 0 46px; /* Lùi vào theo avatar width (36px + 10px gap) */
-}
-
-.peer-volume-row .vol-icon-sm {
-  font-size: 10px;
-  color: rgba(255,255,255,0.4);
-  flex-shrink: 0;
-}
-
 /* Admin Actions */
 .admin-actions {
   display: flex;
@@ -1532,63 +1553,99 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
   flex-shrink: 0;
 }
 
-/* --- Per-peer Volume Control Slider --- */
-.peer-volume-control {
+/* --- Per-peer Volume Popup (nhấn loa mới hiện) --- */
+.peer-vol-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.peer-vol-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: rgba(25, 25, 35, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 170px;
+  z-index: 5000;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  animation: wpFadeInUp 0.15s ease-out;
+}
+.peer-vol-popup.hidden {
+  display: none;
+}
+
+.peer-vol-popup-inner {
   display: flex;
   align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
+  gap: 8px;
+  color: rgba(255,255,255,0.5);
+  font-size: 11px;
+}
+
+.peer-vol-mute-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 5px 0;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.peer-vol-mute-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+.peer-vol-mute-btn.active {
+  color: #ff4444;
+  border-color: rgba(255,68,68,0.3);
 }
 
 .peer-vol-slider {
   -webkit-appearance: none;
   appearance: none;
   flex: 1;
-  width: 60px;
   height: 4px;
   background: rgba(255,255,255,0.2);
   border-radius: 2px;
   outline: none;
   cursor: pointer;
-  transition: background 0.2s;
 }
-
-.peer-vol-slider:hover {
-  background: rgba(255,255,255,0.35);
-}
-
 .peer-vol-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #00d4ff;
   cursor: pointer;
   box-shadow: 0 0 4px rgba(0,212,255,0.5);
-  transition: transform 0.15s;
 }
-
-.peer-vol-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
 .peer-vol-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #00d4ff;
   cursor: pointer;
   border: none;
-  box-shadow: 0 0 4px rgba(0,212,255,0.5);
 }
 
 .peer-vol-label {
   font-size: 11px;
-  color: rgba(255,255,255,0.6);
-  min-width: 32px;
-  text-align: center;
-  font-weight: 500;
+  color: #00d4ff;
+  min-width: 30px;
+  text-align: right;
+  font-weight: 600;
 }
 
 /* QUAN TRỌNG: Định cỡ ảnh đại diện để không bị to đùng */

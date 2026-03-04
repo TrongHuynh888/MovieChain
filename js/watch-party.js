@@ -1108,24 +1108,29 @@ function renderMembersList(snapshot) {
 
     // Nút chức năng
     let actionButtons = "";
-    let volumeSliderHtml = "";
     
     if (!isMe) {
       const isMuted = localMutedPeers.has(uid);
       const currentVol = peerVolumeLevels[uid] !== undefined ? peerVolumeLevels[uid] : 1;
       const volPercent = Math.round(currentVol * 100);
       
-      // Nút tắt tiếng nhỏ gọn
-      actionButtons += `<button class="btn-icon-small ${isMuted ? "active" : ""}" onclick="toggleLocalVolume('${uid}')" title="${isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng'}"><i class="fas ${isMuted ? "fa-volume-mute" : "fa-volume-up"}"></i></button>`;
-      
-      // Thanh slider riêng biệt (được đặt dưới hàng chính)
-      volumeSliderHtml = `
-        <div class="peer-volume-row">
-          <i class="fas fa-volume-down vol-icon-sm"></i>
-          <input type="range" min="0" max="200" value="${volPercent}" class="peer-vol-slider" 
-                 oninput="setPeerVolume('${uid}', this.value)" 
-                 title="Âm lượng: ${volPercent}%">
-          <span class="peer-vol-label">${volPercent}%</span>
+      // Nút loa + popup chỉnh âm lượng (hiện khi nhấn)
+      actionButtons += `
+        <div class="peer-vol-wrap" id="peer-vol-wrap-${uid}">
+          <button class="btn-icon-small ${isMuted ? "active" : ""}" onclick="togglePeerVolPopup('${uid}')" title="Chỉnh âm lượng">
+            <i class="fas ${isMuted ? "fa-volume-mute" : "fa-volume-up"}"></i>
+          </button>
+          <div class="peer-vol-popup hidden" id="peer-vol-popup-${uid}">
+            <div class="peer-vol-popup-inner">
+              <i class="fas fa-volume-down"></i>
+              <input type="range" min="0" max="200" value="${volPercent}" class="peer-vol-slider" 
+                     oninput="setPeerVolume('${uid}', this.value)">
+              <span class="peer-vol-label" id="peer-vol-label-${uid}">${volPercent}%</span>
+            </div>
+            <button class="peer-vol-mute-btn ${isMuted ? 'active' : ''}" onclick="toggleLocalVolume('${uid}')" title="${isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng'}">
+              <i class="fas ${isMuted ? 'fa-volume-mute' : 'fa-volume-up'}"></i> ${isMuted ? 'Đã tắt tiếng' : 'Tắt tiếng'}
+            </button>
+          </div>
         </div>`;
     }
 
@@ -1162,7 +1167,6 @@ function renderMembersList(snapshot) {
                     </div>
                     <div class="member-actions">${actionButtons}</div>
                 </div>
-                ${volumeSliderHtml}
             </div>`;
   });
 }
@@ -1202,17 +1206,18 @@ window.setPeerVolume = function(peerId, value) {
   }
 
   // Cập nhật label
-  const row = document.getElementById(`member-row-${peerId}`);
-  if (row) {
-    const label = row.querySelector('.peer-vol-label');
-    if (label) label.textContent = Math.round(vol * 100) + '%';
-    
-    // Cập nhật icon
-    const icon = row.querySelector('.peer-volume-control .btn-icon-small i');
-    if (icon && !localMutedPeers.has(peerId)) {
-      icon.className = `fas ${vol > 1 ? 'fa-volume-up' : vol > 0 ? 'fa-volume-down' : 'fa-volume-off'}`;
-    }
-  }
+  const label = document.getElementById(`peer-vol-label-${peerId}`);
+  if (label) label.textContent = Math.round(vol * 100) + '%';
+};
+
+// Bật/Tắt popup chỉnh âm lượng của 1 peer
+window.togglePeerVolPopup = function(peerId) {
+  // Đóng tất cả popup khác trước
+  document.querySelectorAll('.peer-vol-popup').forEach(p => {
+    if (p.id !== `peer-vol-popup-${peerId}`) p.classList.add('hidden');
+  });
+  const popup = document.getElementById(`peer-vol-popup-${peerId}`);
+  if (popup) popup.classList.toggle('hidden');
 };
 
 function toggleDeafen() {
@@ -1264,11 +1269,19 @@ window.setGlobalVoiceVolume = function(value) {
 
 // Đóng popup khi click ra ngoài
 document.addEventListener('click', function(e) {
+  // Đóng popup Voice Vol tổng
   const wrap = document.getElementById('voiceVolBtnWrap');
   const popup = document.getElementById('voiceVolPopup');
   if (wrap && popup && !wrap.contains(e.target)) {
     popup.classList.add('hidden');
   }
+  // Đóng popup âm lượng từng peer
+  document.querySelectorAll('.peer-vol-wrap').forEach(w => {
+    if (!w.contains(e.target)) {
+      const p = w.querySelector('.peer-vol-popup');
+      if (p) p.classList.add('hidden');
+    }
+  });
 });
 
 function initVoiceChat() {
@@ -1323,7 +1336,6 @@ async function startPeerConnection() {
 
     myPeer.on("open", (id) => {
       console.log("✅ Kết nối Peer thành công:", id);
-      showNotification("Đã kết nối Voice Chat", "success");
       // Mặc định kết nối tới mọi người để LẮNG NGHE (Nhận âm thanh)
       connectToAllPeers();
     });
