@@ -2370,14 +2370,11 @@ window.toggleFullscreen = function() {
     if (!isNativeFullscreen && !isPseudoFullscreen) {
         // VÀO FULLSCREEN
         if (isIOS || (!container.requestFullscreen && !container.webkitRequestFullscreen)) {
-            // Giả lập cho iOS / Trình duyệt không hỗ trợ
+            // Giả lập toàn màn hình cho iOS (giữ nguyên danh sách tập + tên phim)
             container.classList.add("pseudo-fullscreen");
             document.documentElement.classList.add("has-pseudo-fullscreen");
             document.body.classList.add("has-pseudo-fullscreen");
             if (icon) icon.className = "fas fa-compress";
-            
-            // Hack ẩn thanh URL
-            forceHideAddressBar();
             return;
         }
 
@@ -2430,24 +2427,7 @@ document.addEventListener("keydown", function(e) {
     }
 });
 
-// Helper: Ép trình duyệt ẩn thanh URL bằng thao tác cuộn giả mạnh hơn
-function forceHideAddressBar() {
-    if (!document.body.classList.contains("has-pseudo-fullscreen")) return;
-    window.scrollTo(0, 0); // Về đầu trang trước
-    setTimeout(() => {
-        // Cuộn một khoảng cách đủ lớn (lớn hơn chiều cao thanh URL) để trình duyệt nhận diện là vuốt thật
-        window.scrollTo({
-            top: 150, 
-            behavior: "smooth"
-        });
-    }, 150);
-}
-
-// Lắng nghe sự kiện xoay màn hình để tái kích hoạt ẩn URL bar
-window.addEventListener("resize", forceHideAddressBar);
-window.addEventListener("orientationchange", function() {
-    setTimeout(forceHideAddressBar, 200); // Đợi màn hình xoay xong
-});
+// (Đã bỏ hàm forceHideAddressBar vì dùng overflow:hidden trên body thay thế)
 
 // Lắng nghe sự kiện fullscreenchange để đồng bộ icon
 document.addEventListener("fullscreenchange", function() {
