@@ -2357,8 +2357,11 @@ window.toggleFullscreen = function() {
     const icon = document.querySelector("#fullscreenBtn i");
     if (!container) return;
 
-    // Nhận diện iPhone/iPod (buộc dùng giả lập để giữ custom controls như Danh sách tập)
-    const isIPhone = /iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    // Nhận diện iOS tinh vi hơn (bao gồm iPad hiển thị như Desktop Mac)
+    const isIOS = [
+      'iPad Simulator', 'iPhone Simulator', 'iPod Simulator',
+      'iPad', 'iPhone', 'iPod'
+    ].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
 
     // Trạng thái hiện tại
     const isNativeFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
@@ -2366,11 +2369,14 @@ window.toggleFullscreen = function() {
 
     if (!isNativeFullscreen && !isPseudoFullscreen) {
         // VÀO FULLSCREEN
-        if (isIPhone || (!container.requestFullscreen && !container.webkitRequestFullscreen)) {
-            // Giả lập cho iOS
+        if (isIOS || (!container.requestFullscreen && !container.webkitRequestFullscreen)) {
+            // Giả lập cho iOS / Trình duyệt không hỗ trợ
             container.classList.add("pseudo-fullscreen");
             document.body.classList.add("has-pseudo-fullscreen");
             if (icon) icon.className = "fas fa-compress";
+            
+            // Hack ẩn thanh URL trên mobile/Chrome bằng cách cuộn trang
+            setTimeout(() => window.scrollTo(0, 1), 50);
             return;
         }
 
@@ -2378,11 +2384,13 @@ window.toggleFullscreen = function() {
         if (container.requestFullscreen) {
             container.requestFullscreen().catch(err => {
                 console.warn("Fullscreen API error:", err);
-                // Fallback nếu lỗi
+                // Fallback nếu lỗi (điển hình là Chrome/Safari rườm rà)
                 container.classList.add("pseudo-fullscreen");
                 document.body.classList.add("has-pseudo-fullscreen");
                 if (icon) icon.className = "fas fa-compress";
+                setTimeout(() => window.scrollTo(0, 1), 50);
             });
+
         } else if (container.webkitRequestFullscreen) {
             container.webkitRequestFullscreen(); 
         }
