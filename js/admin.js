@@ -6947,6 +6947,19 @@ function renderAdminWatchRooms(rooms) {
             ? '<span class="badge bg-danger"><i class="fas fa-lock"></i> Riêng tư</span>' 
             : '<span class="badge bg-success"><i class="fas fa-globe"></i> Công khai</span>';
         
+        // --- Xử lý trạng thái / Lên lịch ---
+        let scheduleBadge = `<span class="badge bg-danger" style="animation: wp-live-pulse 2s infinite;"><i class="fas fa-circle" style="font-size: 8px;"></i> LIVE</span>`;
+        if (room.status === 'ended' || (room.currentTime && room.status === 'paused' && room.duration && room.currentTime >= room.duration)) {
+            scheduleBadge = `<span class="badge bg-secondary">Đã Kết Thúc</span>`;
+        } else if (room.scheduledTime) {
+            const now = new Date();
+            const targetDate = typeof room.scheduledTime.toDate === 'function' ? room.scheduledTime.toDate() : new Date(room.scheduledTime);
+            if (targetDate > now) {
+                const timeStr = `${targetDate.getHours().toString().padStart(2, '0')}:${targetDate.getMinutes().toString().padStart(2, '0')} ${targetDate.getDate().toString().padStart(2, '0')}/${(targetDate.getMonth()+1).toString().padStart(2, '0')}`;
+                scheduleBadge = `<span class="badge bg-purple" style="background-color: #9c27b0;"><i class="fas fa-clock"></i> ${timeStr}</span>`;
+            }
+        }
+
         // Poster phim
         const posterUrl = room.moviePoster || 'https://via.placeholder.com/40x60/1a1a2e/ffffff?text=No+Img';
 
@@ -6958,6 +6971,7 @@ function renderAdminWatchRooms(rooms) {
                 <td>${room.hostName || 'Ẩn danh'}</td>
                 <td><span class="badge bg-info">${room.memberCount || 0}</span></td>
                 <td>${typeBadge}</td>
+                <td>${scheduleBadge}</td>
                 <td><small>${createdDate}</small></td>
                 <td>
                     <div class="table-actions">

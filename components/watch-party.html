@@ -2,9 +2,22 @@
   <div id="partyLobby" class="party-container">
     <div class="section-header">
       <h2 class="section-title">Phòng Xem Chung 🍿</h2>
-      <button class="btn btn-primary" onclick="openCreateRoomModal()">
-        <i class="fas fa-plus-circle"></i> Tạo Phòng Mới
-      </button>
+      <div class="party-actions">
+        <div class="wp-search-filter">
+          <div class="wp-search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="wpRoomSearch" placeholder="Tìm tên phòng hoặc phim..." oninput="filterWatchRooms()">
+          </div>
+          <div class="wp-filter-group">
+            <button class="wp-filter-btn active" data-filter="all" onclick="setRoomFilter('all')">Tất cả</button>
+            <button class="wp-filter-btn" data-filter="public" onclick="setRoomFilter('public')">Công khai</button>
+            <button class="wp-filter-btn" data-filter="private" onclick="setRoomFilter('private')">Riêng tư</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateRoomModal()">
+          <i class="fas fa-plus-circle"></i> Tạo Phòng Mới
+        </button>
+      </div>
     </div>
 
     <div class="party-grid" id="roomList">
@@ -238,8 +251,9 @@
             <input type="hidden" id="roomEpisodeIndex" value="0" />
           </section>
 
-          <!-- Bước 3: Cấu hình phòng -->
+          <!-- Bước 3: Cấu hình phòng & Lên lịch chiếu -->
           <section class="wp-form-step" id="roomConfigStep">
+            <!-- Cấu hình Thông Tin Phòng -->
             <div class="wp-step-header">
               <span class="step-num">3</span>
               <label>Thông tin phòng</label>
@@ -264,6 +278,34 @@
                 <div class="password-input-wrapper" style="position: relative; width: 100%;">
                   <input type="password" class="wp-super-input" id="roomPassword" placeholder="Nhập mật khẩu..." autocomplete="new-password">
                   <i class="fas fa-eye password-toggle-icon" onclick="togglePassword('roomPassword', this)" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.5);"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cài Đặt Thời Gian Chiếu -->
+            <div class="wp-step-header" style="margin-top: 25px;">
+              <span class="step-num" style="background: rgba(255,255,255,0.1); color: #fff;">
+                <i class="fas fa-clock" style="font-size: 14px;"></i>
+              </span>
+              <label>Cài đặt thời gian chiếu</label>
+            </div>
+            <p class="text-muted" style="margin-bottom: 15px; font-size: 0.9rem;">
+              Có thể bắt đầu thủ công hoặc tự động theo thời gian cài đặt.
+            </p>
+
+            <div class="wp-schedule-wrapper">
+              <div class="wp-toggle-group">
+                <label class="wp-toggle-switch">
+                  <input type="checkbox" id="roomScheduleToggle" onchange="toggleScheduleInput()">
+                  <span class="wp-slider round"></span>
+                </label>
+                <span style="color: #fff; opacity: 0.9;">Tôi muốn hẹn giờ chiếu (tùy chọn)</span>
+              </div>
+
+              <div id="roomScheduleInputGroup" class="wp-input-group hidden" style="margin-top: 15px;">
+                <label>Thời gian chiếu (Ngày - Giờ)</label>
+                <div class="datetime-input-wrapper">
+                  <input type="datetime-local" class="wp-super-input" id="roomScheduledTime">
                 </div>
               </div>
             </div>
