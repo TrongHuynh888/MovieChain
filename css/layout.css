@@ -2279,10 +2279,10 @@ video::-webkit-media-controls-enclosure {
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: 100vw !important;
+  max-height: 100dvh !important;
   border-radius: 0 !important;
   background: #000 !important;
   display: flex !important;
@@ -2292,16 +2292,12 @@ video::-webkit-media-controls-enclosure {
   margin: 0 !important;
   padding: 0 !important;
   transform: none !important;
-  /* Kích hoạt hỗ trợ touch mượt mà */
-  -webkit-overflow-scrolling: touch;
 }
 
-html.has-pseudo-fullscreen,
-body.has-pseudo-fullscreen {
-  overflow: hidden !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  overscroll-behavior: none !important;
+/* Ẩn thanh cuộn nếu có để trông sạch hơn, 
+   NHƯNG KHÔNG dùng overflow: hidden để tránh khóa thanh URL */
+body.has-pseudo-fullscreen::-webkit-scrollbar {
+  display: none !important;
 }
 
 .video-container.pseudo-fullscreen iframe,
