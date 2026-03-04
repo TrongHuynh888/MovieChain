@@ -2430,12 +2430,16 @@ document.addEventListener("keydown", function(e) {
     }
 });
 
-// Helper: Ép trình duyệt ẩn thanh URL bằng thao tác cuộn giả
+// Helper: Ép trình duyệt ẩn thanh URL bằng thao tác cuộn giả mạnh hơn
 function forceHideAddressBar() {
     if (!document.body.classList.contains("has-pseudo-fullscreen")) return;
     window.scrollTo(0, 0); // Về đầu trang trước
     setTimeout(() => {
-        window.scrollTo(0, 1); // Cuộn nhẹ để trình duyệt tự ẩn thanh URL
+        // Cuộn một khoảng cách đủ lớn (lớn hơn chiều cao thanh URL) để trình duyệt nhận diện là vuốt thật
+        window.scrollTo({
+            top: 150, 
+            behavior: "smooth"
+        });
     }, 150);
 }
 
