@@ -1217,9 +1217,9 @@ async function startPeerConnection() {
     // 🔥 CHẠY SONG SONG: Vừa xin Mic, vừa lấy Server (Không chờ nhau -> Không lag)
     const streamPromise = navigator.mediaDevices.getUserMedia({
       audio: {
-        echoCancellation: true,
+        echoCancellation: /iPad|iPhone|iPod/.test(navigator.userAgent) ? false : true, // Tắt trên iOS để tránh ducking quá mạnh
         noiseSuppression: true,
-        autoGainControl: true,
+        autoGainControl: false, // Tắt tự động giảm âm lượng video nền
       },
       video: false,
     });
@@ -2636,13 +2636,25 @@ window.wpSetSubtitleColor = function(color) {
 window.wpToggleFullscreen = function() {
     const container = document.getElementById("wpVideoContainer");
     const icon = document.querySelector("#wpFullscreenBtn i");
-    if (!document.fullscreenElement) {
-        if (container.requestFullscreen) container.requestFullscreen();
-        else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+    let isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+
+    if (!isFullscreen) {
+        if (container.requestFullscreen) {
+            container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+            container.webkitRequestFullscreen(); // Safari desktop/Android
+        } else if (player && player.tagName === "VIDEO" && player.webkitEnterFullscreen) {
+            // Cứu cánh cho iOS Safari (chỉ cho phép video fullscreen, không cho div)
+            player.webkitEnterFullscreen();
+            return;
+        }
         if (icon) icon.className = "fas fa-compress";
     } else {
-        if (document.exitFullscreen) document.exitFullscreen();
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        }
         if (icon) icon.className = "fas fa-expand";
     }
 };
