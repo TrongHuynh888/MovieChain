@@ -12,6 +12,7 @@
             <button class="wp-filter-btn active" data-filter="all" onclick="setRoomFilter('all')">Tất cả</button>
             <button class="wp-filter-btn" data-filter="public" onclick="setRoomFilter('public')">Công khai</button>
             <button class="wp-filter-btn" data-filter="private" onclick="setRoomFilter('private')">Riêng tư</button>
+            <button class="wp-filter-btn" data-filter="my_rooms" onclick="setRoomFilter('my_rooms')">Phòng của tôi</button>
           </div>
         </div>
         <button class="btn btn-primary" onclick="openCreateRoomModal()">
@@ -51,6 +52,20 @@
           <div id="floatingEmojis" class="floating-emojis"></div>
 
           <div id="partyPlayer"></div>
+
+          <!-- Lớp phủ khi phòng kết thúc -->
+          <div id="roomEndedOverlay" class="room-ended-overlay">
+            <div class="ended-icon">
+              <i class="fas fa-calendar-check"></i>
+            </div>
+            <h2>Buổi xem phim đã kết thúc</h2>
+            <p class="ended-time" id="endedTimeText">Phòng đã đóng lúc: --:--</p>
+            <div class="ended-actions">
+              <button class="btn-leave-ended" onclick="leaveRoom()">
+                <i class="fas fa-sign-out-alt"></i> Thoát phòng
+              </button>
+            </div>
+          </div>
 
           <div id="syncStatus" class="sync-overlay hidden">
             <div class="spinner-border"></div>

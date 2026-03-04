@@ -27,6 +27,7 @@ let globalAudioContext = null;
 let isDeafened = false; // Mặc định nghe được
 let localMutedPeers = new Set();
 let scheduleSyncInterval = null;
+let currentScheduledTime = null;
 
 // API KEY CỦA BẠN (Đã điền sẵn)
 const METERED_API_KEY = "Tp6L8mYZolvVJ2ZwHQnmnZpt3kYvU8uEHJOozyjQtdT15XPE";
@@ -86,6 +87,7 @@ initWatchPartyModule();
 // ==========================================
 // Biến để lưu listener của room list
 let roomsUnsubscribe = null;
+let roomRefreshInterval = null;
 
 async function loadRooms() {
   const container = document.getElementById("roomList");
@@ -97,6 +99,42 @@ async function loadRooms() {
     if (roomsUnsubscribe) {
         roomsUnsubscribe();
     }
+    
+    // Lấy thông số thời gian tự xóa phòng từ configs
+    const wpConfigDoc = await db.collection("configs").doc("watchParty").get();
+    const wpConfig = wpConfigDoc.exists ? wpConfigDoc.data() : {};
+    const autoDeleteHoursLimit = wpConfig.autoDeleteHours || 6;
+    
+    // Thiết lập Interval tự động làm mới giao diện và xóa phòng cũ (mỗi 1 phút)
+    if (roomRefreshInterval) {
+      clearInterval(roomRefreshInterval);
+    }
+    roomRefreshInterval = setInterval(() => {
+      if (allWatchRooms && allWatchRooms.length > 0) {
+        let needsRender = false;
+        const now = new Date();
+        
+        allWatchRooms.forEach(room => {
+          const { isActuallyEnded, endedAt } = checkIfRoomEnded(room);
+          if (isActuallyEnded && endedAt) {
+            const endDate = endedAt.toDate ? endedAt.toDate() : new Date(endedAt);
+            const diffHours = (now - endDate) / (1000 * 60 * 60);
+            
+            // Nếu phòng đã kết thúc hơn số giờ thiết lập (mặc định 6 tiếng)
+            if (diffHours >= autoDeleteHoursLimit) {
+              // Tự động xóa khỏi Database nếu là Host hoặc Admin
+              if (currentUser && (currentUser.uid === room.hostId || (typeof isAdmin !== 'undefined' && isAdmin))) {
+                console.log(`[Watch Party] Đang tự động xóa phòng ${room.name} (${room.id}) do đã kết thúc hơn ${autoDeleteHoursLimit} tiếng.`);
+                db.collection("watchRooms").doc(room.id).delete().catch(e => console.error("Lỗi xóa phòng tự động:", e));
+              }
+            }
+          }
+        });
+        
+        // Luôn trigger filter (và render) để các tag "Sắp chiếu", "LIVE" tự cập nhật sang "Đã kết thúc" mà ko cần click
+        filterWatchRooms();
+      }
+    }, 60000);
 
     roomsUnsubscribe = db
       .collection("watchRooms")
@@ -110,6 +148,7 @@ async function loadRooms() {
           return;
         }
 
+        allWatchRooms = []; // 🔥 QUAN TRỌNG: Làm mới mảng để tránh lặp lại phòng cũ
         snapshot.forEach((doc) => {
           const room = { id: doc.id, ...doc.data() };
           allWatchRooms.push(room);
@@ -159,16 +198,23 @@ function renderWatchRooms(rooms) {
     let joinBtnText = `Vào xem <i class="fas fa-play"></i>`;
     let joinBtnPopupText = `Vào xem ngay <i class="fas fa-play"></i>`;
     
-    if (room.status === 'ended' || (room.currentTime && room.status === 'paused' && room.duration && room.currentTime >= room.duration)) {
-        statusBadge = `<span class="wp-badge-live" style="background: rgba(255,255,255,0.2); color: #fff; animation: none;"><i class="fas fa-check-circle" style="animation: none;"></i> Đã Kết Thúc</span>`;
-        popupStatus = `<div class="wp-popup-status" style="background: rgba(255,255,255,0.1); color: #ccc; border-color: rgba(255,255,255,0.2);"><i class="fas fa-check-circle" style="animation: none;"></i> Đã kết thúc</div>`;
-        joinBtnText = `Xem lại <i class="fas fa-redo"></i>`;
-        joinBtnPopupText = `Xem lại ngay <i class="fas fa-redo"></i>`;
+    const { isActuallyEnded, endedAt } = checkIfRoomEnded(room);
+
+    if (isActuallyEnded) {
+        let timeStr = "";
+        if (endedAt) {
+            const date = endedAt.toDate ? endedAt.toDate() : new Date(endedAt);
+            timeStr = ` lúc ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        }
+        statusBadge = `<span class="wp-badge-ended"><i class="fas fa-check-circle"></i> Đã Kết Thúc</span>`;
+        popupStatus = `<div class="wp-popup-status" style="background: rgba(255,255,255,0.1); color: #ccc; border-color: rgba(255,255,255,0.2);"><i class="fas fa-check-circle" style="animation: none;"></i> Đã kết thúc${timeStr}</div>`;
+        joinBtnText = `Chi tiết <i class="fas fa-info-circle"></i>`;
+        joinBtnPopupText = `Xem chi tiết <i class="fas fa-info-circle"></i>`;
     } else if (room.scheduledTime) {
         const timeInfo = formatRelativeTime(room.scheduledTime);
         if (timeInfo.isFuture) {
             statusBadge = `<span class="wp-badge-live" style="background: rgba(156, 39, 176, 0.9); animation: none; box-shadow: 0 0 10px rgba(156, 39, 176, 0.5);"><i class="fas fa-clock" style="animation: none;"></i> ${timeInfo.text}</span>`;
-            popupStatus = `<div class="wp-popup-status" style="background: rgba(156, 39, 176, 0.2); color: #e1bee7; border-color: rgba(156, 39, 176, 0.4);"><i class="fas fa-clock" style="animation: none;"></i> ${timeInfo.text}</span></div>`;
+            popupStatus = `<div class="wp-popup-status" style="background: rgba(156, 39, 176, 0.2); color: #e1bee7; border-color: rgba(156, 39, 176, 0.4);"><i class="fas fa-clock" style="animation: none;"></i> ${timeInfo.text}</div>`;
             joinBtnText = `Phòng chờ <i class="fas fa-door-open"></i>`;
             joinBtnPopupText = `Vào phòng chờ <i class="fas fa-door-open"></i>`;
         }
@@ -192,7 +238,7 @@ function renderWatchRooms(rooms) {
                 <span class="wp-room-host"><i class="fas fa-crown"></i> ${room.hostName || 'Host'}</span>
                 <span class="wp-room-count"><i class="fas fa-users"></i> ${count}</span>
               </div>
-              <button class="wp-room-join-btn" onclick="event.stopPropagation(); joinRoom('${room.id}', '${room.type}')">
+              <button class="wp-room-join-btn ${isActuallyEnded ? 'wp-btn-info' : ''}" onclick="event.stopPropagation(); joinRoom('${room.id}', '${room.type}')">
                 ${joinBtnText}
               </button>
             </div>
@@ -220,7 +266,7 @@ function renderWatchRooms(rooms) {
           </ul>
           <div class="wp-popup-divider"></div>
           ${popupStatus}
-          <button class="wp-popup-join-btn" onclick="event.stopPropagation(); joinRoom('${room.id}', '${room.type}')">
+          <button class="wp-popup-join-btn ${isActuallyEnded ? 'wp-btn-info' : ''}" onclick="event.stopPropagation(); joinRoom('${room.id}', '${room.type}')">
             ${joinBtnPopupText}
           </button>
         </div>
@@ -239,7 +285,15 @@ function filterWatchRooms() {
   let filtered = allWatchRooms;
 
   // 1. Lọc theo loại phòng (tab)
-  if (currentRoomFilter !== 'all') {
+  if (currentRoomFilter === 'my_rooms') {
+    if (!currentUser) {
+      // Yêu cầu đăng nhập
+      showNotification("Vui lòng kết nối ví để xem phòng của bạn!", "warning");
+      filtered = []; // Trống khi chưa đăng nhập
+    } else {
+      filtered = filtered.filter(room => room.hostId === currentUser.uid);
+    }
+  } else if (currentRoomFilter !== 'all') {
     filtered = filtered.filter(room => room.type === currentRoomFilter);
   }
 
@@ -739,6 +793,14 @@ async function handleCreateRoom(e) {
       password,
       status: "paused",
       currentTime: 0,
+      duration: (() => {
+          let d = episode.duration || 0;
+          if (!d && movie.duration) {
+              const mins = parseInt(movie.duration.replace(/\D/g, ''));
+              if (mins) d = mins * 60;
+          }
+          return d;
+      })(),
       scheduledTime: scheduledTime, // Lưu trường thời gian chiếu vào DB (null hoặc Timestamp)
       lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
       memberCount: 1,
@@ -804,13 +866,29 @@ async function joinRoom(roomId, type, passwordInput = null) {
         return;
       }
       const roomData = docSnapshot.data();
+      roomData.id = docSnapshot.id;
       latestRoomData = roomData;
+
+      // 🔥 CHẾ ĐỘ ĐƠN GIẢN: Kiểm tra kết thúc ngay lập tức bằng hàm tập trung
+      const { isActuallyEnded, endedAt } = checkIfRoomEnded(roomData);
+      if (isActuallyEnded) {
+          showRoomEndedOverlay(endedAt || roomData.endedAt);
+          if (player) {
+              if (player.pauseVideo) player.pauseVideo();
+              else player.pause();
+          }
+          return;
+      }
+
       if (roomData.bannedUsers?.includes(currentUser.uid)) {
         leaveRoom();
         return;
       }
       updateRoomUI(roomData);
-      handleSync(roomData);
+      // Phòng hẹn giờ -> Schedule Sync Engine lo, không gọi handleSync để tránh xung đột
+      if (!roomData.scheduledTime) {
+        handleSync(roomData);
+      }
     });
 
     await setupMemberAndChat(roomId, roomRef);
@@ -938,6 +1016,19 @@ async function setupMemberAndChat(roomId, roomRef) {
 function updateRoomUI(data) {
   document.getElementById("roomTitleDisplay").textContent = data.name;
   
+  // 🔥 ĐƠN GIẢN HÓA: Kiểm tra kết thúc tập trung
+  const { isActuallyEnded, endedAt } = checkIfRoomEnded(data);
+  const liveBadge = document.querySelector(".live-badge");
+
+  if (isActuallyEnded) {
+      showRoomEndedOverlay(endedAt || data.endedAt);
+      if (liveBadge) liveBadge.style.display = "none"; // Ẩn badge LIVE khi đã xong
+      return; 
+  } else {
+      hideRoomEndedOverlay();
+      if (liveBadge) liveBadge.style.display = "inline-flex";
+  }
+
   // 👇 FIX: Admin cũng có quyền điều khiển như chủ phòng
   isHost = (currentUser.uid === data.hostId) || (typeof isAdmin !== 'undefined' && isAdmin);
   
@@ -1490,36 +1581,64 @@ function initHTML5Player(type, source, initialData) {
     player.videoType = type; // Đánh dấu loại
     video.controls = false; // Tắt native controls, dùng custom
 
+    // Xác định phòng có lên lịch chiếu hay không
+    const isScheduledRoom = !!(initialData.scheduledTime);
+
+    // Tính startPosition cho phòng hẹn giờ (HLS.js sẽ load segment đúng luôn, không cần seek)
+    let hlsStartPosition = 0;
+    if (isScheduledRoom) {
+        const schedDate = initialData.scheduledTime.toDate ? initialData.scheduledTime.toDate() : new Date(initialData.scheduledTime);
+        const elapsed = (new Date() - schedDate) / 1000;
+        if (elapsed > 0) hlsStartPosition = elapsed;
+    }
+
     // Load Source
     if (type === "hls" && Hls.isSupported()) {
-        const hls = new Hls();
+        // Nếu phòng hẹn giờ, dùng startPosition để HLS.js load từ đúng segment luôn (KHÔNG cần seek sau)
+        const hlsConfig = isScheduledRoom && hlsStartPosition > 0 
+            ? { startPosition: hlsStartPosition } 
+            : {};
+        const hls = new Hls(hlsConfig);
         window.hlsInstance = hls;
         hls.loadSource(source);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            if (initialData.status === "playing") {
+            if (isScheduledRoom) {
+                // Phòng hẹn giờ: HLS.js đã load đúng segment, chỉ cần play
+                video.play().catch(e => console.log("Auto-play blocked", e));
+            } else if (initialData.status === "playing") {
                 video.currentTime = initialData.currentTime || 0;
                 video.play().catch(e => console.log("Auto-play blocked", e));
             }
-            // Populate quality menu sau khi manifest parse xong
             wpPopulateQuality(hls);
         });
-        // Lắng nghe chuyển level để update UI
         hls.on(Hls.Events.LEVEL_SWITCHED, (evt, data) => {
             wpUpdateQualityDisplay(data.level);
         });
     } else {
-        // MP4 hoặc Native HLS (Safari)
         video.src = source;
-        if (initialData.status === "playing") {
+        if (isScheduledRoom && hlsStartPosition > 0) {
+            video.currentTime = hlsStartPosition;
+            video.play().catch(e => console.log("Auto-play blocked", e));
+        } else if (initialData.status === "playing") {
              video.currentTime = initialData.currentTime || 0;
              video.play().catch(e => console.log("Auto-play blocked", e));
         }
     }
 
+    // --- Lấy duration và cập nhật Firestore (Chỉ dành cho Host) ---
+    if (isHost && !isScheduledRoom) {
+        video.addEventListener("loadedmetadata", () => {
+            if (video.duration && video.duration > 0 && (!initialData.duration || Math.abs(initialData.duration - video.duration) > 5)) {
+                console.log("🎬 HTML5 duration updated:", video.duration);
+                db.collection("watchRooms").doc(currentRoomId).update({ duration: video.duration });
+            }
+        });
+    }
+
     // --- EVENTS CHO HOST (SYNC) ---
-    if (isHost) {
-        // Debounce simple
+    // ⚠️ Phòng hẹn giờ: KHÔNG đăng ký event sync → Tránh Firestore feedback loop
+    if (isHost && !isScheduledRoom) {
         let seeking = false;
         
         video.addEventListener("play", () => updateRoomState("playing", video.currentTime));
@@ -1531,10 +1650,21 @@ function initHTML5Player(type, source, initialData) {
             updateRoomState("buffering", video.currentTime); 
         });
         
-        // Sync định kỳ mỗi 5s để đảm bảo chính xác
         setInterval(() => {
             if(!video.paused && !seeking) updateRoomState("playing", video.currentTime);
+            
+            // Fallback: Kiểm tra xem đã gần hết phim chưa (Chỉ dành cho Host)
+            if (video.duration > 0 && video.currentTime >= video.duration - 0.5) {
+                console.log("🎬 Video duration reached (Fallback), updating to ended.");
+                updateRoomState("ended", video.duration);
+            }
         }, 5000);
+
+        // Sự kiện kết thúc phim (Host xử lý)
+        video.addEventListener("ended", () => {
+            console.log("🎬 Video ended, updating room state to ended.");
+            updateRoomState("ended", video.duration || video.currentTime);
+        });
     }
 
     // --- INIT CUSTOM CONTROLS ---
@@ -1574,11 +1704,22 @@ function initYouTubePlayerLegacy(videoId) {
 
 function onPlayerReady() {
   if (latestRoomData) {
+      // Phòng hẹn giờ: Schedule Sync Engine lo, không can thiệp ở đây
+      if (latestRoomData.scheduledTime) return;
       // Seek đến đúng giờ
       if (Math.abs(player.getCurrentTime() - latestRoomData.currentTime) > 2) {
           player.seekTo(latestRoomData.currentTime, true);
       }
       if (latestRoomData.status === "playing") player.playVideo();
+      
+      // Cập nhật duration cho YouTube (Chỉ Host)
+      if (isHost && !latestRoomData.scheduledTime) {
+          const duration = player.getDuration();
+          if (duration > 0 && (!latestRoomData.duration || Math.abs(latestRoomData.duration - duration) > 5)) {
+              console.log("🎬 YouTube duration updated:", duration);
+              db.collection("watchRooms").doc(currentRoomId).update({ duration: duration });
+          }
+      }
   }
 }
 
@@ -1589,27 +1730,92 @@ const onPlayerStateChange = (event) => {
   else if (event.data === 3) updatePlayButtonState("loading"); // Buffering
   else if (event.data === 0) updatePlayButtonState("paused"); // Ended
 
-  // Sync Logic (Host only)
+  // Sync Logic (Host only) - Phòng hẹn giờ KHÔNG ghi Firestore (tránh feedback loop)
   if (!isHost) return;
-  if (event.data === 1) updateRoomState("playing", player.getCurrentTime());
-  else if (event.data === 2) updateRoomState("paused", player.getCurrentTime());
+  if (latestRoomData && latestRoomData.scheduledTime) return;
+  const dur = player.getDuration ? player.getDuration() : 0;
+  const curr = player.getCurrentTime ? player.getCurrentTime() : 0;
+  
+  if (event.data === 1) updateRoomState("playing", curr, dur);
+  else if (event.data === 2) updateRoomState("paused", curr, dur);
+  else if (event.data === 0) {
+      console.log("🎬 YouTube ended, updating room state to ended.");
+      updateRoomState("ended", dur || curr, dur);
+  }
 };
 
-async function updateRoomState(status, time) {
-  if (Date.now() - lastSyncTime < 500) return;
+async function updateRoomState(status, time, forcedDuration = null) {
+  if (!currentRoomId || currentRoomId === "undefined" || currentRoomId === "") return;
+  
+  // Bỏ qua throttle nếu là trạng thái kết thúc (quan trọng)
+  if (status !== "ended" && Date.now() - lastSyncTime < 500) return;
   lastSyncTime = Date.now();
-  await db.collection("watchRooms").doc(currentRoomId).update({ 
-      status, 
-      currentTime: time,
-      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-  });
+  
+  try {
+    const roomRef = db.collection("watchRooms").doc(currentRoomId);
+    const doc = await roomRef.get();
+    if (!doc.exists) return;
+    const roomData = doc.data();
+
+    const updateData = { 
+        status, 
+        currentTime: time,
+        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    // Luôn cập nhật duration nếu có từ Player
+    if (forcedDuration && forcedDuration > 0) {
+        updateData.duration = forcedDuration;
+    }
+
+    // 1. Nếu bắt đầu phát (không phải hẹn giờ), lưu startedAt lần đầu tiên
+    if (status === "playing" && !roomData.startedAt && !roomData.scheduledTime) {
+        updateData.startedAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+
+    // 2. Nếu kết thúc, tính endedAt = Start + Duration
+    if (status === "ended") {
+        let startTime = null;
+        if (roomData.scheduledTime) {
+            startTime = roomData.scheduledTime.toDate ? roomData.scheduledTime.toDate() : new Date(roomData.scheduledTime);
+        } else if (roomData.startedAt) {
+            startTime = roomData.startedAt.toDate ? roomData.startedAt.toDate() : new Date(roomData.startedAt);
+        } else if (updateData.startedAt) { // Trường hợp vừa play xong end ngay
+             startTime = new Date(); 
+        }
+
+        const duration = forcedDuration || roomData.duration || time || 0;
+        if (startTime && duration > 0) {
+            updateData.endedAt = new Date(startTime.getTime() + duration * 1000);
+        } else {
+            // Cùn lắm thì lấy mốc hiện tại
+            updateData.endedAt = firebase.firestore.FieldValue.serverTimestamp();
+        }
+    }
+
+    await roomRef.update(updateData);
+  } catch (e) {
+    console.error("Lỗi cập nhật trạng thái phòng:", e);
+  }
 }
 
 function handleSync(data) {
   if (isHost) return; // Host không cần sync ngược (trừ khi có tính năng cướp host)
   if (!player) return;
 
+  // Phòng có lên lịch chiếu -> Schedule Sync Engine lo toàn bộ, không can thiệp ở đây
+  if (data.scheduledTime) return;
+
   const currentType = player.videoType || (player.playVideo ? "youtube" : "html5");
+
+  if (data.status === "ended") {
+      showRoomEndedOverlay(data.endedAt);
+      if (currentType === "youtube") player.pauseVideo();
+      else player.pause();
+      return;
+  } else {
+      hideRoomEndedOverlay();
+  }
 
   if (currentType === "youtube" && player.getPlayerState) {
       // --- SYNC YOUTUBE ---
@@ -2074,23 +2280,7 @@ window.syncSeek = function (seconds) {
   updateRoomState("buffering", newTime);
 };
 
-// Hàm cập nhật trạng thái phòng lên Firebase (Hỗ trợ cho Player)
-async function updateRoomState(status, time) {
-  if (!currentRoomId || currentRoomId === "undefined" || currentRoomId === "") return;
-  // Debounce: Tránh gửi quá nhiều request cùng lúc
-  if (Date.now() - lastSyncTime < 500) return;
-  lastSyncTime = Date.now();
-
-  try {
-    await db.collection("watchRooms").doc(currentRoomId).update({
-      status: status,
-      currentTime: time,
-      lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-  } catch (e) {
-    console.error("Lỗi sync:", e);
-  }
-}
+// (Hàm updateRoomState đã được hợp nhất lên phía trên)
 
 // ==========================================
 // WATCH PARTY - CUSTOM VIDEO CONTROLS LOGIC
@@ -2150,13 +2340,23 @@ function initWpCustomControls(video) {
 
     // Loading State
     video.addEventListener("waiting", () => updatePlayButtonState("loading"));
-    video.addEventListener("playing", () => updatePlayButtonState("playing"));
-    video.addEventListener("pause", () => updatePlayButtonState("paused"));
+    video.addEventListener("play", () => {
+      if (isHost) updateRoomState("playing", video.currentTime, video.duration);
+      updatePlayButtonState("playing");
+    });
+    video.addEventListener("pause", () => {
+      if (isHost) updateRoomState("paused", video.currentTime, video.duration);
+      updatePlayButtonState("paused");
+    });
+    video.addEventListener("ended", () => {
+      if (isHost) updateRoomState("ended", video.duration, video.duration);
+      updatePlayButtonState("ended");
+    });
     video.addEventListener("canplay", () => {
         if (video.paused) updatePlayButtonState("paused");
         else updatePlayButtonState("playing");
     });
-    video.addEventListener("ended", () => updatePlayButtonState("paused"));
+    // video.addEventListener("ended", () => updatePlayButtonState("paused")); // This line is replaced by the new "ended" event listener
 
     // Seek (Host only via slider)
     const slider = document.getElementById("wpProgressSlider");
@@ -2504,74 +2704,202 @@ window.formatRelativeTime = function(timestamp) {
     }
 };
 
-// Khởi chạy vòng lặp ép đồng bộ Video cho phòng Scheduled
+// ==========================================
+// SCHEDULE SYNC ENGINE (Chiến lược đồng bộ chuyên nghiệp)
+// Tham khảo YouTube Premiere / Twitch:
+//   Tầng 1: Seek MỘT LẦN khi mới vào phòng
+//   Tầng 2: Điều chỉnh playbackRate (1.03x / 0.97x) để bù trễ nhẹ
+//   Tầng 3: Hard Seek cho lệch lớn (>30s), có cooldown 15s
+// ==========================================
 function startScheduleSync(roomData) {
+    const newTime = typeof roomData.scheduledTime.toDate === 'function' 
+        ? roomData.scheduledTime.toDate().getTime() 
+        : new Date(roomData.scheduledTime).getTime();
+
+    // Cache: Nếu interval đang chạy cho cùng mốc thời gian -> Bỏ qua
+    if (scheduleSyncInterval && currentScheduledTime === newTime) {
+        return;
+    }
+
+    currentScheduledTime = newTime;
     if (scheduleSyncInterval) clearInterval(scheduleSyncInterval);
+
+    let hasInitialSeeked = false;  // Cờ: Đã tua lần đầu chưa
+    let lastHardSeekTime = 0;      // Thời điểm hard-seek gần nhất (ms)
+    const HARD_SEEK_COOLDOWN = 15000; // 15 giây giữa 2 lần hard-seek
+    const DRIFT_TOLERANCE = 5;     // Dưới 5s lệch -> coi là OK, không làm gì
+    const RATE_ADJUST_RANGE = 15;  // 5-15s lệch -> Dùng playbackRate bù
+    const HARD_SEEK_THRESHOLD = 30; // >30s lệch -> Bắt buộc hard-seek
 
     scheduleSyncInterval = setInterval(() => {
         if (!player) return;
+        
+        // 🔥 KIỂM TRA TRẠNG THÁI TỪ DB TRƯỚC (QUAN TRỌNG)
+        if (latestRoomData && latestRoomData.status === "ended") {
+            console.log("🛑 Engine detected ended status from DB. Stopping sync.");
+            showRoomEndedOverlay(latestRoomData.endedAt);
+            if (player.pauseVideo) player.pauseVideo();
+            else player.pause();
+            clearInterval(scheduleSyncInterval);
+            scheduleSyncInterval = null;
+            return;
+        }
 
         const now = new Date();
-        const schedDate = typeof roomData.scheduledTime.toDate === 'function' ? roomData.scheduledTime.toDate() : new Date(roomData.scheduledTime);
-        const diffSeconds = (now - schedDate) / 1000;
+        const schedDate = new Date(newTime);
+        const diffSeconds = (now - schedDate) / 1000; // Số giây kể từ lúc hẹn giờ
+        const syncStatus = document.getElementById("syncStatus");
 
         const isYt = (player.videoType === "youtube" || typeof player.getPlayerState === "function");
-        const syncStatus = document.getElementById("syncStatus");
-        
+
+        // Lấy duration thực tế từ player hoặc DB
+        const videoDuration = (isYt ? (player.getDuration ? player.getDuration() : 0) : player.duration) || roomData.duration || 0;
+
         if (diffSeconds >= 0) {
-            // ⏰ Đã qua thời gian chiếu -> Ép Play và Tua tới đúng số giây hiện tại
-            let isBuffering = false;
+            // ========== ĐÃ QUA GIỜ CHIẾU ==========
             
+            // 🔥 NẾU DIFF VƯỢT QUÁ DURATION THÌ KẾT THÚC LUÔN (TRÁNH SEEK VÔ TẬN)
+            if (videoDuration > 0 && diffSeconds >= videoDuration) {
+                console.log("🎬 diffSeconds exceeds videoDuration. Ending sync engine.");
+                
+                // Tính chính xác mốc thời gian phim hết
+                const actualEndTime = new Date(schedDate.getTime() + videoDuration * 1000);
+                
+                if (isHost) updateRoomState("ended", videoDuration, videoDuration);
+                showRoomEndedOverlay(actualEndTime);
+                
+                clearInterval(scheduleSyncInterval);
+                scheduleSyncInterval = null;
+                return;
+            }
+
+            let currentTime = 0;
+            let isPlaying = false;
+            let isBufferingState = false;
+
             if (isYt) {
                 const ytState = player.getPlayerState ? player.getPlayerState() : -1;
-                if (ytState !== 1 && ytState !== 3) { // 1 = playing, 3 = buffering
+                currentTime = player.getCurrentTime ? player.getCurrentTime() : 0;
+                isPlaying = (ytState === 1);
+                isBufferingState = (ytState === 3);
+
+                // Đảm bảo video đang chạy
+                if (!isPlaying && !isBufferingState) {
                     player.playVideo();
                 }
-                const current = player.getCurrentTime ? player.getCurrentTime() : 0;
-                
-                // Hiển thị Buffering UI nếu YouTube đang load (State 3) hoặc đang bị ép tua
-                if (ytState === 3) isBuffering = true;
-                
-                if (Math.abs(current - diffSeconds) > 3) {
-                    player.seekTo(diffSeconds, true);
-                    isBuffering = true;
-                }
             } else {
-                if (player.paused) {
+                currentTime = player.currentTime || 0;
+                isPlaying = !player.paused;
+                isBufferingState = (player.readyState < 3);
+
+                if (!isPlaying && !isBufferingState) {
                     player.play().catch(e => console.log("Schedule auto-play blocked", e));
-                    isBuffering = true;
-                }
-                const current = player.currentTime;
-                
-                // HTML5: Sẽ buffering nếu readystate < 3 (Chưa đủ video để play)
-                if (player.readyState < 3) isBuffering = true;
-                
-                if (Math.abs(current - diffSeconds) > 3) {
-                    player.currentTime = diffSeconds;
-                    isBuffering = true;
-                }
-            }
-            
-            // Xử lý UI hiển thị Loader
-            if (syncStatus) {
-                if (isBuffering) {
-                    syncStatus.classList.remove("hidden");
-                    syncStatus.querySelector("span").textContent = "Đang tải luồng...";
-                } else {
-                    syncStatus.classList.add("hidden");
                 }
             }
 
-            // Nếu video đã chạy vượt quá duration thì đánh dấu kết thúc (Dừng lại)
+            const drift = diffSeconds - currentTime;  // Dương = video chạy chậm hơn thực tế
+            const absDrift = Math.abs(drift);
+
+            // --- TẦNG 1: Initial Seek (Chỉ chạy 1 lần duy nhất khi mới vào phòng) ---
+            if (!hasInitialSeeked && diffSeconds > 2) {
+                hasInitialSeeked = true;
+                console.log(`⏩ [ScheduleSync] Initial seek tới ${Math.round(diffSeconds)}s`);
+                if (isYt) {
+                    player.seekTo(diffSeconds, true);
+                } else {
+                    player.currentTime = diffSeconds;
+                }
+                // Hiện loader trong lúc seek lần đầu
+                if (syncStatus) {
+                    syncStatus.classList.remove("hidden");
+                    syncStatus.querySelector("span").textContent = "Đang đồng bộ lần đầu...";
+                }
+                return; // Thoát sớm, đợi video load xong tick tiếp theo
+            }
+
+            // Nếu đang buffering thì chỉ hiện UI chờ, KHÔNG CAN THIỆP video
+            if (isBufferingState) {
+                if (syncStatus) {
+                    syncStatus.classList.remove("hidden");
+                    syncStatus.querySelector("span").textContent = "Đang tải luồng...";
+                }
+                return; // QUAN TRỌNG: Không làm gì khi đang buffer
+            }
+
+            // --- TẦNG 2: Playback Rate Adjustment (Bù trễ mượt mà, không giật) ---
+            if (absDrift > DRIFT_TOLERANCE && absDrift <= HARD_SEEK_THRESHOLD) {
+                // Video chạy chậm hơn thực tế -> Tăng tốc nhẹ
+                if (drift > DRIFT_TOLERANCE) {
+                    const newRate = Math.min(1.05, 1 + (absDrift / 200)); // Tối đa 1.05x
+                    if (isYt) {
+                        if (player.setPlaybackRate) player.setPlaybackRate(newRate);
+                    } else {
+                        player.playbackRate = newRate;
+                    }
+                }
+                // Video chạy nhanh hơn thực tế -> Chậm lại nhẹ
+                else if (drift < -DRIFT_TOLERANCE) {
+                    const newRate = Math.max(0.95, 1 - (absDrift / 200)); // Tối thiểu 0.95x
+                    if (isYt) {
+                        if (player.setPlaybackRate) player.setPlaybackRate(newRate);
+                    } else {
+                        player.playbackRate = newRate;
+                    }
+                }
+
+                // Ẩn loader vì video đang chạy bình thường (chỉ hơi lệch)
+                if (syncStatus) syncStatus.classList.add("hidden");
+            }
+            // --- TẦNG 3: Hard Seek (Lệch quá lớn, bắt buộc phải nhảy) ---
+            else if (absDrift > HARD_SEEK_THRESHOLD) {
+                const nowMs = Date.now();
+                if (nowMs - lastHardSeekTime > HARD_SEEK_COOLDOWN) {
+                    lastHardSeekTime = nowMs;
+                    console.warn(`⚡ [ScheduleSync] Hard seek: lệch ${Math.round(absDrift)}s -> tua tới ${Math.round(diffSeconds)}s`);
+                    if (isYt) {
+                        player.seekTo(diffSeconds, true);
+                    } else {
+                        player.currentTime = diffSeconds;
+                    }
+                    if (syncStatus) {
+                        syncStatus.classList.remove("hidden");
+                        syncStatus.querySelector("span").textContent = "Đang đồng bộ lại...";
+                    }
+                } else {
+                    // Đang trong cooldown -> Chỉ hiện thông báo, không seek
+                    if (syncStatus) {
+                        syncStatus.classList.remove("hidden");
+                        syncStatus.querySelector("span").textContent = "Đang bắt kịp tiến độ...";
+                    }
+                }
+            }
+            // --- Drift OK (dưới ngưỡng) -> Reset playbackRate về chuẩn ---
+            else {
+                if (isYt) {
+                    if (player.setPlaybackRate) player.setPlaybackRate(1);
+                } else {
+                    player.playbackRate = 1;
+                }
+                if (syncStatus) syncStatus.classList.add("hidden");
+            }
+
+            // Nếu video đã chạy vượt quá duration thì đánh dấu kết thúc
             if (roomData.duration && diffSeconds >= roomData.duration) {
-                if (isYt) { if(player.pauseVideo) player.pauseVideo(); }
+                if (isYt) { if (player.pauseVideo) player.pauseVideo(); }
                 else player.pause();
                 if (syncStatus) syncStatus.classList.add("hidden");
+                
+                // 🔥 QUAN TRỌNG: Cập nhật trạng thái "ended" lên Firestore cho phòng hẹn giờ
+                if (isHost) {
+                    updateRoomState("ended", roomData.duration);
+                }
+                
                 clearInterval(scheduleSyncInterval);
                 scheduleSyncInterval = null;
+                currentScheduledTime = null;
             }
         } else {
-            // ⏳ Chưa tới giờ chiếu -> Ép Pause và ở vị trí 0s, hiện bảng đếm ngược (nếu muốn) hoặc loader
+            // ========== CHƯA TỚI GIỜ CHIẾU ==========
             if (syncStatus) {
                 syncStatus.classList.remove("hidden");
                 const remaining = Math.abs(Math.floor(diffSeconds));
@@ -2579,7 +2907,7 @@ function startScheduleSync(roomData) {
                 const rmSec = remaining % 60;
                 syncStatus.querySelector("span").innerHTML = `Chờ phát sóng: <b>${rmMin}:${rmSec.toString().padStart(2, '0')}</b>`;
             }
-            
+
             if (isYt) {
                 if (player.getPlayerState && player.getPlayerState() === 1) {
                     player.pauseVideo();
@@ -2590,5 +2918,102 @@ function startScheduleSync(roomData) {
                 if (player.currentTime > 1) player.currentTime = 0;
             }
         }
-    }, 1000);
+    }, 3000); // Kiểm tra mỗi 3 giây thay vì 1 giây (giảm tải CPU/Network)
+}
+
+/** Hàm kiểm tra phòng đã kết thúc chưa (Dùng chung cho cả Lobby và Room) **/
+function checkIfRoomEnded(room) {
+    if (!room) return { isActuallyEnded: false };
+    
+    // 1. Trạng thái cứng từ DB
+    if (room.status === "ended") {
+        return { isActuallyEnded: true, endedAt: room.endedAt || room.lastUpdated || new Date() };
+    }
+
+    // 2. Lấy duration (ưu tiên DB, sau đó tra cứu allMovies)
+    let duration = room.duration || 0;
+    if (!duration && typeof allMovies !== 'undefined' && room.movieId) {
+        const movie = allMovies.find(m => m.id === room.movieId);
+        if (movie && movie.duration) {
+            const mins = parseInt(movie.duration.replace(/\D/g, ''));
+            if (mins) duration = mins * 60;
+        }
+        if (movie && movie.episodes && room.episodeIndex !== undefined) {
+             const ep = movie.episodes[room.episodeIndex];
+             if (ep && ep.duration) duration = ep.duration;
+        }
+    }
+
+    // 3. Kiểm tra dựa trên thời lượng (duration) và thời gian bắt đầu
+    let startTime = null;
+    if (room.scheduledTime) {
+        startTime = room.scheduledTime.toDate ? room.scheduledTime.toDate() : new Date(room.scheduledTime);
+    } else if (room.startedAt) {
+        startTime = room.startedAt.toDate ? room.startedAt.toDate() : new Date(room.startedAt);
+    }
+
+    if (startTime && duration > 0) {
+        const now = new Date();
+        const expectedEnd = new Date(startTime.getTime() + duration * 1000);
+        
+        // Nếu đã qua thời điểm kết thúc dự kiến (+ 5s buffer cho mượt)
+        if (now >= expectedEnd) {
+            return { isActuallyEnded: true, endedAt: expectedEnd };
+        }
+    }
+
+    // 4. Fallback: Kiểm tra dựa trên currentTime (nếu đang trong phòng)
+    if (duration > 0 && room.currentTime >= duration - 3) {
+        let calcEnd = new Date();
+        if (startTime) {
+            calcEnd = new Date(startTime.getTime() + duration * 1000);
+        }
+        return { isActuallyEnded: true, endedAt: calcEnd };
+    }
+
+    return { isActuallyEnded: false };
+}
+
+function showRoomEndedOverlay(endedAt) {
+    const overlay = document.getElementById("roomEndedOverlay");
+    const timeText = document.getElementById("endedTimeText");
+    if (!overlay) return;
+
+    overlay.classList.add("active");
+    
+    // Tắt các điều khiển khác
+    const controls = document.getElementById("wpCenterOverlay");
+    const bottomBar = document.getElementById("wpControlsBar");
+    if (controls) controls.style.display = "none";
+    if (bottomBar) bottomBar.style.display = "none";
+
+    if (endedAt) {
+        try {
+            const date = endedAt.toDate ? endedAt.toDate() : new Date(endedAt);
+            if (!isNaN(date.getTime())) {
+                const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const dateStr = date.toLocaleDateString();
+                timeText.innerText = `Phòng đã đóng lúc: ${timeStr} - ${dateStr}`;
+            } else {
+                timeText.innerText = `Phòng đã đóng.`;
+            }
+        } catch (e) {
+            timeText.innerText = `Phòng đã đóng.`;
+        }
+    } else {
+        timeText.innerText = `Phòng đã đóng.`;
+    }
+}
+
+/** Ẩn lớp phủ kết thúc phòng **/
+function hideRoomEndedOverlay() {
+    const overlay = document.getElementById("roomEndedOverlay");
+    if (!overlay) return;
+    overlay.classList.remove("active");
+    
+    // Hiện lại các điều khiển
+    const controls = document.getElementById("wpCenterOverlay");
+    const bottomBar = document.getElementById("wpControlsBar");
+    if (controls) controls.style.display = "flex";
+    if (bottomBar) bottomBar.style.display = "flex";
 }

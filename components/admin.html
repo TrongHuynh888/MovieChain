@@ -1175,9 +1175,14 @@
                     <label style="color: var(--text-muted); font-size: 0.9rem;">Tổng giới hạn hệ thống:</label>
                     <input type="number" id="totalRoomLimitInput" class="form-input" style="width: 80px;" min="1" value="50">
                 </div>
+                <!-- Cấu hình tự xóa phòng sau N giờ -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="color: var(--text-muted); font-size: 0.9rem;" title="Phòng đã kết thúc sẽ bị xóa sau khoảng thời gian này">Tự xóa sau (giờ):</label>
+                    <input type="number" id="autoDeleteHoursInput" class="form-input" style="width: 70px;" min="1" value="6">
+                </div>
                 <button class="btn btn-sm btn-primary" onclick="saveUserRoomLimit()">Lưu cấu hình</button>
             </div>
-            <small class="text-muted" style="display: block; margin-top: 5px;">* Giới hạn số lượng phòng tối đa một người dùng có thể tạo và tổng số phòng toàn hệ thống (Admin được miễn trừ).</small>
+            <small class="text-muted" style="display: block; margin-top: 5px;">* Giới hạn số lượng phòng tối đa một người dùng có thể tạo và tổng số phòng toàn hệ thống (Admin được miễn trừ). Phòng đã kết thúc sẽ tự động xóa sau khoảng thời gian quy định.</small>
         </div>
 
         <!-- Watch Party Statistics & Charts -->
@@ -1283,6 +1288,7 @@
               <th>Loại phòng</th>
               <th>Lịch chiếu</th>
               <th>Ngày tạo</th>
+              <th>Xóa Tự Động</th>
               <th>Thao tác</th>
             </tr>
           </thead>

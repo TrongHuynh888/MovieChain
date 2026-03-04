@@ -179,18 +179,20 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #e50914;
+  background: #ff0000; /* Đỏ rực hơn */
   color: #fff;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800; /* Đậm hơn */
   letter-spacing: 1px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 20px;
   text-transform: uppercase;
   animation: wp-live-pulse 2s infinite;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); /* Thêm bóng chữ */
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
 }
 .wp-badge-live i {
-  font-size: 7px;
+  font-size: 8px;
   animation: wp-blink 1.2s infinite;
 }
 @keyframes wp-live-pulse {
@@ -200,6 +202,50 @@
 @keyframes wp-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+/* Badge trạng thái Đã kết thúc */
+.wp-badge-ended {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.7); /* Nền tối hơn hẳn */
+  color: #ffffff; /* Chữ trắng rực */
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px); /* Làm mờ nền phim phía dưới nhãn */
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 5;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+/* Nút bấm thông tin (Chi tiết) */
+.wp-btn-info {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.wp-btn-info:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Nút bấm bị vô hiệu hóa khi phòng đóng (Giữ lại để dự phòng) */
+.wp-room-join-btn.disabled,
+.wp-popup-join-btn.disabled {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+  cursor: not-allowed !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  pointer-events: none;
 }
 
 .wp-badge-private,
@@ -569,7 +615,7 @@
 .wp-room-card-wrapper.popup-active .wp-room-popup {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) translateY(0);
+  transform: none; /* FIX: Xóa translateX(-50%) gây lệch */
   pointer-events: auto;
 }
 
@@ -595,14 +641,14 @@
 }
 
 /* =========================================
-   ROOM CARD - RESPONSIVE
+   ROOM CARD - RESPONSIVE (MOBILE < 600PX)
    ========================================= */
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   /* Thu nhỏ padding container cho mobile */
   .party-container {
     padding: 10px 10px;
   }
-  /* Ép 2 cột cố định, gap nhỏ hơn */
+  /* Ép 2 cột cố định cho điện thoại, gap nhỏ hơn */
   .party-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
@@ -715,6 +761,15 @@
   }
 }
 
+/* =========================================
+   TABLET OPTIMIZATION (601PX - 1024PX)
+   ========================================= */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .wp-room-popup {
+    transform: none !important; /* Fix lệch popup hiển thị trên tablet */
+  }
+}
+
 
 /* =========================================
    ROOM SCHEDULE UI Cài Đặt Thời Gian Box
@@ -811,8 +866,10 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
   display: grid;
   grid-template-columns: 1fr 350px; /* Cột trái to, cột phải nhỏ */
   gap: 20px;
-  height: calc(100vh - 100px);
-  padding: 10px;
+  height: 100dvh; /* Sử dụng dvh để chính xác hơn trên mobile */
+  padding: 10px 15px 20px; /* Thêm padding đáy 20px để nâng timeline cao lên */
+  box-sizing: border-box;
+  overflow: hidden; /* Chống tràn tuyệt đối */
 }
 @media (max-width: 900px) {
   .room-layout {
@@ -870,6 +927,13 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
 }
 
 /* Main Area */
+.room-main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+}
 .room-header-bar {
   display: flex;
   align-items: center;
@@ -877,16 +941,17 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
   background: var(--bg-secondary);
   padding: 10px 15px;
   border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 0; /* Xóa margin để tiết kiệm không gian */
 }
 .room-player-wrapper {
   flex: 1;
-  min-height: 480px;
+  min-height: 0; /* QUAN TRỌNG: Cho phép co lại để không bị chìm thanh timeline */
   background: #000;
   position: relative;
   border-radius: 12px;
   overflow: hidden;
   width: 100%;
+  max-height: 100%; /* Đảm bảo không vượt quá container cha */
 }
 
 /* Đảm bảo Player YouTube chiếm full khung */
@@ -924,6 +989,8 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 100%; /* Fill high */
+  min-height: 0; /* QUAN TRỌNG: Cho phép sidebar co lại */
 }
 .room-tabs {
   display: flex;
@@ -946,12 +1013,15 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
 .room-tab-content {
   display: none;
   flex: 1;
-  overflow-y: auto;
+  overflow-y: hidden; /* Cha không cuộn, để con (chat-messages) cuộn */
   padding: 10px;
   flex-direction: column;
+  min-height: 0; /* Cho phép co giãn */
 }
 .room-tab-content.active {
   display: flex;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Chat UI */
@@ -962,6 +1032,7 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
   flex-direction: column;
   gap: 8px;
   padding-bottom: 10px;
+  min-height: 0; /* Đảm bảo có thể co lại khi nội dung quá dài */
 }
 .chat-msg {
   font-size: 13px;
@@ -2044,4 +2115,73 @@ select.wp-super-input {
     text-align: center;
     padding: 40px 20px;
     color: #666;
+}
+
+/* Room Ended Overlay */
+.room-ended-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  color: #fff;
+  text-align: center;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.room-ended-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ended-icon {
+  font-size: 64px;
+  color: var(--accent-primary);
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 15px rgba(124, 58, 237, 0.5));
+}
+.room-ended-overlay h2 {
+  font-size: 28px;
+  margin-bottom: 10px;
+  background: linear-gradient(45deg, #fff, #a78bfa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.ended-time {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 30px;
+}
+
+.ended-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.btn-leave-ended {
+  padding: 12px 24px;
+  border-radius: 30px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-leave-ended:hover {
+  background: var(--accent-secondary);
+  transform: translateY(-2px);
 }

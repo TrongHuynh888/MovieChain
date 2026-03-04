@@ -6719,6 +6719,7 @@ async function saveQuickEditEpisodeNumber(index, newNumber) {
 let allAdminWatchRooms = [];
 let roomTypeChart = null;
 let popularMoviesChart = null;
+let adminWatchRoomsInterval = null;
 
 async function loadAdminWatchRooms() {
     const tableBody = document.getElementById("adminWatchRoomsTable");
@@ -6728,7 +6729,7 @@ async function loadAdminWatchRooms() {
 
     try {
         // Tải cấu hình giới hạn phòng trước
-        loadUserRoomLimit();
+        await loadUserRoomLimit();
 
         const snapshot = await db.collection("watchRooms")
             .orderBy("createdAt", "desc")
@@ -6736,8 +6737,16 @@ async function loadAdminWatchRooms() {
 
         allAdminWatchRooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        renderAdminWatchRooms(allAdminWatchRooms);
+        filterAdminWatchRooms(); // Sẽ gọi renderAdminWatchRooms sau khi sort/filter
         updateWatchPartyStats(allAdminWatchRooms);
+        
+        // Khởi động Interval đếm ngược mỗi giây cho các phòng trong Admin
+        if (adminWatchRoomsInterval) clearInterval(adminWatchRoomsInterval);
+        adminWatchRoomsInterval = setInterval(() => {
+            // Không cần tải lại từ DB, chỉ chạy lại render để update text đếm ngược
+            filterAdminWatchRooms();
+        }, 1000);
+
     } catch (error) {
         console.error("Lỗi tải danh sách phòng (Admin):", error);
         if (tableBody) {
@@ -6960,6 +6969,32 @@ function renderAdminWatchRooms(rooms) {
             }
         }
 
+        // --- Tính toán thời gian xóa tự động ---
+        let deleteStatusHTML = '<span class="text-muted">-</span>';
+        const { isActuallyEnded, endedAt } = checkIfRoomEnded(room);
+        
+        if (isActuallyEnded && endedAt) {
+            const now = new Date();
+            const endDate = endedAt.toDate ? endedAt.toDate() : new Date(endedAt);
+            
+            // Lấy giới hạn thời gian (đọc từ input nếu có, nếu không lấy mặc định 6)
+            const autoDeleteHoursInput = document.getElementById('autoDeleteHoursInput');
+            const autoDeleteHoursLimit = autoDeleteHoursInput ? (parseInt(autoDeleteHoursInput.value) || 6) : 6;
+            
+            const diffMs = now.getTime() - endDate.getTime();
+            const limitMs = autoDeleteHoursLimit * 60 * 60 * 1000;
+            const remainingMs = limitMs - diffMs;
+            
+            if (remainingMs <= 0) {
+               deleteStatusHTML = '<span class="text-danger" style="font-weight: 500;"><i class="fas fa-spinner fa-spin"></i> Đang xóa...</span>';
+            } else {
+               const rh = Math.floor(remainingMs / (1000 * 60 * 60));
+               const rm = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+               const rs = Math.floor((remainingMs % (1000 * 60)) / 1000);
+               deleteStatusHTML = `<span class="text-warning" style="font-weight: 500; font-family: monospace;" title="Xóa sau ${autoDeleteHoursLimit}h kể từ khi đóng">${rh.toString().padStart(2, '0')}:${rm.toString().padStart(2, '0')}:${rs.toString().padStart(2, '0')}</span>`;
+            }
+        }
+
         // Poster phim
         const posterUrl = room.moviePoster || 'https://via.placeholder.com/40x60/1a1a2e/ffffff?text=No+Img';
 
@@ -6973,6 +7008,7 @@ function renderAdminWatchRooms(rooms) {
                 <td>${typeBadge}</td>
                 <td>${scheduleBadge}</td>
                 <td><small>${createdDate}</small></td>
+                <td>${deleteStatusHTML}</td>
                 <td>
                     <div class="table-actions">
                         <button class="btn btn-sm btn-action-glass" onclick="adminJoinRoom('${room.id}', '${room.type}')" title="Vào xem">
@@ -7001,12 +7037,15 @@ async function loadUserRoomLimit() {
             const data = doc.data();
             const userLimit = data.userRoomLimit || 3;
             const totalLimit = data.totalRoomLimit || 50;
+            const autoDeleteHours = data.autoDeleteHours || 6;
 
             const userInput = document.getElementById('userRoomLimitInput');
             const totalInput = document.getElementById('totalRoomLimitInput');
+            const deleteInput = document.getElementById('autoDeleteHoursInput');
 
             if (userInput) userInput.value = userLimit;
             if (totalInput) totalInput.value = totalLimit;
+            if (deleteInput) deleteInput.value = autoDeleteHours;
         }
     } catch (error) {
         console.error("Lỗi tải giới hạn phòng:", error);
@@ -7016,14 +7055,16 @@ async function loadUserRoomLimit() {
 async function saveUserRoomLimit() {
     const userInput = document.getElementById('userRoomLimitInput');
     const totalInput = document.getElementById('totalRoomLimitInput');
+    const deleteInput = document.getElementById('autoDeleteHoursInput');
     
-    if (!userInput || !totalInput) return;
+    if (!userInput || !totalInput || !deleteInput) return;
     
     const userLimit = parseInt(userInput.value);
     const totalLimit = parseInt(totalInput.value);
+    const autoDeleteHours = parseInt(deleteInput.value);
 
-    if (isNaN(userLimit) || userLimit < 1 || isNaN(totalLimit) || totalLimit < 1) {
-        showNotification("Giới hạn phải là số dương!", "error");
+    if (isNaN(userLimit) || userLimit < 1 || isNaN(totalLimit) || totalLimit < 1 || isNaN(autoDeleteHours) || autoDeleteHours < 1) {
+        showNotification("Cấu hình giới hạn và thời gian phải là số dương!", "error");
         return;
     }
 
@@ -7032,13 +7073,14 @@ async function saveUserRoomLimit() {
         await db.collection("configs").doc("watchParty").set({
             userRoomLimit: userLimit,
             totalRoomLimit: totalLimit,
+            autoDeleteHours: autoDeleteHours,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedBy: currentUser.uid
         }, { merge: true });
-        showNotification("Đã lưu cấu hình giới hạn phòng mới!", "success");
+        showNotification("Đã lưu cấu hình phòng xem chung mới!", "success");
         toggleRoomLimitSettings();
     } catch (error) {
-        console.error("Lỗi lưu giới hạn phòng:", error);
+        console.error("Lỗi lưu cấu hình:", error);
         showNotification("Lỗi khi lưu cấu hình.", "error");
     } finally {
         showLoading(false);
