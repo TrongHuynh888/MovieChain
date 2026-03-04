@@ -2294,6 +2294,13 @@ video::-webkit-media-controls-enclosure {
   transform: none !important;
 }
 
+body.has-pseudo-fullscreen {
+  /* Ép chiều cao nền dài ra để trình duyệt luôn CÓ KHOẢNG TRỐNG cuộn trang.
+     Nếu độ dài trang chỉ vừa đúng 100vh, lệnh auto-scroll sẽ bị vô hiệu hóa 
+     khiến thanh URL không thể tự ẩn được chừng nào chưa vuốt tay */
+  min-height: 150vh !important;
+}
+
 /* Ẩn thanh cuộn nếu có để trông sạch hơn, 
    NHƯNG KHÔNG dùng overflow: hidden để tránh khóa thanh URL */
 body.has-pseudo-fullscreen::-webkit-scrollbar {

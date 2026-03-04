@@ -2376,8 +2376,8 @@ window.toggleFullscreen = function() {
             document.body.classList.add("has-pseudo-fullscreen");
             if (icon) icon.className = "fas fa-compress";
             
-            // Hack ẩn thanh URL trên mobile/Chrome bằng cách cuộn trang
-            setTimeout(() => window.scrollTo(0, 1), 50);
+            // Hack ẩn thanh URL
+            forceHideAddressBar();
             return;
         }
 
@@ -2390,7 +2390,7 @@ window.toggleFullscreen = function() {
                 document.documentElement.classList.add("has-pseudo-fullscreen");
                 document.body.classList.add("has-pseudo-fullscreen");
                 if (icon) icon.className = "fas fa-compress";
-                setTimeout(() => window.scrollTo(0, 1), 50);
+                forceHideAddressBar();
             });
 
         } else if (container.webkitRequestFullscreen) {
@@ -2430,16 +2430,19 @@ document.addEventListener("keydown", function(e) {
     }
 });
 
-// Lắng nghe sự kiện xoay màn hình để tự động cuộn trang giấu URL bar trên mobile
-window.addEventListener("resize", function() {
-    if (document.body.classList.contains("has-pseudo-fullscreen")) {
-        setTimeout(() => window.scrollTo(0, 1), 100);
-    }
-});
+// Helper: Ép trình duyệt ẩn thanh URL bằng thao tác cuộn giả
+function forceHideAddressBar() {
+    if (!document.body.classList.contains("has-pseudo-fullscreen")) return;
+    window.scrollTo(0, 0); // Về đầu trang trước
+    setTimeout(() => {
+        window.scrollTo(0, 1); // Cuộn nhẹ để trình duyệt tự ẩn thanh URL
+    }, 150);
+}
+
+// Lắng nghe sự kiện xoay màn hình để tái kích hoạt ẩn URL bar
+window.addEventListener("resize", forceHideAddressBar);
 window.addEventListener("orientationchange", function() {
-    if (document.body.classList.contains("has-pseudo-fullscreen")) {
-        setTimeout(() => window.scrollTo(0, 1), 200);
-    }
+    setTimeout(forceHideAddressBar, 200); // Đợi màn hình xoay xong
 });
 
 // Lắng nghe sự kiện fullscreenchange để đồng bộ icon
