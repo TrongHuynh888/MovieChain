@@ -2366,10 +2366,13 @@ window.toggleFullscreen = function() {
             if (container.requestFullscreen) {
                 container.requestFullscreen().catch(err => {
                     console.warn("Fullscreen API error:", err.message);
-                    showNotification("Không thể bật toàn màn hình!", "error");
                 });
             } else if (container.webkitRequestFullscreen) {
-                container.webkitRequestFullscreen();
+                container.webkitRequestFullscreen(); // Safari desktop/Android
+            } else if (videoEl && videoEl.webkitEnterFullscreen) {
+                // Cứu cánh cho iOS Safari (chỉ cho phép video fullscreen, không cho div)
+                videoEl.webkitEnterFullscreen();
+                return;
             }
             if (icon) icon.className = "fas fa-compress";
         } catch (err) {
