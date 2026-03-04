@@ -2335,7 +2335,7 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
   padding-top: env(safe-area-inset-top, 20px) !important;
   padding-left: env(safe-area-inset-left, 30px) !important;
   padding-right: env(safe-area-inset-right, 30px) !important;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.95) 40%, rgba(0,0,0,0.5) 80%, transparent) !important;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 60%, transparent 100%) !important;
 }
 .video-container.pseudo-fullscreen .custom-video-controls {
   position: absolute !important;
@@ -2346,7 +2346,7 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
   display: flex !important;
   z-index: 9999 !important;
   padding: 10px 20px 20px !important;
-  background: linear-gradient(to top, rgba(0,0,0,0.95) 30%, rgba(0,0,0,0.5) 70%, transparent) !important;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%) !important;
 }
 
 .video-container.pseudo-fullscreen .center-controls-overlay {
@@ -2363,6 +2363,66 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
 .video-container.pseudo-fullscreen .time-duration { font-size: 13px !important; }
 .video-container.pseudo-fullscreen .control-btn { width: 32px !important; height: 32px !important; font-size: 16px !important; }
 .video-container.pseudo-fullscreen .skip-btn-small { width: 30px !important; height: 30px !important; }
+
+/* ============================================================
+   NÚT KHÓA MÀN HÌNH - Nổi bên trái video
+   Chỉ hiện khi đang ở chế độ fullscreen/pseudo-fullscreen
+   ============================================================ */
+.screen-lock-float {
+  display: none; /* Ẩn mặc định */
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10002;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, opacity 0.3s;
+  backdrop-filter: blur(4px);
+}
+.screen-lock-float:hover,
+.screen-lock-float:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Hiện nút khi ở pseudo-fullscreen */
+.video-container.pseudo-fullscreen .screen-lock-float {
+  display: flex !important;
+}
+/* Hiện nút khi ở native fullscreen */
+.video-container:fullscreen .screen-lock-float,
+.video-container:-webkit-full-screen .screen-lock-float {
+  display: flex !important;
+}
+
+/* ============================================================
+   TRẠNG THÁI KHÓA MÀN HÌNH (screen-locked)
+   Ẩn hết controls + top-bar, chỉ giữ nút mở khóa
+   ============================================================ */
+.video-container.pseudo-fullscreen.screen-locked .player-top-bar,
+.video-container.pseudo-fullscreen.screen-locked .center-controls-overlay,
+.video-container.pseudo-fullscreen.screen-locked .custom-video-controls {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Nút khóa vẫn hiện khi đã khóa, nhưng mờ đi */
+.video-container.pseudo-fullscreen.screen-locked .screen-lock-float {
+  display: flex !important;
+  opacity: 0.4;
+}
+.video-container.pseudo-fullscreen.screen-locked .screen-lock-float:active {
+  opacity: 1;
+}
 
 
 /* ============================================================

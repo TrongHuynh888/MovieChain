@@ -2387,7 +2387,6 @@ window.toggleFullscreen = function() {
                 document.documentElement.classList.add("has-pseudo-fullscreen");
                 document.body.classList.add("has-pseudo-fullscreen");
                 if (icon) icon.className = "fas fa-compress";
-                forceHideAddressBar();
             });
 
         } else if (container.webkitRequestFullscreen) {
@@ -2396,6 +2395,10 @@ window.toggleFullscreen = function() {
         if (icon) icon.className = "fas fa-compress";
     } else {
         // THOÁT FULLSCREEN
+        // Nếu đang khóa màn hình, không cho thoát
+        if (container.classList.contains("screen-locked")) {
+            return;
+        }
         if (isPseudoFullscreen) {
             container.classList.remove("pseudo-fullscreen");
             document.documentElement.classList.remove("has-pseudo-fullscreen");
@@ -2417,8 +2420,11 @@ window.toggleFullscreen = function() {
 document.addEventListener("keydown", function(e) {
     if (e.key === "Escape") {
         const container = document.getElementById("videoContainer");
+        if (!container) return;
+        // Nếu đang khóa màn hình, chặn ESC
+        if (container.classList.contains("screen-locked")) return;
         const icon = document.querySelector("#fullscreenBtn i");
-        if (container && container.classList.contains("pseudo-fullscreen")) {
+        if (container.classList.contains("pseudo-fullscreen")) {
             container.classList.remove("pseudo-fullscreen");
             document.documentElement.classList.remove("has-pseudo-fullscreen");
             document.body.classList.remove("has-pseudo-fullscreen");
@@ -2427,7 +2433,29 @@ document.addEventListener("keydown", function(e) {
     }
 });
 
-// (Đã bỏ hàm forceHideAddressBar vì dùng overflow:hidden trên body thay thế)
+/**
+ * Bật/Tắt khóa màn hình trong pseudo-fullscreen
+ * Khi khóa: ẩn hết controls, chỉ giữ nút mở khóa
+ * Ngăn chặn việc vô tình thoát fullscreen khi xem phim
+ */
+window.toggleScreenLock = function() {
+    const container = document.getElementById("videoContainer");
+    const lockBtn = document.getElementById("screenLockBtn");
+    if (!container || !lockBtn) return;
+
+    const isLocked = container.classList.toggle("screen-locked");
+    const lockIcon = lockBtn.querySelector("i");
+
+    if (isLocked) {
+        // Đã khóa
+        if (lockIcon) lockIcon.className = "fas fa-lock";
+        lockBtn.title = "Mở khóa màn hình";
+    } else {
+        // Đã mở khóa
+        if (lockIcon) lockIcon.className = "fas fa-lock-open";
+        lockBtn.title = "Khóa màn hình";
+    }
+};
 
 // Lắng nghe sự kiện fullscreenchange để đồng bộ icon
 document.addEventListener("fullscreenchange", function() {
