@@ -2372,6 +2372,7 @@ window.toggleFullscreen = function() {
         if (isIOS || (!container.requestFullscreen && !container.webkitRequestFullscreen)) {
             // Giả lập cho iOS / Trình duyệt không hỗ trợ
             container.classList.add("pseudo-fullscreen");
+            document.documentElement.classList.add("has-pseudo-fullscreen");
             document.body.classList.add("has-pseudo-fullscreen");
             if (icon) icon.className = "fas fa-compress";
             
@@ -2386,6 +2387,7 @@ window.toggleFullscreen = function() {
                 console.warn("Fullscreen API error:", err);
                 // Fallback nếu lỗi (điển hình là Chrome/Safari rườm rà)
                 container.classList.add("pseudo-fullscreen");
+                document.documentElement.classList.add("has-pseudo-fullscreen");
                 document.body.classList.add("has-pseudo-fullscreen");
                 if (icon) icon.className = "fas fa-compress";
                 setTimeout(() => window.scrollTo(0, 1), 50);
@@ -2399,6 +2401,7 @@ window.toggleFullscreen = function() {
         // THOÁT FULLSCREEN
         if (isPseudoFullscreen) {
             container.classList.remove("pseudo-fullscreen");
+            document.documentElement.classList.remove("has-pseudo-fullscreen");
             document.body.classList.remove("has-pseudo-fullscreen");
             if (icon) icon.className = "fas fa-expand";
             return;
@@ -2420,9 +2423,22 @@ document.addEventListener("keydown", function(e) {
         const icon = document.querySelector("#fullscreenBtn i");
         if (container && container.classList.contains("pseudo-fullscreen")) {
             container.classList.remove("pseudo-fullscreen");
+            document.documentElement.classList.remove("has-pseudo-fullscreen");
             document.body.classList.remove("has-pseudo-fullscreen");
             if (icon) icon.className = "fas fa-expand";
         }
+    }
+});
+
+// Lắng nghe sự kiện xoay màn hình để tự động cuộn trang giấu URL bar trên mobile
+window.addEventListener("resize", function() {
+    if (document.body.classList.contains("has-pseudo-fullscreen")) {
+        setTimeout(() => window.scrollTo(0, 1), 100);
+    }
+});
+window.addEventListener("orientationchange", function() {
+    if (document.body.classList.contains("has-pseudo-fullscreen")) {
+        setTimeout(() => window.scrollTo(0, 1), 200);
     }
 });
 
