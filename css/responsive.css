@@ -935,25 +935,33 @@ body.watch-party-active #watchPartyPage {
     padding: 8px !important;
   }
 
-  /* --- D. LƯỚI PHIM 4 CỘT --- */
+  /* --- D. LƯỚI PHIM (2 CỘT TRÊN MOBILE CHO DỄ NHÌN) --- */
   .movie-grid {
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 10px !important;
-    padding: 0 5px !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
+    padding: 0 10px !important;
   }
   .card-body {
-    padding: 6px 4px !important;
+    padding: 10px 8px !important;
   }
   .card-title {
-    font-size: 11px !important;
-    margin-bottom: 2px !important;
-    line-height: 1.3 !important;
+    font-size: 14px !important;
+    margin-bottom: 4px !important;
+    line-height: 1.4 !important;
+    white-space: normal !important; /* Cho phép xuống dòng nếu tiêu đề dài */
+    display: -webkit-box !important;
+    line-clamp: 2;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
   .card-meta {
-    font-size: 10px !important;
+    font-size: 11px !important;
+    opacity: 0.9 !important;
   }
   .card-image img {
-    border-radius: 6px !important;
+    border-radius: 8px !important;
   }
 
   /* --- E. FIX POPUP TO QUÁ (Thu nhỏ & Tinh chỉnh) --- */
@@ -2335,8 +2343,8 @@ body[data-theme="light"] .chat-msg .author {
   }
   .actor-movies-grid,
   .timeline-movies-row {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
-    gap: 10px !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
   }
   .actor-movies-header {
     flex-direction: column !important;

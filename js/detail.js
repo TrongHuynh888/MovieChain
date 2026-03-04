@@ -2357,38 +2357,66 @@ window.toggleFullscreen = function() {
     const icon = document.querySelector("#fullscreenBtn i");
     if (!container) return;
 
-    // Kiểm tra đang fullscreen chưa (cả chuẩn lẫn webkit)
-    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    // Nhận diện iPhone/iPod (buộc dùng giả lập để giữ custom controls như Danh sách tập)
+    const isIPhone = /iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-    if (!isFullscreen) {
-        // Vào fullscreen
-        try {
-            if (container.requestFullscreen) {
-                container.requestFullscreen().catch(err => {
-                    console.warn("Fullscreen API error:", err.message);
-                    showNotification("Không thể bật toàn màn hình!", "error");
-                });
-            } else if (container.webkitRequestFullscreen) {
-                container.webkitRequestFullscreen();
-            }
+    // Trạng thái hiện tại
+    const isNativeFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    const isPseudoFullscreen = container.classList.contains("pseudo-fullscreen");
+
+    if (!isNativeFullscreen && !isPseudoFullscreen) {
+        // VÀO FULLSCREEN
+        if (isIPhone || (!container.requestFullscreen && !container.webkitRequestFullscreen)) {
+            // Giả lập cho iOS
+            container.classList.add("pseudo-fullscreen");
+            document.body.classList.add("has-pseudo-fullscreen");
             if (icon) icon.className = "fas fa-compress";
-        } catch (err) {
-            console.error("Fullscreen error:", err);
+            return;
         }
+
+        // Native cho Android/Desktop PC
+        if (container.requestFullscreen) {
+            container.requestFullscreen().catch(err => {
+                console.warn("Fullscreen API error:", err);
+                // Fallback nếu lỗi
+                container.classList.add("pseudo-fullscreen");
+                document.body.classList.add("has-pseudo-fullscreen");
+                if (icon) icon.className = "fas fa-compress";
+            });
+        } else if (container.webkitRequestFullscreen) {
+            container.webkitRequestFullscreen(); 
+        }
+        if (icon) icon.className = "fas fa-compress";
     } else {
-        // Thoát fullscreen
-        try {
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch(e => console.log("Exit fullscreen:", e));
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
+        // THOÁT FULLSCREEN
+        if (isPseudoFullscreen) {
+            container.classList.remove("pseudo-fullscreen");
+            document.body.classList.remove("has-pseudo-fullscreen");
             if (icon) icon.className = "fas fa-expand";
-        } catch (err) {
-            console.error("Exit fullscreen error:", err);
+            return;
         }
+
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(e => console.log("Exit fullscreen:", e));
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        }
+        if (icon) icon.className = "fas fa-expand";
     }
 };
+
+// Lắng nghe phím ESC để thoát giả lập (nếu có dùng trên Desktop)
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+        const container = document.getElementById("videoContainer");
+        const icon = document.querySelector("#fullscreenBtn i");
+        if (container && container.classList.contains("pseudo-fullscreen")) {
+            container.classList.remove("pseudo-fullscreen");
+            document.body.classList.remove("has-pseudo-fullscreen");
+            if (icon) icon.className = "fas fa-expand";
+        }
+    }
+});
 
 // Lắng nghe sự kiện fullscreenchange để đồng bộ icon
 document.addEventListener("fullscreenchange", function() {
