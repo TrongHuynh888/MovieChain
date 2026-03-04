@@ -1108,15 +1108,20 @@ function renderMembersList(snapshot) {
 
     // Nút chức năng
     let actionButtons = "";
+    let volumeSliderHtml = "";
+    
     if (!isMe) {
       const isMuted = localMutedPeers.has(uid);
       const currentVol = peerVolumeLevels[uid] !== undefined ? peerVolumeLevels[uid] : 1;
       const volPercent = Math.round(currentVol * 100);
-      actionButtons += `
-        <div class="peer-volume-control">
-          <button class="btn-icon-small ${isMuted ? "active" : ""}" onclick="toggleLocalVolume('${uid}')" title="${isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng'}">
-            <i class="fas ${isMuted ? "fa-volume-mute" : (currentVol > 1 ? "fa-volume-up" : currentVol > 0 ? "fa-volume-down" : "fa-volume-off")}"></i>
-          </button>
+      
+      // Nút tắt tiếng nhỏ gọn
+      actionButtons += `<button class="btn-icon-small ${isMuted ? "active" : ""}" onclick="toggleLocalVolume('${uid}')" title="${isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng'}"><i class="fas ${isMuted ? "fa-volume-mute" : "fa-volume-up"}"></i></button>`;
+      
+      // Thanh slider riêng biệt (được đặt dưới hàng chính)
+      volumeSliderHtml = `
+        <div class="peer-volume-row">
+          <i class="fas fa-volume-down vol-icon-sm"></i>
           <input type="range" min="0" max="200" value="${volPercent}" class="peer-vol-slider" 
                  oninput="setPeerVolume('${uid}', this.value)" 
                  title="Âm lượng: ${volPercent}%">
@@ -1126,10 +1131,10 @@ function renderMembersList(snapshot) {
 
     if ((isHost || (typeof isAdmin !== "undefined" && isAdmin)) && !isMe) {
       actionButtons += `
-            <div class="admin-actions" style="display:flex; gap:5px; margin-left:5px;">
-                <button class="btn-icon-small" onclick="toggleChatBan('${uid}', ${!m.isChatBanned})"><i class="fas fa-comment-${m.isChatBanned ? "slash" : "dots"}"></i></button>
-                <button class="btn-icon-small" onclick="toggleMicBan('${uid}', ${!m.isMicBanned})"><i class="fas fa-microphone-${m.isMicBanned ? "slash" : "lines"}"></i></button>
-                <button class="btn-icon-small danger" onclick="kickUser('${uid}', '${m.name}')"><i class="fas fa-sign-out-alt"></i></button>
+            <div class="admin-actions">
+                <button class="btn-icon-small" onclick="toggleChatBan('${uid}', ${!m.isChatBanned})" title="${m.isChatBanned ? 'Bỏ cấm chat' : 'Cấm chat'}"><i class="fas fa-comment-${m.isChatBanned ? "slash" : "dots"}"></i></button>
+                <button class="btn-icon-small" onclick="toggleMicBan('${uid}', ${!m.isMicBanned})" title="${m.isMicBanned ? 'Bỏ cấm mic' : 'Cấm mic'}"><i class="fas fa-microphone-${m.isMicBanned ? "slash" : "lines"}"></i></button>
+                <button class="btn-icon-small danger" onclick="kickUser('${uid}', '${m.name}')" title="Đuổi"><i class="fas fa-sign-out-alt"></i></button>
             </div>`;
     }
 
@@ -1141,20 +1146,23 @@ function renderMembersList(snapshot) {
 
     list.innerHTML += `
             <div class="member-item" id="member-row-${uid}">
-                <div style="display:flex; align-items:center; gap:10px; flex:1; min-width: 0;">
-                    <div style="position:relative; flex-shrink: 0;">
-                        <img src="${m.avatar || defaultAvatar}" class="member-avatar avatar-img">
-                        ${m.isSpeaking ? '<div class="speaking-indicator"></div>' : ""}
-                    </div>
-                    <div class="member-info">
-                        <div class="member-name-row">
-                            <span class="member-name">${m.name}</span> 
-                            ${micIcon} ${chatBanIcon}
+                <div class="member-main-row">
+                    <div class="member-identity">
+                        <div class="member-avatar-wrap">
+                            <img src="${m.avatar || defaultAvatar}" class="member-avatar avatar-img">
+                            ${m.isSpeaking ? '<div class="speaking-indicator"></div>' : ""}
                         </div>
-                        <span class="member-role">${roleHtml}</span>
+                        <div class="member-info">
+                            <div class="member-name-row">
+                                <span class="member-name">${m.name}</span> 
+                                ${micIcon} ${chatBanIcon}
+                            </div>
+                            <span class="member-role">${roleHtml}</span>
+                        </div>
                     </div>
+                    <div class="member-actions">${actionButtons}</div>
                 </div>
-                <div class="member-actions">${actionButtons}</div>
+                ${volumeSliderHtml}
             </div>`;
   });
 }
@@ -1484,6 +1492,8 @@ function addMicButtonToUI() {
     document.getElementById("myMicBtn").remove();
   if (document.getElementById("myDeafenBtn"))
     document.getElementById("myDeafenBtn").remove();
+  if (document.getElementById("voiceVolBtnWrap"))
+    document.getElementById("voiceVolBtnWrap").remove();
 
   const micBtn = document.createElement("button");
   micBtn.id = "myMicBtn";

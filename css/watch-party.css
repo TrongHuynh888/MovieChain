@@ -967,13 +967,73 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
     display: none !important;
   }
 
-  /* Thu nhỏ nút Mic/Deafen trên mobile */
+  /* Thu nhỏ nút Mic/Deafen/Voice Vol trên mobile */
   .btn-mic-toggle,
-  .btn-deafen-toggle {
+  .btn-deafen-toggle,
+  .btn-voice-vol {
     width: 30px;
     height: 30px;
     font-size: 12px;
     margin-right: 4px;
+  }
+  .voice-vol-btn-wrap {
+    margin-right: 4px;
+  }
+
+  /* Member list - compact cho mobile */
+  .member-item {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+  .peer-volume-row {
+    padding-left: 0; /* Không lùi vào trên mobile */
+  }
+  .peer-vol-slider {
+    height: 6px; /* Nhỏn hơn cho dễ chạm */
+  }
+  .peer-vol-slider::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+  }
+  .peer-vol-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+  }
+  .admin-actions {
+    gap: 3px;
+  }
+  .btn-icon-small {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+}
+
+/* Landscape mode mobile - member list compact */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .member-item {
+    padding: 6px 8px;
+    gap: 3px;
+  }
+  .member-avatar {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .member-name {
+    font-size: 12px;
+  }
+  .member-role {
+    font-size: 10px;
+  }
+  .peer-volume-row {
+    padding-left: 0;
+  }
+  .peer-vol-slider {
+    height: 5px;
+  }
+  .peer-vol-label {
+    font-size: 10px;
+    min-width: 28px;
   }
 }
 
@@ -1410,16 +1470,66 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
 
 .member-item {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.05); /* Nền mờ nhẹ */
-  border-radius: 8px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
   transition: background 0.2s;
 }
 
 .member-item:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* Hàng chính: Avatar + Tên + Nút */
+.member-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.member-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.member-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Hàng Volume Slider (dưới avatar) */
+.peer-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 0 46px; /* Lùi vào theo avatar width (36px + 10px gap) */
+}
+
+.peer-volume-row .vol-icon-sm {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+  flex-shrink: 0;
+}
+
+/* Admin Actions */
+.admin-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.member-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 /* --- Per-peer Volume Control Slider --- */
@@ -1433,7 +1543,8 @@ input[type="datetime-local"].wp-super-input::-webkit-calendar-picker-indicator:h
 .peer-vol-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 70px;
+  flex: 1;
+  width: 60px;
   height: 4px;
   background: rgba(255,255,255,0.2);
   border-radius: 2px;
