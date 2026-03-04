@@ -29,8 +29,8 @@ let localMutedPeers = new Set();
 let scheduleSyncInterval = null;
 
 // API KEY CỦA BẠN (Đã điền sẵn)
-const METERED_API_KEY = "XdPnoCY8k0fnWLdeEczCipMdUx8zgEbQHbdbjyKMPVgNNQYk";
-const APP_NAME = "TramPhim";
+const METERED_API_KEY = "Tp6L8mYZolvVJ2ZwHQnmnZpt3kYvU8uEHJOozyjQtdT15XPE";
+const APP_NAME = "tramphim";
 
 // ==========================================
 // 1. MODULE LOADER
