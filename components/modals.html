@@ -556,7 +556,7 @@
       <div class="modal" style="max-width: 950px; width: 95%;">
         <div class="modal-header">
           <h3 class="modal-title" id="episodeModalTitle">Thêm Tập Mới</h3>
-          <button class="modal-close" onclick="closeModal('episodeModal')">
+          <button class="modal-close" onclick="closeEpisodeModal()">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -580,6 +580,76 @@
             
             <!-- Trường ẩn để tương thích ngược với code cũ -->
             <input type="hidden" id="episodeYoutubeId" />
+            <!-- BỔ SUNG: KHUNG PREVIEW VIDEO ĐỂ LẤY THỜI GIAN INTRO -->
+            <div class="intro-preview-container" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <label class="form-label" style="color: var(--accent-primary); display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <i class="fas fa-play-circle"></i> Xem trước để đánh dấu Bỏ qua đoạn giới thiệu
+                </label>
+
+                <!-- Vùng chứa các nút chuyển đổi phiên bản video -->
+                <div id="adminPreviewSourceSwitch" style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <!-- Nút sẽ được chèn tự động bằng JS -->
+                </div>
+                
+                <div id="adminIntroPlayerWrapper" style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 4px; overflow: hidden; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <!-- Video hoặc Iframe sẽ được chèn vào đây bằng JS -->
+                    <div id="adminIntroPlayerPlaceholder" style="text-align: center; color: #666;">
+                        <i class="fas fa-video-slash fa-2x mb-2"></i>
+                        <p style="font-size: 0.9rem;">Chưa có video. Hãy nhập link video bên trên.</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="form-group" style="margin-bottom: 0; min-width: 120px;">
+                        <label class="form-label" style="font-size: 0.85rem; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="timeCaptureTarget" value="intro" checked style="width: 15px; height: 15px; margin: 0; cursor: pointer; accent-color: var(--accent-primary);">
+                            <span>Intro kết thúc lúc:</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" id="introEndMinute" class="form-input" placeholder="0" min="0" style="width: 70px; text-align: center;">
+                            <span class="text-muted">phút</span>
+                            <input type="number" id="introEndSecond" class="form-input" placeholder="0" min="0" max="59" style="width: 70px; text-align: center;">
+                            <span class="text-muted">giây</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-top: 15px;">
+                    <div class="form-group" style="margin-bottom: 0; min-width: 120px;">
+                        <label class="form-label" style="font-size: 0.85rem; color: #4ecdc4; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="timeCaptureTarget" value="outro" style="width: 15px; height: 15px; margin: 0; cursor: pointer; accent-color: #4ecdc4;">
+                            <span>Chuyển tập sau (Outro):</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" id="outroStartMinute" class="form-input" placeholder="0" min="0" style="width: 70px; text-align: center; border-color: #4ecdc4;">
+                            <span class="text-muted">phút</span>
+                            <input type="number" id="outroStartSecond" class="form-input" placeholder="0" min="0" max="59" style="width: 70px; text-align: center; border-color: #4ecdc4;">
+                            <span class="text-muted">giây</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-top: 15px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="getCurrentTimeFromPreview()" style="height: 38px; white-space: nowrap;">
+                        <i class="fas fa-clock"></i> Lấy thời gian hiện tại
+                    </button>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="previewSkipIntro()" style="height: 38px; white-space: nowrap;">
+                        <i class="fas fa-fast-forward"></i> Thử nhảy đoạn này
+                    </button>
+                    <!-- [NEW] Nút áp dụng cho tất cả tập phim -->
+                    <div style="display: flex; align-items: center; gap: 8px; margin-left: 10px; height: 38px;">
+                        <input type="checkbox" id="applyIntroToAll" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-primary);">
+                        <label for="applyIntroToAll" style="margin-bottom: 0; font-size: 0.9rem; font-weight: 600; color: #ffc107; cursor: pointer;">
+                            Áp dụng cho tất cả tập
+                        </label>
+                    </div>
+                </div>
+                <small class="text-muted" style="display: block; margin-top: 8px; font-size: 0.8rem;">
+                    * Lưu ý: "Bỏ qua đoạn giới thiệu" (0s đến lúc đánh dấu). "Chuyển tập" (Hiện thông báo từ lúc đánh dấu Outro).
+                </small>
+            </div>
+            <!-- END BỔ SUNG -->
+
             <div
               style="display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 16px"
             >
@@ -616,7 +686,7 @@
         <div class="modal-footer">
           <button
             class="btn btn-secondary"
-            onclick="closeModal('episodeModal')"
+            onclick="closeEpisodeModal()"
           >
             Hủy
           </button>
@@ -1170,6 +1240,34 @@
               </div>
             </div>
             <small class="text-muted">* Để trống cả 2 ô nếu không muốn thay đổi thời lượng</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cập nhật thời gian Intro (Tất cả)</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="input-with-label" style="position: relative;">
+                <input type="number" id="bulkEpisodeIntroMinute" class="form-input" placeholder="Phút" min="0" style="padding-right: 45px;">
+                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none;">phút</span>
+              </div>
+              <div class="input-with-label" style="position: relative;">
+                <input type="number" id="bulkEpisodeIntroSecond" class="form-input" placeholder="Giây" min="0" max="59" style="padding-right: 45px;">
+                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none;">giây</span>
+              </div>
+            </div>
+            <small class="text-muted">* Để trống cả 2 ô nếu không muốn thay đổi Intro</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cập nhật thời gian Outro/Chuyển tập (Tất cả)</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="input-with-label" style="position: relative;">
+                <input type="number" id="bulkEpisodeOutroMinute" class="form-input" placeholder="Phút" min="0" style="padding-right: 45px;">
+                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none;">phút</span>
+              </div>
+              <div class="input-with-label" style="position: relative;">
+                <input type="number" id="bulkEpisodeOutroSecond" class="form-input" placeholder="Giây" min="0" max="59" style="padding-right: 45px;">
+                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; pointer-events: none;">giây</span>
+              </div>
+            </div>
+            <small class="text-muted">* Để trống cả 2 ô nếu không muốn thay đổi Outro</small>
           </div>
         </div>
         <div class="modal-footer">

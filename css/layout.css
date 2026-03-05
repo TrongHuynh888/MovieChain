@@ -2557,3 +2557,90 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
   pointer-events: auto !important;
   z-index: 1000 !important; /* Đẩy video lên trên cùng để nhận click */
 }
+
+/* ============================================================ */
+/* PREMIUM OVERLAY BUTTONS (SKIP INTRO & NEXT EPISODE)          */
+/* ============================================================ */
+
+/* Lớp chung cho các nút điều hướng nổi trên video */
+.btn-skip-intro, 
+.btn-next-episode {
+    position: absolute;
+    bottom: 90px;
+    right: 30px;
+    z-index: 9999;
+    padding: 12px 28px;
+    background: rgba(15, 15, 15, 0.75);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    outline: none;
+    white-space: nowrap;
+}
+
+/* Hiệu ứng hover cho cả 2 nút */
+.btn-skip-intro:hover, 
+.btn-next-episode:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+.btn-skip-intro:active, 
+.btn-next-episode:active {
+    transform: translateY(-2px) scale(0.98);
+}
+
+/* Màu sắc đặc trưng riêng khi hover (tùy chọn để tạo điểm nhấn) */
+.btn-skip-intro:hover {
+    box-shadow: 0 0 20px rgba(229, 9, 20, 0.3);
+}
+
+.btn-next-episode:hover {
+    box-shadow: 0 0 20px rgba(78, 205, 196, 0.3);
+}
+
+/* Trạng thái ẩn */
+.btn-skip-intro.hidden, 
+.btn-next-episode.hidden {
+    display: none !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* RESPONSIVE CHO MOBILE/TABLET */
+@media (max-width: 992px) {
+    .btn-skip-intro, 
+    .btn-next-episode {
+        bottom: 80px;
+        right: 20px;
+        padding: 10px 22px;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .btn-skip-intro, 
+    .btn-next-episode {
+        bottom: 75px;
+        right: 15px;
+        padding: 8px 18px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        background: rgba(15, 15, 15, 0.85); /* Tăng độ đậm trên mobile để dễ nhìn */
+    }
+}
+

@@ -471,6 +471,16 @@
               
               <iframe id="videoPlayer" class="hidden" src="" allowfullscreen></iframe>
               <video id="html5Player" class="hidden" playsinline></video>
+
+              <!-- NÚT BỎ QUA INTRO (SKIP INTRO) -->
+              <button id="btnSkipIntro" class="btn-skip-intro hidden" onclick="handleSkipIntro()">
+                <i class="fas fa-fast-forward"></i> Bỏ qua đoạn giới thiệu
+              </button>
+
+              <!-- NÚT CHUYỂN TẬP NHANH (NEXT EPISODE) -->
+              <button id="btnNextEpisode" class="btn-next-episode hidden" onclick="handleNextEpisode()">
+                <span>Tập tiếp theo</span> <i class="fas fa-step-forward"></i>
+              </button>
               
               <!-- TOP INFO BAR (Tên phim + Danh sách tập) - chỉ hiện khi fullscreen -->
               <div class="player-top-bar" id="playerTopBar">

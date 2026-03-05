@@ -1,4 +1,3 @@
-// --- CONFIG ---
 const EPISODES_PER_PAGE = 10;
 let currentEpisodePage = 0;
 
@@ -189,6 +188,9 @@ async function viewMovieDetail(movieId, updateHistory = true) {
       console.error("Lỗi load movie detail:", error);
     }
   }
+
+  // Gán vào biến toàn cục để các hàm khác (như Skip Intro) có thể truy cập
+  currentMovie = movie;
 
   if (!movie) {
     showNotification("Không tìm thấy phim!", "error");
@@ -1808,6 +1810,9 @@ function initCustomControls(video) {
             if (currentMovieId) {
                 saveWatchProgress(currentMovieId, currentEpisode, current, total);
                 checkAutoNextCountdown(current, total);
+                
+                // [NEW] Kiểm tra hiển thị nút Bỏ qua Intro
+                checkSkipIntro(current);
             }
         }
     };
@@ -2220,6 +2225,113 @@ window.handleResumeChoice = function(continueWatching) {
     
     // Reset
     pendingResumeData = null;
+};
+
+/**
+ * ============================================================
+ * SKIP INTRO LOGIC (USER SIDE)
+ * ============================================================
+ */
+
+/**
+ * Kiểm tra xem có cần hiển thị nút Bỏ qua Intro hoặc Chuyển tập tiếp theo không
+ */
+function checkSkipIntro(currentTime) {
+    const btnSkip = document.getElementById("btnSkipIntro");
+    const btnNext = document.getElementById("btnNextEpisode");
+    
+    if (!currentMovie || !currentMovie.episodes) {
+        if (btnSkip) btnSkip.classList.add("hidden");
+        if (btnNext) btnNext.classList.add("hidden");
+        return;
+    }
+
+    const episode = currentMovie.episodes[currentEpisode];
+    if (!episode) return;
+
+    // 1. Xử lý Bỏ qua Intro
+    if (btnSkip) {
+        const introEnd = Number(episode.introEndTime) || 0;
+        if (introEnd > 0) {
+            // Hiển thị nút từ bắt đầu video (0s) cho đến khi đạt mốc introEnd
+            if (currentTime < introEnd) {
+                btnSkip.classList.remove("hidden");
+            } else {
+                btnSkip.classList.add("hidden");
+            }
+        } else {
+            btnSkip.classList.add("hidden");
+        }
+    }
+
+    // 2. Xử lý Chuyển tập tiếp theo (Outro)
+    if (btnNext) {
+        const hasNextEpisode = currentEpisode < currentMovie.episodes.length - 1;
+        const outroStart = Number(episode.outroStartTime) || 0;
+        
+        if (outroStart > 0 && hasNextEpisode) {
+            // Hiển thị nút nếu currentTime đã đến mốc outro
+            // Thêm điều kiện outroStart > introEnd để tránh hiện nhầm ở đầu phim nếu Admin nhập sai
+            const introEnd = Number(episode.introEndTime) || 0;
+            if (currentTime >= outroStart && currentTime > introEnd) { 
+                btnNext.classList.remove("hidden");
+            } else {
+                btnNext.classList.add("hidden");
+            }
+        } else {
+            btnNext.classList.add("hidden");
+        }
+    }
+}
+
+/**
+ * Thực hiện hành động chuyển sang tập tiếp theo
+ */
+window.handleNextEpisode = function() {
+    if (!currentMovie || !currentMovie.episodes) return;
+    
+    const nextEpisodeIndex = currentEpisode + 1;
+    if (nextEpisodeIndex < currentMovie.episodes.length) {
+        console.log("⏭️ Chuyển sang tập tiếp theo:", nextEpisodeIndex);
+        showNotification("Đang chuyển sang tập tiếp theo...", "info");
+        
+        // Gọi hàm selectEpisode hiện có để xử lý việc đổi tập
+        if (typeof selectEpisode === 'function') {
+            selectEpisode(nextEpisodeIndex);
+        } else {
+            console.warn("Hàm selectEpisode không tồn tại!");
+        }
+    }
+
+    // Ẩn nút ngay lập tức
+    const btn = document.getElementById("btnNextEpisode");
+    if (btn) btn.classList.add("hidden");
+};
+
+/**
+ * Thực hiện hành động bỏ qua Intro
+ */
+window.handleSkipIntro = function() {
+    if (!currentMovie || !currentMovie.episodes) return;
+    
+    const episode = currentMovie.episodes[currentEpisode];
+    const introEnd = Number(episode?.introEndTime) || 0;
+    if (!episode || introEnd === 0) return;
+    
+    // Thực hiện nhảy tới thời gian kết thúc intro
+    if (currentVideoType === 'youtube' && window.ytPlayer && typeof window.ytPlayer.seekTo === 'function') {
+        window.ytPlayer.seekTo(introEnd, true);
+        window.ytPlayer.playVideo();
+    } else if (videoEl) {
+        videoEl.currentTime = introEnd;
+        videoEl.play();
+    }
+
+    // Ẩn nút ngay lập tức sau khi bấm
+    const btn = document.getElementById("btnSkipIntro");
+    if (btn) btn.classList.add("hidden");
+    
+    showNotification("Đã bỏ qua đoạn giới thiệu", "info");
 };
 
 window.skipTime = function(seconds) {

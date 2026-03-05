@@ -1938,7 +1938,7 @@ async function loadEpisodesForMovie(movieIdFromGrid) {
  * Lưu tổng số tập vào Firestore
  */
 async function saveTotalEpisodes() {
-  const movieId = document.getElementById("selectMovieForEpisodes").value;
+  const movieId = selectedMovieForEpisodes || document.getElementById("selectMovieForEpisodes").value;
   if (!movieId || !db) return;
   
   const input = document.getElementById("totalEpisodesInput");
@@ -1993,7 +1993,7 @@ function updateEpisodeStatusBadge(currentCount, totalEpisodes) {
  * [NEW] Mở modal Import Nhiều Tập (API)
  */
 function openImportEpisodesModal() {
-  const movieId = document.getElementById("selectMovieForEpisodes").value;
+  const movieId = selectedMovieForEpisodes || document.getElementById("selectMovieForEpisodes").value;
   if (!movieId) {
     showNotification("Vui lòng chọn phim trước khi thao tác!", "error");
     return;
@@ -2254,6 +2254,9 @@ async function saveBatchImportedEpisodes() {
 function addSourceInput(type = "hls", source = "", label = "") {
   const container = document.getElementById("sourceListContainer");
   const id = new Date().getTime() + Math.random().toString(36).substr(2, 9);
+  
+  // Tự động cập nhật preview buttons khi có thay đổi về số lượng source
+  setTimeout(() => updateAdminIntroPreview(), 100);
 
   // Khởi tạo các nhãn mặc định
   const standardLabels = [
@@ -2303,6 +2306,8 @@ function addSourceInput(type = "hls", source = "", label = "") {
 
 function removeSourceInput(id) {
   document.getElementById(`source-${id}`)?.remove();
+  // Cập nhật lại danh sách nút preview
+  updateAdminIntroPreview();
 }
 
 function updateSourcePlaceholder(id) {
@@ -2381,8 +2386,10 @@ function openEpisodeModal(index = null) {
   // Reset form
   form.reset();
   sourceContainer.innerHTML = ""; // Xóa các source cũ
+  adminPreviewSelectedIndex = 0; // Reset index preview về nguồn đầu tiên
 
-  const movieId = document.getElementById("selectMovieForEpisodes").value;
+  // Sử dụng biến toàn cục selectedMovieForEpisodes thay vì đọc từ DOM (vì DOM select có thể bị ẩn/sai lệch)
+  const movieId = selectedMovieForEpisodes || document.getElementById("selectMovieForEpisodes").value;
   const movie = allMovies.find((m) => m.id === movieId);
   const isSingle = movie && movie.type === "single";
 
@@ -2474,26 +2481,42 @@ function openEpisodeModal(index = null) {
     // Reset Thời lượng
     document.getElementById("episodeDurationHour").value = "";
     document.getElementById("episodeDurationMinute").value = "";
+
+    // Reset Intro
+    document.getElementById("introEndMinute").value = "";
+    document.getElementById("introEndSecond").value = "";
+    
+    // Reset Outro
+    document.getElementById("outroStartMinute").value = "";
+    document.getElementById("outroStartSecond").value = "";
+    
+    // Reset checkbox áp dụng cho tất cả
+    const applyCheck = document.getElementById("applyIntroToAll");
+    if (applyCheck) applyCheck.checked = false;
     
     // Thêm 1 dòng source mặc định
     addSourceInput("hls", "", "Bản gốc");
   }
 
-  // Define openModal locally or assume it exists globally. The user's code used openModal("episodeModal").
-  // However, earlier in the same function (line 789 in original) it used openModal.
-  // Wait, I see `const modal = new bootstrap.Modal(...)` in my previous failed attempt, but the original code uses `openModal("episodeModal")`.
-  // I should stick to the original code style or available functions.
-  // Looking at the context, line 789 is `openModal("episodeModal");`.
-  // I will just return the control to that line.
-  
-  // Actually, I am replacing lines 771-787.
-  // The original code calls `openModal("episodeModal")` at line 789.
-  // I don't need to include line 789 in my replacement if I stop before it.
-  
-  // Wait, the `addSourceInput` call at line 786 in original code was:
-  // `addSourceInput("youtube", "", "Bản gốc");`
-  // I should keep it or ensure it's called.
+  // Khởi tạo preview player và load dữ liệu intro sau khi modal mở
+  setTimeout(() => {
+      updateAdminIntroPreview();
+      
+      if (index !== null) {
+          const movieId = selectedMovieForEpisodes || document.getElementById("selectMovieForEpisodes").value;
+          const movie = allMovies.find((m) => m.id === movieId);
+          const episode = movie?.episodes?.[index];
+          if (episode) {
+              const introTime = Number(episode.introEndTime) || 0;
+              document.getElementById("introEndMinute").value = introTime > 0 ? Math.floor(introTime / 60) : "";
+              document.getElementById("introEndSecond").value = introTime > 0 ? (introTime % 60) : "";
 
+              const outroTime = Number(episode.outroStartTime) || 0;
+              document.getElementById("outroStartMinute").value = outroTime > 0 ? Math.floor(outroTime / 60) : "";
+              document.getElementById("outroStartSecond").value = outroTime > 0 ? (outroTime % 60) : "";
+          }
+      }
+  }, 300);
 
   openModal("episodeModal");
 }
@@ -2541,12 +2564,35 @@ async function handleEpisodeSubmit(event) {
 
     quality: document.getElementById("episodeQuality").value,
     sources: sources,
-    // Giữ lại videoType/videoSource/youtubeId cho tương thích ngược (lấy từ source đầu tiên)
+    // [FIX] Khôi phục việc lưu thời gian kết thúc intro (giây)
+    introEndTime: (() => {
+        const m = parseInt(document.getElementById("introEndMinute").value) || 0;
+        const s = parseInt(document.getElementById("introEndSecond").value) || 0;
+        return (m * 60) + s;
+    })(),
+    // [FIX] Khôi phục việc lưu thời gian bắt đầu outro (giây)
+    outroStartTime: (() => {
+        const m = parseInt(document.getElementById("outroStartMinute").value) || 0;
+        const s = parseInt(document.getElementById("outroStartSecond").value) || 0;
+        return (m * 60) + s;
+    })(),
+    // Giữ lại videoType/videoSource/youtubeId cho tương thích ngược
     videoType: sources.length > 0 ? sources[0].type : "youtube",
     videoSource: sources.length > 0 ? sources[0].source : "",
     youtubeId: sources.length > 0 && sources[0].type === "youtube" ? sources[0].source : "",
     updatedAt: new Date()
   };
+
+  // [NEW] Kiểm tra tính hợp lệ của mốc thời gian
+  if (episodeData.introEndTime > 0 && episodeData.outroStartTime > 0 && episodeData.introEndTime >= episodeData.outroStartTime) {
+      if (!await customConfirm("Thời gian Intro đang lớn hơn hoặc bằng thời gian Outro. Bạn có chắc chắn muốn lưu không?", { 
+          title: "Cảnh báo mốc thời gian", 
+          type: "warning",
+          confirmText: "Vẫn lưu" 
+      })) {
+          return;
+      }
+  }
 
   try {
     showLoading(true, "Đang lưu...");
@@ -2561,6 +2607,18 @@ async function handleEpisodeSubmit(event) {
       episodes.push(episodeData);
     }
 
+    // [NEW] Kiểm tra nếu áp dụng cho tất cả tập
+    const applyIntroToAll = document.getElementById("applyIntroToAll")?.checked;
+    if (applyIntroToAll) {
+        const introVal = episodeData.introEndTime;
+        const outroVal = episodeData.outroStartTime;
+        episodes.forEach(ep => {
+            ep.introEndTime = introVal;
+            ep.outroStartTime = outroVal;
+        });
+        console.log("✅ Đã áp dụng Intro/Outro cho tất cả", episodes.length, "tập");
+    }
+
     episodes.sort((a, b) => {
         return String(a.episodeNumber).localeCompare(String(b.episodeNumber), undefined, { numeric: true, sensitivity: 'base' });
     });
@@ -2568,7 +2626,7 @@ async function handleEpisodeSubmit(event) {
     await movieRef.update({ episodes });
 
     showNotification("Đã lưu tập phim!", "success");
-    closeModal("episodeModal");
+    closeEpisodeModal(); // [FIX] Dùng hàm mới để dừng video khi đóng
 
     await loadMovies();
     loadEpisodesForMovie();
@@ -2580,12 +2638,48 @@ async function handleEpisodeSubmit(event) {
   }
 }
 
-/**
- * Sửa tập phim
- */
 function editEpisode(index) {
   openEpisodeModal(index);
 }
+
+/**
+ * [FIX] Hàm đóng modal tập phim chuyên biệt để dừng video review
+ */
+window.closeEpisodeModal = function() {
+    console.log("🎬 Đang đóng Modal Episode và dừng video preview...");
+    
+    if (adminPreviewPlayer) {
+        try {
+            if (adminPreviewPlayer instanceof HTMLVideoElement) {
+                adminPreviewPlayer.pause();
+                adminPreviewPlayer.src = "";
+                adminPreviewPlayer.load();
+            } else if (typeof adminPreviewPlayer.stopVideo === 'function') {
+                // YouTube API
+                adminPreviewPlayer.stopVideo();
+            } else if (typeof adminPreviewPlayer.pauseVideo === 'function') {
+                adminPreviewPlayer.pauseVideo();
+            }
+        } catch (e) {
+            console.error("Lỗi khi dừng video preview:", e);
+        }
+        adminPreviewPlayer = null;
+    }
+
+    // Xóa nội dung trong wrapper để chắc chắn video/iframe bị gỡ bỏ hoàn toàn
+    const wrapper = document.getElementById("adminIntroPlayerWrapper");
+    if (wrapper) {
+        wrapper.innerHTML = `
+            <div id="adminIntroPlayerPlaceholder" style="text-align: center; color: #666;">
+                <i class="fas fa-video-slash fa-2x mb-2"></i>
+                <p style="font-size: 0.9rem;">Chưa có video. Hãy nhập link video bên trên.</p>
+            </div>
+        `;
+    }
+
+    // Đóng modal giao diện
+    closeModal("episodeModal");
+};
 
 /**
  * Xóa tập phim
@@ -2651,6 +2745,221 @@ async function deleteAllEpisodes() {
   } finally {
     showLoading(false);
   }
+}
+
+/**
+ * ============================================================
+ * SKIP INTRO & PREVIEW PLAYER LOGIC (ADMIN)
+ * ============================================================
+ */
+
+let adminPreviewPlayer = null; 
+let adminPreviewSelectedIndex = 0; // Lưu chỉ số source đang được preview
+
+/**
+ * Tự động cập nhật danh sách nút chuyển và preview video
+ */
+function updateAdminIntroPreview() {
+    const sourceList = document.getElementById("sourceListContainer");
+    const switchContainer = document.getElementById("adminPreviewSourceSwitch");
+    if (!sourceList || !switchContainer) return;
+
+    const sourceItems = sourceList.querySelectorAll(".source-item");
+    if (sourceItems.length === 0) {
+        switchContainer.innerHTML = "";
+        initAdminIntroPlayer(null, null);
+        return;
+    }
+
+    // Đảm bảo index hợp lệ
+    if (adminPreviewSelectedIndex >= sourceItems.length) {
+        adminPreviewSelectedIndex = 0;
+    }
+
+    // Render danh sách nút chuyển đổi
+    let switchHtml = "";
+    sourceItems.forEach((item, index) => {
+        const label = item.querySelector(".source-label").value || `Nguồn ${index + 1}`;
+        const isActive = index === adminPreviewSelectedIndex;
+        const btnClass = isActive ? "btn-primary" : "btn-outline-secondary";
+        const style = `padding: 4px 12px; font-size: 0.8rem; border-radius: 20px; text-transform: none;`;
+        
+        switchHtml += `
+            <button type="button" class="btn ${btnClass} btn-sm" style="${style}" onclick="changeAdminPreviewSource(${index})">
+                <i class="fas ${isActive ? 'fa-play-circle' : 'fa-link'}"></i> ${index + 1}. ${label}
+            </button>
+        `;
+
+        // Gán sự kiện oninput/onchange cho từng source nếu chưa có để update preview tức thì
+        const urlInput = item.querySelector(".source-url");
+        const typeSelect = item.querySelector(".source-type");
+        const labelSelect = item.querySelector(".source-label");
+
+        if (urlInput && !urlInput.dataset.hasPreviewListener) {
+            urlInput.addEventListener('input', () => {
+                if (index === adminPreviewSelectedIndex) updateAdminIntroPreview();
+            });
+            typeSelect.addEventListener('change', () => {
+                if (index === adminPreviewSelectedIndex) updateAdminIntroPreview();
+            });
+            labelSelect.addEventListener('change', () => updateAdminIntroPreview()); // Refresh labels
+            urlInput.dataset.hasPreviewListener = "true";
+        }
+    });
+    switchContainer.innerHTML = switchHtml;
+
+    // Lấy thông tin của source đang chọn để init player
+    const selectedItem = sourceItems[adminPreviewSelectedIndex];
+    const type = selectedItem.querySelector(".source-type").value;
+    const url = selectedItem.querySelector(".source-url").value.trim();
+
+    initAdminIntroPlayer(type, url);
+}
+
+/**
+ * Hành động khi nhấn nút chuyển Source
+ */
+window.changeAdminPreviewSource = function(index) {
+    adminPreviewSelectedIndex = index;
+    updateAdminIntroPreview();
+}
+
+/**
+ * Khởi tạo trình phát preview
+ */
+function initAdminIntroPlayer(type, source) {
+    const wrapper = document.getElementById("adminIntroPlayerWrapper");
+    if (!wrapper) return;
+
+    // Cleanup cũ
+    wrapper.innerHTML = "";
+    adminPreviewPlayer = null;
+
+    if (!source) {
+        wrapper.innerHTML = `
+            <div id="adminIntroPlayerPlaceholder" style="text-align: center; color: #666;">
+                <i class="fas fa-video-slash fa-2x mb-2"></i>
+                <p style="font-size: 0.9rem;">Chưa có video. Hãy nhập link video bên trên.</p>
+            </div>
+        `;
+        return;
+    }
+
+    if (type === "youtube") {
+        const videoId = extractYouTubeId(source) || source;
+        wrapper.innerHTML = `<div id="adminYoutubePreview"></div>`;
+        
+        // Cần đảm bảo YT API đã load (Thường đã load ở detail.js hoặc trang chủ)
+        if (window.YT && window.YT.Player) {
+            adminPreviewPlayer = new YT.Player('adminYoutubePreview', {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: { 'autoplay': 0, 'controls': 1 }
+            });
+        } else {
+            wrapper.innerHTML = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+        }
+    } else if (type === "hls") {
+        const video = document.createElement("video");
+        video.style.width = "100%";
+        video.style.height = "100%";
+        video.controls = true;
+        wrapper.appendChild(video);
+        adminPreviewPlayer = video;
+
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(source);
+            hls.attachMedia(video);
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = source;
+        }
+    } else if (type === "embed") {
+        wrapper.innerHTML = `<iframe src="${source}" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>`;
+        // Với Iframe thường không lấy được currentTime trừ khi cùng origin hoặc hỗ trợ API
+    }
+}
+
+/**
+ * Lấy thời gian hiện tại từ trình phát để điền vào ô Intro
+ */
+function getCurrentTimeFromPreview() {
+    let seconds = 0;
+    
+    if (!adminPreviewPlayer) {
+        showNotification("Không tìm thấy trình phát video để lấy thời gian!", "warning");
+        return;
+    }
+
+    if (adminPreviewPlayer instanceof HTMLVideoElement) {
+        seconds = Math.floor(adminPreviewPlayer.currentTime);
+    } else if (adminPreviewPlayer.getCurrentTime) {
+        // YouTube API
+        seconds = Math.floor(adminPreviewPlayer.getCurrentTime());
+    } else {
+        showNotification("Trình phát này không hỗ trợ lấy thời gian tự động. Vui lòng nhập tay.", "info");
+        return;
+    }
+
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+
+    // [NEW] Xác định mục tiêu đang chọn (Intro hay Outro)
+    const target = document.querySelector('input[name="timeCaptureTarget"]:checked')?.value || 'intro';
+    
+    if (target === 'intro') {
+        document.getElementById("introEndMinute").value = mins;
+        document.getElementById("introEndSecond").value = secs;
+        showNotification(`Đã lấy thời gian Intro: ${mins}p ${secs}s`, "success");
+    } else {
+        document.getElementById("outroStartMinute").value = mins;
+        document.getElementById("outroStartSecond").value = secs;
+        showNotification(`Đã lấy thời gian Outro: ${mins}p ${secs}s`, "success");
+    }
+}
+
+/**
+ * Thử nhảy tới đoạn intro đã đánh dấu để kiểm tra
+ */
+function previewSkipIntro() {
+    // [NEW] Xác định mục tiêu đang chọn để thử nhảy
+    const target = document.querySelector('input[name="timeCaptureTarget"]:checked')?.value || 'intro';
+    let mins, secs;
+
+    if (target === 'intro') {
+        mins = parseInt(document.getElementById("introEndMinute").value) || 0;
+        secs = parseInt(document.getElementById("introEndSecond").value) || 0;
+    } else {
+        mins = parseInt(document.getElementById("outroStartMinute").value) || 0;
+        secs = parseInt(document.getElementById("outroStartSecond").value) || 0;
+    }
+
+    const totalSeconds = (mins * 60) + secs;
+
+    if (totalSeconds <= 0) {
+        showNotification(`Vui lòng nhập thời gian ${target === 'intro' ? 'kết thúc intro' : 'bắt đầu outro'} trước!`, "warning");
+        return;
+    }
+
+    if (!adminPreviewPlayer) return;
+
+    if (adminPreviewPlayer instanceof HTMLVideoElement) {
+        adminPreviewPlayer.currentTime = totalSeconds;
+        adminPreviewPlayer.play();
+    } else if (adminPreviewPlayer.seekTo) {
+        adminPreviewPlayer.seekTo(totalSeconds, true);
+        adminPreviewPlayer.playVideo();
+    }
+}
+
+/**
+ * Helper: Trích xuất YouTube ID
+ */
+function extractYouTubeId(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
 }
 /**
  * Populate movie select cho quản lý tập
@@ -6586,6 +6895,10 @@ function openBulkEpisodeEditModal() {
     document.getElementById("bulkEpisodeQuality").value = "";
     document.getElementById("bulkEpisodeHour").value = "";
     document.getElementById("bulkEpisodeMinute").value = "";
+    document.getElementById("bulkEpisodeIntroMinute").value = "";
+    document.getElementById("bulkEpisodeIntroSecond").value = "";
+    document.getElementById("bulkEpisodeOutroMinute").value = "";
+    document.getElementById("bulkEpisodeOutroSecond").value = "";
     
     openModal("bulkEpisodeEditModal");
 }
@@ -6599,12 +6912,30 @@ async function saveBulkEpisodeChanges() {
     const h = parseInt(document.getElementById("bulkEpisodeHour").value);
     const m = parseInt(document.getElementById("bulkEpisodeMinute").value);
     
+    // [NEW] Lấy thông tin Intro mới
+    const introM = parseInt(document.getElementById("bulkEpisodeIntroMinute").value);
+    const introS = parseInt(document.getElementById("bulkEpisodeIntroSecond").value);
+    
+    // [NEW] Lấy thông tin Outro mới
+    const outroM = parseInt(document.getElementById("bulkEpisodeOutroMinute").value);
+    const outroS = parseInt(document.getElementById("bulkEpisodeOutroSecond").value);
+    
     let newDuration = null;
     if (!isNaN(h) || !isNaN(m)) {
         newDuration = formatDuration(h || 0, m || 0);
     }
+    
+    let newIntroEndTime = null;
+    if (!isNaN(introM) || !isNaN(introS)) {
+        newIntroEndTime = (introM || 0) * 60 + (introS || 0);
+    }
 
-    if (!newQuality && !newDuration) {
+    let newOutroStartTime = null;
+    if (!isNaN(outroM) || !isNaN(outroS)) {
+        newOutroStartTime = (outroM || 0) * 60 + (outroS || 0);
+    }
+
+    if (!newQuality && !newDuration && newIntroEndTime === null && newOutroStartTime === null) {
         showNotification("Bạn chưa thay đổi thông tin nào!", "warning");
         return;
     }
@@ -6619,6 +6950,8 @@ async function saveBulkEpisodeChanges() {
         indicesToUpdate.forEach(index => {
             if (newQuality) episodes[index].quality = newQuality;
             if (newDuration) episodes[index].duration = newDuration;
+            if (newIntroEndTime !== null) episodes[index].introEndTime = newIntroEndTime;
+            if (newOutroStartTime !== null) episodes[index].outroStartTime = newOutroStartTime;
         });
 
         await db.collection("movies").doc(movieId).update({

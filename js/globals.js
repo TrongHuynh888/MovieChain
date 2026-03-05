@@ -21,6 +21,7 @@ const ADMIN_UID = "";
 // 3. Các biến trạng thái ứng dụng
 let currentUser = null;
 let isAdmin = false;
+let currentMovie = null; // Dữ liệu của phim đang xem
 let currentMovieId = null;
 let currentEpisode = 0;
 let selectedRating = 0; // Biến lưu đánh giá sao
