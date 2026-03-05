@@ -473,12 +473,12 @@
               <video id="html5Player" class="hidden" playsinline></video>
 
               <!-- NÚT BỎ QUA INTRO (SKIP INTRO) -->
-              <button id="btnSkipIntro" class="btn-skip-intro hidden" onclick="handleSkipIntro()">
-                <i class="fas fa-fast-forward"></i> Bỏ qua đoạn giới thiệu
+              <button id="btnSkipIntro" class="btn-skip-intro hidden" onclick="event.stopPropagation(); event.preventDefault(); handleSkipIntro();" ontouchend="event.stopPropagation(); event.preventDefault(); handleSkipIntro();">
+                <i class="fas fa-fast-forward"></i> Bỏ qua intro
               </button>
 
               <!-- NÚT CHUYỂN TẬP NHANH (NEXT EPISODE) -->
-              <button id="btnNextEpisode" class="btn-next-episode hidden" onclick="handleNextEpisode()">
+              <button id="btnNextEpisode" class="btn-next-episode hidden" onclick="event.stopPropagation(); event.preventDefault(); handleNextEpisode();" ontouchend="event.stopPropagation(); event.preventDefault(); handleNextEpisode();">
                 <span>Tập tiếp theo</span> <i class="fas fa-step-forward"></i>
               </button>
               
@@ -652,7 +652,7 @@
                 </div>
                 <div class="switch-item">
                     <span>Native Player</span>
-                    <span class="badge-switch on" id="swAntiLe" onclick="toggleSwitch('swAntiLe')">ON</span>
+                    <span class="badge-switch off" id="swAntiLe" onclick="toggleSwitch('swAntiLe')">OFF</span>
                 </div>
                 <button class="btn-toolbar" onclick="shareMovie()">
                     <i class="fas fa-paper-plane"></i> Chia sẻ

@@ -3393,7 +3393,7 @@ async function handleMoviePageExit() {
     switches.forEach(id => {
         const sw = document.getElementById(id);
         if (sw) {
-            if (id === "swNextEpisode" || id === "swAntiLe") {
+            if (id === "swNextEpisode") {
                 sw.classList.remove("off");
                 sw.classList.add("on");
                 sw.textContent = "ON";
