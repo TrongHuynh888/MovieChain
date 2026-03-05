@@ -2297,6 +2297,45 @@
   height: 30px !important;
 }
 
+/* Nút Bỏ qua Intro & Tập tiếp theo trong native fullscreen
+   Chỉ đảm bảo z-index và vị trí. Visibility do JS quản lý qua class .hidden */
+.video-container:fullscreen .btn-skip-intro:not(.hidden),
+.video-container:fullscreen .btn-next-episode:not(.hidden),
+.video-container:-webkit-full-screen .btn-skip-intro:not(.hidden),
+.video-container:-webkit-full-screen .btn-next-episode:not(.hidden) {
+  position: absolute !important;
+  bottom: 100px !important; /* Trên thanh controls */
+  right: 30px !important;
+  z-index: 100000 !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Đảm bảo buttons vẫn nằm trên cả khi user-inactive (tự ẩn controls) */
+.video-container.user-inactive .btn-skip-intro:not(.hidden),
+.video-container.user-inactive .btn-next-episode:not(.hidden) {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Nút Bỏ qua Intro & Tập tiếp theo trong pseudo-fullscreen (iOS) */
+.video-container.pseudo-fullscreen .btn-skip-intro:not(.hidden),
+.video-container.pseudo-fullscreen .btn-next-episode:not(.hidden) {
+  position: absolute !important;
+  bottom: 100px !important;
+  right: 25px !important;
+  z-index: 100001 !important; /* Trên cả panel danh sách tập (100000) */
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+
+
 /* ============================================================
    PSEUDO-FULLSCREEN (Fallback for iOS Safari/Chrome non-video tags)
    Ngăn chặn chặn custom control list của Apple Native Player
@@ -2554,6 +2593,7 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
 /* Đảm bảo thẻ video nhận toàn bộ tương tác (click/touch/swipe) 
    để trình duyệt (Safari/Chrome) điều khiển controls tự nhiên */
 .video-container.native-controls-active video#html5Player {
+  position: relative !important; /* Cần position để z-index có tác dụng */
   pointer-events: auto !important;
   z-index: 1000 !important; /* Đẩy video lên trên cùng để nhận click */
 }
@@ -2625,8 +2665,8 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
 @media (max-width: 992px) {
     .btn-skip-intro, 
     .btn-next-episode {
-        bottom: 80px;
-        right: 20px;
+        bottom: 100px; /* Đẩy lên cao hơn một chút trên tablet */
+        right: 25px;
         padding: 10px 22px;
         font-size: 0.75rem;
     }
@@ -2635,12 +2675,19 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
 @media (max-width: 768px) {
     .btn-skip-intro, 
     .btn-next-episode {
-        bottom: 75px;
+        bottom: 115px; /* Hạ xuống một chút từ 125px vì nút đã ngắn hơn, ít chiếm diện tích ngang */
         right: 15px;
-        padding: 8px 18px;
-        border-radius: 10px;
-        font-size: 0.7rem;
-        background: rgba(15, 15, 15, 0.85); /* Tăng độ đậm trên mobile để dễ nhìn */
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 0.65rem;
+        background: rgba(15, 15, 15, 0.85);
+        gap: 6px;
+        letter-spacing: 0.5px;
+    }
+    
+    .btn-skip-intro i, 
+    .btn-next-episode i {
+        font-size: 0.75rem;
     }
 }
 
