@@ -710,9 +710,37 @@
     pointer-events: auto;
 }
 
-.video-container:hover .custom-video-controls,
+.video-container:not(.native-controls-active):hover .custom-video-controls,
 .custom-video-controls.show {
     opacity: 1;
+}
+
+/* Khi dùng Native controls, buộc ẩn Custom controls hoàn toàn */
+.video-container.native-controls-active .custom-video-controls,
+.video-container.native-controls-active .center-controls-overlay,
+.video-container.native-controls-active .player-top-bar,
+.video-container.native-controls-active .screen-lock-btn {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+/* Chế độ Khóa màn hình (Screen Locked) */
+.video-container.screen-locked .center-controls-overlay {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+}
+
+.video-container.screen-locked .center-controls-overlay .center-btn {
+    display: none !important;
+}
+
+.video-container.screen-locked .video-progress-container,
+.video-container.screen-locked .video-progress-slider {
+    pointer-events: none !important;
+    cursor: default !important;
 }
 
 /* Tự động ẩn khi không hoạt động (JS thêm class user-inactive) */
@@ -943,11 +971,11 @@
     margin-left: 8px;
 }
 
-/* Hide native controls explicitly */
-video::-webkit-media-controls {
+/* Hide native controls explicitly - Chỉ ẩn khi KHÔNG ở chế độ native-controls-active */
+.video-container:not(.native-controls-active) video::-webkit-media-controls {
     display: none !important;
 }
-video::-webkit-media-controls-enclosure {
+.video-container:not(.native-controls-active) video::-webkit-media-controls-enclosure {
     display: none !important;
 }
 
@@ -2505,4 +2533,27 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
   .mobile-only-marquee {
     display: none !important;
   }
+}
+
+/* ============================================================
+   NATIVE CONTROLS OVERRIDE (Dành cho chức năng Anti Lê OFF)
+   Trạng thái này yêu cầu trình duyệt tự quản lý Video Controls.
+   Hệ thống sẽ ép ẩn sạch các custom UI của Trạm Phim để nhường chỗ
+   ============================================================ */
+.video-container.native-controls-active .player-top-bar,
+.video-container.native-controls-active .custom-video-controls,
+.video-container.native-controls-active .center-controls-overlay,
+.video-container.native-controls-active .screen-lock-float,
+.video-container.native-controls-active .player-episode-panel {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Đảm bảo thẻ video nhận toàn bộ tương tác (click/touch/swipe) 
+   để trình duyệt (Safari/Chrome) điều khiển controls tự nhiên */
+.video-container.native-controls-active video#html5Player {
+  pointer-events: auto !important;
+  z-index: 1000 !important; /* Đẩy video lên trên cùng để nhận click */
 }
