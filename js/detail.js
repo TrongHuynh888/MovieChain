@@ -563,28 +563,33 @@ function toggleSwitch(id) {
             clearTimeout(cinemaHideTimeout);
         }
     } else if (id === "swAntiLe") {
-        const isActivating = !isOn; // Trạng thái mới của Anti Lê
-        const video = document.getElementById("html5Player");
+        const isNativeOn = !isOn; // Trạng thái MỚI sau khi click (ngược với isOn)
+        const html5Video = document.getElementById("html5Player");
         const container = document.getElementById("videoContainer");
         
-        if (video && container) {
-            if (isActivating) {
-                // ON: Dùng custom controls (tắt native)
-                video.controls = false;
-                video.removeAttribute("controls");
-                container.classList.remove("native-controls-active");
-                // Đảm bảo custom controls hiển thị lại
-                if (typeof showControls === 'function') {
-                    showControls();
+        if (container) {
+            if (isNativeOn) {
+                // TRẠNG THÁI MỚI LÀ ON: Dùng native controls
+                if (html5Video) {
+                    html5Video.controls = true;
+                    html5Video.setAttribute("controls", "controls");
+                    html5Video.style.display = "block"; // Đảm bảo hiện video
                 }
-            } else {
-                // OFF: Dùng native controls (ẩn custom)
-                video.controls = true;
-                video.setAttribute("controls", "controls");
                 container.classList.add("native-controls-active");
-                // Ẩn custom controls đi
+                // Ẩn custom controls
                 if (typeof hideControls === 'function') {
                     hideControls();
+                }
+            } else {
+                // TRẠNG THÁI MỚI LÀ OFF: Dùng custom controls
+                if (html5Video) {
+                    html5Video.controls = false;
+                    html5Video.removeAttribute("controls");
+                }
+                container.classList.remove("native-controls-active");
+                // Hiện custom controls
+                if (typeof showControls === 'function') {
+                    showControls();
                 }
             }
         }

@@ -2590,12 +2590,17 @@ body.has-pseudo-fullscreen::-webkit-scrollbar {
   pointer-events: none !important;
 }
 
-/* Đảm bảo thẻ video nhận toàn bộ tương tác (click/touch/swipe) 
-   để trình duyệt (Safari/Chrome) điều khiển controls tự nhiên */
-.video-container.native-controls-active video#html5Player {
-  position: relative !important; /* Cần position để z-index có tác dụng */
+/* Đảm bảo thẻ video/iframe luôn hiện đúng vị trí và nhận tương tác khi ở chế độ Native */
+.video-container.native-controls-active video#html5Player,
+.video-container.native-controls-active iframe#videoPlayer {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
   pointer-events: auto !important;
-  z-index: 1000 !important; /* Đẩy video lên trên cùng để nhận click */
+  z-index: 1001 !important; /* Đẩy lên trên cả video-locked */
 }
 
 /* ============================================================ */
