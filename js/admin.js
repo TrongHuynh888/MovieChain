@@ -6,21 +6,65 @@ window.latestAddedActorIds = JSON.parse(localStorage.getItem('latestAddedActorId
 // Danh sách diễn viên tự động tạo từ Quản lý Phim
 window.latestAutoActorIds = JSON.parse(localStorage.getItem('latestAutoAutoIds') || '[]');
 
+// Phân trang diễn viên
+let currentActorPage = 1;
+const actorsPerPage = 20;
+
+// Phân trang các tab khác
+let currentAdminMoviePage = 1;
+let currentAdminEpisodePage = 1;
+let currentAdminUserPage = 1;
+let currentAdminNotifPage = 1;
+let currentAdminVipPage = 1;
+let currentAdminErrorPage = 1;
+let currentAdminRoomPage = 1;
+
+const adminPerPage = 20; // Số mục mỗi trang mặc định cho các tab
+
 /**
  * TỐI ƯU HÓA: DEBOUNCE CHO CÁC HÀM TÌM KIẾM ADMIN
  * Giúp giảm lag khi người dùng nhập liệu nhanh vào các ô tìm kiếm
  */
-window.filterAdminMoviesDebounced = debounce(() => typeof filterAdminMovies === 'function' && filterAdminMovies(), 300);
-window.filterEpisodeMoviesDebounced = debounce(() => typeof filterEpisodeMovies === 'function' && filterEpisodeMovies(), 300);
-window.filterAdminUsersDebounced = debounce(() => typeof filterAdminUsers === 'function' && filterAdminUsers(), 300);
+window.filterAdminMoviesDebounced = debounce(() => {
+    window.currentAdminMoviePage = 1;
+    if (typeof filterAdminMovies === 'function') filterAdminMovies();
+}, 300);
+window.filterEpisodeMoviesDebounced = debounce(() => {
+    // Lưu ý: Tab Episodes có 2 bước, chọn phim và chọn tập. 
+    // Ở đây reset danh sách phim gợi ý.
+    window.currentAdminEpisodePage = 1; 
+    if (typeof filterEpisodeMovies === 'function') filterEpisodeMovies();
+}, 300);
+window.filterAdminUsersDebounced = debounce(() => {
+    currentAdminUserPage = 1;
+    if (typeof filterAdminUsers === 'function') filterAdminUsers();
+}, 300);
 window.renderAdminCategoriesDebounced = debounce(() => typeof renderAdminCategories === 'function' && renderAdminCategories(), 300);
 window.renderAdminCountriesDebounced = debounce(() => typeof renderAdminCountries === 'function' && renderAdminCountries(), 300);
-window.renderAdminActorsDebounced = debounce(() => typeof renderAdminActors === 'function' && renderAdminActors(), 300);
-window.filterAdminCommentsDebounced = debounce(() => typeof filterAdminComments === 'function' && filterAdminComments(), 300);
-window.filterAdminNotificationsDebounced = debounce(() => typeof filterAdminNotifications === 'function' && filterAdminNotifications(), 300);
-window.filterAdminVipRequestsDebounced = debounce(() => typeof filterAdminVipRequests === 'function' && filterAdminVipRequests(), 300);
-window.filterErrorReportsDebounced = debounce(() => typeof filterErrorReports === 'function' && filterErrorReports(), 300);
-window.filterAdminWatchRoomsDebounced = debounce(() => typeof filterAdminWatchRooms === 'function' && filterAdminWatchRooms(), 300);
+window.renderAdminActorsDebounced = debounce(() => {
+    currentActorPage = 1; 
+    if (typeof renderAdminActors === 'function') renderAdminActors();
+}, 300);
+window.filterAdminCommentsDebounced = debounce(() => {
+    // Bình luận chưa yêu cầu phân trang cụ thể nhưng nên reset nếu sau này thêm
+    if (typeof filterAdminComments === 'function') filterAdminComments();
+}, 300);
+window.filterAdminNotificationsDebounced = debounce(() => {
+    currentAdminNotifPage = 1;
+    if (typeof filterAdminNotifications === 'function') filterAdminNotifications();
+}, 300);
+window.filterAdminVipRequestsDebounced = debounce(() => {
+    currentAdminVipPage = 1;
+    if (typeof filterAdminVipRequests === 'function') filterAdminVipRequests();
+}, 300);
+window.filterErrorReportsDebounced = debounce(() => {
+    currentAdminErrorPage = 1;
+    if (typeof filterErrorReports === 'function') filterErrorReports();
+}, 300);
+window.filterAdminWatchRoomsDebounced = debounce(() => {
+    currentAdminRoomPage = 1;
+    if (typeof filterAdminWatchRooms === 'function') filterAdminWatchRooms();
+}, 300);
 
 // Thêm debounced cho các tính năng khác trong admin.html
 window.adminHandleAvatarUrlInputDebounced = debounce((el) => typeof adminHandleAvatarUrlInput === 'function' && adminHandleAvatarUrlInput(el), 500);
@@ -202,12 +246,24 @@ function renderAdminVipRequests(requests) {
     const tbody = document.getElementById("adminVipRequestsTable");
     if (!tbody) return;
 
-    if (requests.length === 0) {
+    // --- LOGIC PHÂN TRANG ---
+    const totalItems = requests.length;
+    const totalPages = Math.ceil(totalItems / adminPerPage);
+    
+    if (currentAdminVipPage > totalPages && totalPages > 0) currentAdminVipPage = totalPages;
+    if (currentAdminVipPage < 1) currentAdminVipPage = 1;
+
+    const startIndex = (currentAdminVipPage - 1) * adminPerPage;
+    const paginatedRequests = requests.slice(startIndex, startIndex + adminPerPage);
+
+    if (totalItems === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center">Không có yêu cầu nào phù hợp</td></tr>';
+        const paginationContainer = document.getElementById("adminVipPagination");
+        if (paginationContainer) paginationContainer.innerHTML = "";
         return;
     }
 
-    tbody.innerHTML = requests.map(req => {
+    tbody.innerHTML = paginatedRequests.map(req => {
         const date = req.createdAt?.toDate ? req.createdAt.toDate() : new Date(req.createdAt);
         const statusClass = req.status === "pending" ? "warning" : req.status === "approved" ? "success" : "danger";
         const statusText = req.status === "pending" ? "Đang chờ duyệt" : req.status === "approved" ? "Đã duyệt" : "Đã từ chối";
@@ -244,7 +300,20 @@ function renderAdminVipRequests(requests) {
             </tr>
         `;
     }).join('');
+
+    // Render nút phân trang
+    renderAdminPagination("adminVipPagination", totalItems, currentAdminVipPage, adminPerPage, "changeAdminVipPage", "yêu cầu");
 }
+
+/**
+ * Chuyển trang VIP
+ */
+window.changeAdminVipPage = function(page) {
+    currentAdminVipPage = page;
+    filterAdminVipRequests();
+    const panel = document.getElementById("vipRequestsPanel");
+    if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+};
 
 /**
  * Xem ảnh Bill Lớn
@@ -555,12 +624,24 @@ function renderErrorReports(list) {
     const tbody = document.getElementById("errorReportsTable");
     if (!tbody) return;
 
-    if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 20px; color: #888;">Không có báo lỗi nào.</td></tr>';
+    // --- LOGIC PHÂN TRANG ---
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / adminPerPage);
+    
+    if (currentAdminErrorPage > totalPages && totalPages > 0) currentAdminErrorPage = totalPages;
+    if (currentAdminErrorPage < 1) currentAdminErrorPage = 1;
+
+    const startIndex = (currentAdminErrorPage - 1) * adminPerPage;
+    const paginatedList = list.slice(startIndex, startIndex + adminPerPage);
+
+    if (totalItems === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 20px; color: #888;">Không có báo lỗi nào.</td></tr>';
+        const paginationContainer = document.getElementById("adminErrorReportPagination");
+        if (paginationContainer) paginationContainer.innerHTML = "";
         return;
     }
 
-    tbody.innerHTML = list.map(item => {
+    tbody.innerHTML = paginatedList.map(item => {
         const timeStr = item.createdAt && item.createdAt.toDate 
             ? item.createdAt.toDate().toLocaleString('vi-VN') 
             : "—";
@@ -612,6 +693,11 @@ function renderErrorReports(list) {
             </tr>
         `;
     }).join("");
+
+    // Render nút phân trang
+    if (typeof renderAdminPagination === 'function') {
+        renderAdminPagination("adminErrorReportPagination", totalItems, currentAdminErrorPage, adminPerPage, "changeAdminErrorPage", "báo lỗi");
+    }
 }
 
 /**
@@ -828,64 +914,6 @@ function getCountryInfo(countryName) {
     return { icon: '🏳️', bg: 'rgba(255,255,255,0.08)', color: '#eee' };
 }
 
-/**
- * Render bảng phim
- */
-function renderAdminMoviesList(movies) {
-  const tbody = document.getElementById("adminMoviesTable");
-  if (!tbody) return;
-
-  if (movies.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" class="text-center">Không tìm thấy phim nào</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = movies
-      .map(
-        (movie) => {
-            const currentEps = (movie.episodes || []).length;
-            const totalEps = movie.totalEpisodes || "??";
-            const statusColor = currentEps > 0 && currentEps >= totalEps ? '#51cf66' : '#ff922b';
-            
-            const countryInfo = getCountryInfo(movie.country);
-            
-            return `
-                <tr>
-                    <td><img src="${movie.posterUrl}" alt="${movie.title}" width="40" height="60" style="width: 40px; height: 60px; object-fit: cover;" onerror="this.onerror=null; this.src='https://placehold.co/40x60/2a2a3a/FFFFFF?text=NO'"></td>
-                    <td class="movie-title-cell">
-                        <div style="font-weight: 600;">${movie.title}</div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted);">${movie.originTitle || ''}</div>
-                    </td>
-                    <td>
-                        <span class="country-badge-v2" style="background: ${countryInfo.bg}; color: ${countryInfo.color}; border-color: ${countryInfo.color}33;">
-                            ${countryInfo.code ? `<img src="https://flagcdn.com/w40/${countryInfo.code}.png" class="flag-icon-img" alt="${movie.country}">` : `<span class="flag-icon">${countryInfo.icon}</span>`}
-                            ${movie.country || 'N/A'}
-                        </span>
-                    </td>
-                    <td><span style="font-size: 11px; padding: 3px 8px; border-radius: 4px; background: ${movie.type === 'single' ? '#4d638c' : '#da77f2'}; color: #fff; white-space: nowrap; display: inline-block;">${movie.type === 'single' ? 'Phim Lẻ' : 'Phim Bộ'}</span></td>
-                    <td>${movie.categories || movie.category || "N/A"}</td>
-                    <td>
-                        <span style="font-weight: 600; color: ${statusColor};">
-                            ${movie.type === 'single' && currentEps > 0 ? (movie.episodes[0].episodeNumber || "Full") : `${currentEps}/${totalEps} tập`}
-                        </span>
-                    </td>
-                    <td>${movie.price}</td>
-                    <td>${formatNumber(movie.views || 0)}</td>
-                    <td><span class="status-badge ${movie.status}">${getStatusText(movie.status)}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-secondary" onclick="editMovie('${movie.id}')" title="Sửa">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteMovie('${movie.id}')" title="Xóa">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }
-      )
-      .join("");
-}
 
 /**
  * Biến toàn cục lưu danh sách phim cho Admin (Bao gồm cả ẩn/chờ duyệt)
@@ -1861,7 +1889,7 @@ function goBackToMovieSelection() {
 /**
  * Load tập phim cho phim đã chọn
  */
-async function loadEpisodesForMovie(movieIdFromGrid) {
+async function loadEpisodesForMovie(movieIdFromGrid, resetPage = true) {
   const movieId = movieIdFromGrid || document.getElementById("selectMovieForEpisodes").value;
   const management = document.getElementById("episodesManagement");
   const selectionSection = document.getElementById("movieSelectionSection");
@@ -1873,6 +1901,7 @@ async function loadEpisodesForMovie(movieIdFromGrid) {
     return;
   }
 
+  if (resetPage) currentAdminEpisodePage = 1;
   selectedMovieForEpisodes = movieId;
   
   // Hiển thị panel quản lý tập, ẩn panel chọn phim
@@ -1916,47 +1945,68 @@ async function loadEpisodesForMovie(movieIdFromGrid) {
           }
           updateEpisodeStatusBadge(episodes.length, freshMovie.totalEpisodes);
 
-          if (episodes.length === 0) {
-            tbody.innerHTML =
-              '<tr><td colspan="6" class="text-center">Chưa có tập nào</td></tr>';
+          // --- LOGIC PHÂN TRANG ---
+          const totalItems = episodes.length;
+          const perPage = adminPerPage; // 20
+          const totalPages = Math.ceil(totalItems / perPage);
+          
+          if (currentAdminEpisodePage > totalPages && totalPages > 0) currentAdminEpisodePage = totalPages;
+          if (currentAdminEpisodePage < 1) currentAdminEpisodePage = 1;
+
+          const startIndex = (currentAdminEpisodePage - 1) * perPage;
+          const paginatedEpisodes = episodes.slice(startIndex, startIndex + perPage);
+
+          if (totalItems === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Chưa có tập nào</td></tr>';
+            const paginationContainer = document.getElementById("adminEpisodePagination");
+            if (paginationContainer) paginationContainer.innerHTML = "";
             return;
           }
 
           const isSingle = freshMovie.type === 'single';
           
-          tbody.innerHTML = episodes
+          tbody.innerHTML = paginatedEpisodes
             .map(
-              (ep, index) => `
-                <tr data-index="${index}">
-                    <td>
-                        <input type="checkbox" class="episode-checkbox" data-index="${index}" onclick="updateEpisodeSelection()">
-                    </td>
-                    <td class="drag-handle-cell">
-                        ${!isSingle ? '<i class="fas fa-grip-lines drag-handle"></i>' : ""}
-                    </td>
-                    <td>
-                        <input type="text" class="quick-edit-input ${isSingle ? 'is-single' : ''}" 
-                          value="${ep.episodeNumber}" 
-                          onblur="saveQuickEditEpisodeNumber(${index}, this.value)"
-                          title="Sửa nhanh số tập">
-                    </td>
-                    <td>${ep.youtubeId || (ep.sources ? ep.sources.length + " sources" : "N/A")}</td>
-                    <td>${ep.duration || "N/A"}</td>
-                    <td>${ep.quality || "HD"}</td>
-                    <td>
-                        <button class="btn btn-sm btn-secondary" onclick="editEpisode(${index})" title="Sửa">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteEpisode(${index})" title="Xóa">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `,
+              (ep, locIdx) => {
+                const globalIdx = startIndex + locIdx;
+                return `
+                  <tr data-index="${globalIdx}">
+                      <td>
+                          <input type="checkbox" class="episode-checkbox" data-index="${globalIdx}" onclick="updateEpisodeSelection()">
+                      </td>
+                      <td class="drag-handle-cell">
+                          ${!isSingle ? '<i class="fas fa-grip-lines drag-handle"></i>' : ""}
+                      </td>
+                      <td>
+                          <input type="text" class="quick-edit-input ${isSingle ? 'is-single' : ''}" 
+                            value="${ep.episodeNumber}" 
+                            onblur="saveQuickEditEpisodeNumber(${globalIdx}, this.value)"
+                            title="Sửa nhanh số tập">
+                      </td>
+                      <td>${ep.youtubeId || (ep.sources ? ep.sources.length + " sources" : "N/A")}</td>
+                      <td>${ep.duration || "N/A"}</td>
+                      <td>${ep.quality || "HD"}</td>
+                      <td>
+                          <button class="btn btn-sm btn-secondary" onclick="editEpisode(${globalIdx})" title="Sửa">
+                              <i class="fas fa-edit"></i>
+                          </button>
+                          <button class="btn btn-sm btn-danger" onclick="deleteEpisode(${globalIdx})" title="Xóa">
+                              <i class="fas fa-trash"></i>
+                          </button>
+                      </td>
+                  </tr>
+              `;
+              }
             )
             .join("");
 
-          // Khởi tạo kéo thả cho Phim Bộ
+          // Render nút phân trang
+          renderAdminPagination("adminEpisodePagination", totalItems, currentAdminEpisodePage, perPage, "changeAdminEpisodePage", "tập");
+
+          // Khởi tạo kéo thả cho Phim Bộ (Chỉ hiệu quả khi KHÔNG phân trang, 
+          // nhưng nếu admin cuộn xem trang nào muốn kéo trang đó thì ta giữ logic SortableJS cho tbody hiện tại)
+          // CHÚ Ý: Kéo thả xuyên trang thường cần thư viện mạnh hơn hoặc load tất cả.
+          // Tạm thời chỉ cho phép kéo thả các tập đang hiển thị trên trang này.
           if (!isSingle) {
               initEpisodesSortable();
           }
@@ -1969,6 +2019,14 @@ async function loadEpisodesForMovie(movieIdFromGrid) {
       showNotification("Lỗi tải danh sách tập phim", "error");
   }
 }
+
+/**
+ * Chuyển trang Tập phim
+ */
+window.changeAdminEpisodePage = function(page) {
+    currentAdminEpisodePage = page;
+    loadEpisodesForMovie(selectedMovieForEpisodes, false);
+};
 
 /**
  * Lưu tổng số tập vào Firestore
@@ -3075,12 +3133,24 @@ function renderAdminUsersList(users) {
   const tbody = document.getElementById("adminUsersTable");
   if (!tbody) return;
 
-  if (users.length === 0) {
+  // --- LOGIC PHÂN TRANG ---
+  const totalItems = users.length;
+  const totalPages = Math.ceil(totalItems / adminPerPage);
+  
+  if (currentAdminUserPage > totalPages && totalPages > 0) currentAdminUserPage = totalPages;
+  if (currentAdminUserPage < 1) currentAdminUserPage = 1;
+
+  const startIndex = (currentAdminUserPage - 1) * adminPerPage;
+  const paginatedUsers = users.slice(startIndex, startIndex + adminPerPage);
+
+  if (totalItems === 0) {
     tbody.innerHTML = `<tr><td colspan="9" class="text-center">Không tìm thấy người dùng nào</td></tr>`;
+    const paginationContainer = document.getElementById("adminUserPagination");
+    if (paginationContainer) paginationContainer.innerHTML = "";
     return;
   }
 
-  tbody.innerHTML = users
+  tbody.innerHTML = paginatedUsers
     .map((user) => {
       const date = user.createdAt?.toDate
         ? formatDate(user.createdAt.toDate())
@@ -3120,7 +3190,6 @@ function renderAdminUsersList(users) {
           expiryText = `<span class="tag" style="background: linear-gradient(45deg, #00d4ff, #00ff88); color: #000; font-weight:800;">♾️ VĨNH VIỄN</span>`;
         }
       }
-      // 👆 HẾT LOGIC TÍNH HẠN 👆
 
       const vipBadge = isVip
         ? `<span class="status-badge vip"><i class="fas fa-crown"></i> VIP</span>`
@@ -3156,7 +3225,20 @@ function renderAdminUsersList(users) {
       `;
     })
     .join("");
+
+  // Render nút phân trang
+  renderAdminPagination("adminUserPagination", totalItems, currentAdminUserPage, adminPerPage, "changeAdminUserPage", "người dùng");
 }
+
+/**
+ * Chuyển trang Người dùng
+ */
+window.changeAdminUserPage = function(page) {
+    currentAdminUserPage = page;
+    filterAdminUsers();
+    const panel = document.getElementById("usersPanel");
+    if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+};
 // 👇 HÀM MỚI: CẤP VIP CÓ THỜI HẠN 👇
 // 👇 HÀM CẤP VIP (ĐÃ CÓ TÙY CHỌN VĨNH VIỄN) 👇
 async function toggleUserVip(userId, setVip) {
@@ -3557,6 +3639,99 @@ function renderAdminCountries() {
     .join("");
 }
 
+
+function renderAdminMoviesList(movies) {
+  const tbody = document.getElementById("adminMoviesTable");
+  if (!tbody) return;
+
+  // --- LOGIC PHÂN TRANG ---
+  const totalItems = movies.length;
+  const totalPages = Math.ceil(totalItems / adminPerPage);
+  
+  if (currentAdminMoviePage > totalPages && totalPages > 0) currentAdminMoviePage = totalPages;
+  if (currentAdminMoviePage < 1) currentAdminMoviePage = 1;
+
+  const startIndex = (currentAdminMoviePage - 1) * adminPerPage;
+  const paginatedMovies = movies.slice(startIndex, startIndex + adminPerPage);
+
+  if (totalItems === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center">Không tìm thấy phim nào.</td></tr>';
+    const paginationContainer = document.getElementById("adminMoviePagination");
+    if (paginationContainer) paginationContainer.innerHTML = "";
+    return;
+  }
+
+  tbody.innerHTML = paginatedMovies
+    .map((movie) => {
+      const countryInfo = getCountryInfo(movie.country);
+      const typeBadge =
+        movie.type === "series"
+          ? '<span class="movie-type-badge series">Phim Bộ</span>'
+          : '<span class="movie-type-badge single">Phim Lẻ</span>';
+
+      const statusBadge =
+        movie.status === "public"
+          ? '<span class="status-badge public">Công khai</span>'
+          : movie.status === "hidden"
+          ? '<span class="status-badge hidden">Đã ẩn</span>'
+          : '<span class="status-badge pending">Chờ duyệt</span>';
+
+      const genres = Array.isArray(movie.category) ? movie.category.join(", ") : movie.category || "N/A";
+      // Sử dụng posterUrl thay vì poster (tương tự bản cũ dòng 914)
+      const poster = movie.posterUrl || movie.poster || 'https://placehold.co/40x60/2a2a3a/FFFFFF?text=NO';
+
+      return `
+        <tr>
+          <td><img src="${poster}" class="admin-table-poster" onerror="this.onerror=null; this.src='https://placehold.co/40x60/2a2a3a/FFFFFF?text=NO'"></td>
+          <td>
+            <strong>${movie.title}</strong><br>
+            <small class="text-muted">${movie.originTitle || movie.originalTitle || ""}</small><br>
+            <small class="text-muted">ID: ${movie.id}</small>
+          </td>
+          <td>
+            <div class="country-column">
+                <span class="country-badge-v2" style="background: ${countryInfo.bg}; color: ${countryInfo.color}; border-color: ${countryInfo.color}33;">
+                    ${countryInfo.code ? `<img src="https://flagcdn.com/w40/${countryInfo.code}.png" class="flag-icon-img" alt="${movie.country}">` : `<span class="flag-icon">${countryInfo.icon}</span>`}
+                    <span class="country-name">${movie.country || "N/A"}</span>
+                </span>
+            </div>
+          </td>
+          <td>${typeBadge}</td>
+          <td><small class="genres-text">${genres}</small></td>
+          <td><span class="text-secondary">${movie.movieStatus || "N/A"}</span></td>
+          <td>${movie.price ? `<span class="text-accent">${movie.price} CRO</span>` : '<span class="status-badge free">Miễn phí</span>'}</td>
+          <td><i class="fas fa-eye text-muted"></i> ${formatNumber(movie.views || 0)}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <div class="admin-actions">
+              <button class="btn btn-sm btn-primary" onclick="editMovie('${movie.id}')" title="Sửa">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="deleteMovie('${movie.id}')" title="Xóa">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    // Render nút phân trang
+    if (typeof renderAdminPagination === 'function') {
+        renderAdminPagination("adminMoviePagination", totalItems, currentAdminMoviePage, adminPerPage, "changeAdminMoviePage", "phim");
+    }
+}
+
+/**
+ * Chuyển trang Phim
+ */
+window.changeAdminMoviePage = function(page) {
+    currentAdminMoviePage = page;
+    filterAdminMovies(); // Gọi lại hàm lọc để render đúng dữ liệu trang mới
+    const panel = document.getElementById("moviesPanel");
+    if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+};
+
 function openCountryModal(countryId = null) {
   const modalTitle = document.getElementById("countryModalTitle");
   const idInput = document.getElementById("countryId");
@@ -3732,13 +3907,26 @@ function renderAdminActors() {
     });
   }
 
-  if (actorsToRender.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="6" class="text-center">Không tìm thấy diễn viên nào.</td></tr>';
+  // --- LOGIC PHÂN TRANG ---
+  const totalItems = actorsToRender.length;
+  const totalPages = Math.ceil(totalItems / actorsPerPage);
+  
+  // Đảm bảo currentActorPage hợp lệ
+  if (currentActorPage > totalPages && totalPages > 0) currentActorPage = totalPages;
+  if (currentActorPage < 1) currentActorPage = 1;
+
+  const startIndex = (currentActorPage - 1) * actorsPerPage;
+  const paginatedActors = actorsToRender.slice(startIndex, startIndex + actorsPerPage);
+
+  if (totalItems === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Không tìm thấy diễn viên nào.</td></tr>';
+    const paginationContainer = document.getElementById("adminActorPagination");
+    if (paginationContainer) paginationContainer.innerHTML = "";
     return;
   }
 
-  tbody.innerHTML = actorsToRender
+  // Render bảng
+  tbody.innerHTML = paginatedActors
     .map((actor, index) => {
       const avatarUrl = actor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(actor.name)}&background=random&color=fff&size=100`;
       const isSelected = selectedActorIds.includes(actor.id);
@@ -3750,7 +3938,7 @@ function renderAdminActors() {
                     ${isSelected ? 'checked' : ''} 
                     onchange="toggleActorSelection('${actor.id}', this.checked)" />
                 </td>
-                <td>${index + 1}</td>
+                <td>${startIndex + index + 1}</td>
                 <td>
                   <img src="${avatarUrl}" alt="${actor.name}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                 </td>
@@ -3764,7 +3952,14 @@ function renderAdminActors() {
                 <td><span style="font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; font-weight: bold; background: ${actor.role === 'director' ? '#9c27b0' : '#4dabf7'}; color: #fff;">${actor.role === 'director' ? 'Đạo diễn' : 'Diễn viên'}</span></td>
                 <td>${actor.gender || "Không rõ"}</td>
                 <td>${actor.dob ? new Date(actor.dob).toLocaleDateString('vi-VN') : "Không rõ"}</td>
-                <td>${actor.country || "Không rõ"}</td>
+                <td>
+                  <div class="country-column">
+                      <span class="country-badge-v2" style="background: ${getCountryInfo(actor.country).bg}; color: ${getCountryInfo(actor.country).color}; border-color: ${getCountryInfo(actor.country).color}33;">
+                          ${getCountryInfo(actor.country).code ? `<img src="https://flagcdn.com/w40/${getCountryInfo(actor.country).code}.png" class="flag-icon-img" alt="${actor.country}">` : `<span class="flag-icon">${getCountryInfo(actor.country).icon}</span>`}
+                          <span class="country-name">${actor.country || "Không rõ"}</span>
+                      </span>
+                  </div>
+                </td>
                 <td>
                     <button class="btn btn-sm btn-primary" onclick="editActor('${actor.id}')" title="Sửa">
                         <i class="fas fa-edit"></i>
@@ -3777,6 +3972,93 @@ function renderAdminActors() {
         `;
     })
     .join("");
+
+  // Kiểm tra trạng thái "Chọn tất cả" của trang hiện tại
+  const allCurrentSelected = paginatedActors.length > 0 && paginatedActors.every(a => selectedActorIds.includes(a.id));
+  const selectAllCb = document.getElementById("selectAllActors");
+  if (selectAllCb) selectAllCb.checked = allCurrentSelected;
+
+  // Cập nhật thanh bulk actions
+  updateBulkActionsBar();
+
+  // Render nút phân trang
+  renderAdminPagination("adminActorPagination", totalItems, currentActorPage, actorsPerPage, "changeActorPage", "diễn viên");
+}
+
+/**
+ * Hàm phân trang dùng chung cho toàn hệ thống Admin
+ * @param {string} containerId - ID của div chứa phân trang
+ * @param {number} totalItems - Tổng số mục
+ * @param {number} currentPage - Trang hiện tại
+ * @param {number} perPage - Số mục mỗi trang
+ * @param {string} changePageFuncName - Tên hàm xử lý chuyển trang (dạng chuỗi để gọi qua window)
+ * @param {string} unitName - Tên đơn vị hiển thị (VD: "phim", "người dùng")
+ */
+function renderAdminPagination(containerId, totalItems, currentPage, perPage, changePageFuncName, unitName = "mục") {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const totalPages = Math.ceil(totalItems / perPage);
+  if (totalPages <= 1) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const startItem = (currentPage - 1) * perPage + 1;
+  const endItem = Math.min(totalItems, currentPage * perPage);
+
+  let html = `
+    <div class="pagination-info">
+      Hiển thị ${startItem}-${endItem} / ${totalItems} ${unitName}
+    </div>
+    <div class="pagination-controls">
+      <button class="btn-page btn-page-nav" onclick="window.${changePageFuncName}(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+        <i class="fas fa-chevron-left"></i> <span>Trước</span>
+      </button>
+  `;
+
+  // Hiển thị tối đa 5 nút số trang quanh trang hiện tại
+  let startPage = Math.max(1, currentPage - 2);
+  let endPage = Math.min(totalPages, startPage + 4);
+  if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+  for (let i = startPage; i <= endPage; i++) {
+    html += `
+      <button class="btn-page ${i === currentPage ? 'active' : ''}" onclick="window.${changePageFuncName}(${i})">
+        ${i}
+      </button>
+    `;
+  }
+
+  html += `
+      <button class="btn-page btn-page-nav" onclick="window.${changePageFuncName}(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+        <span>Sau</span> <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+    <div class="pagination-jump">
+      <span>Đến trang</span>
+      <input type="number" class="jump-input" min="1" max="${totalPages}" value="${currentPage}" 
+        onkeydown="if(event.key==='Enter') { 
+          const val = parseInt(this.value); 
+          if(val >= 1 && val <= ${totalPages}) window.${changePageFuncName}(val);
+          else showNotification('Số trang không hợp lệ', 'warning');
+        }">
+      <button class="btn-jump" onclick="const val = parseInt(this.previousElementSibling.value); if(val >= 1 && val <= ${totalPages}) window.${changePageFuncName}(val); else showNotification('Số trang không hợp lệ', 'warning');">Vào</button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+/**
+ * Chuyển sang trang diễn viên cụ thể
+ */
+window.changeActorPage = function(page) {
+  currentActorPage = page;
+  renderAdminActors();
+  // Cuộn lên đầu bảng để dễ nhìn
+  const actorsPanel = document.getElementById("actorsPanel");
+  if (actorsPanel) actorsPanel.scrollIntoView({ behavior: 'smooth' });
 }
 
 /**
@@ -4226,12 +4508,14 @@ window.toggleActorSelection = function(actorId, isChecked) {
 
 window.toggleSelectAllActors = function(isChecked) {
     const checkboxes = document.querySelectorAll(".actor-checkbox");
-    selectedActorIds = [];
     
     checkboxes.forEach(cb => {
+        const id = cb.value;
         cb.checked = isChecked;
         if (isChecked) {
-            selectedActorIds.push(cb.value);
+            if (!selectedActorIds.includes(id)) selectedActorIds.push(id);
+        } else {
+            selectedActorIds = selectedActorIds.filter(item => item !== id);
         }
     });
     
@@ -4976,8 +5260,20 @@ function renderAdminNotifications(notifications) {
 
     currentGroupedNotifications = grouped; // Lưu ra biến global để dùng khi click
 
-    if (grouped.length === 0) {
+    // --- LOGIC PHÂN TRANG TRÊN DỮ LIỆU ĐÃ NHÓM ---
+    const totalItems = grouped.length;
+    const totalPages = Math.ceil(totalItems / adminPerPage);
+    
+    if (currentAdminNotifPage > totalPages && totalPages > 0) currentAdminNotifPage = totalPages;
+    if (currentAdminNotifPage < 1) currentAdminNotifPage = 1;
+
+    const startIndex = (currentAdminNotifPage - 1) * adminPerPage;
+    const paginatedGrouped = grouped.slice(startIndex, startIndex + adminPerPage);
+
+    if (totalItems === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding: 30px; color: var(--text-muted);">Không có thông báo nào</td></tr>';
+        const paginationContainer = document.getElementById("adminNotificationsPagination");
+        if (paginationContainer) paginationContainer.innerHTML = "";
         return;
     }
 
@@ -4991,7 +5287,7 @@ function renderAdminNotifications(notifications) {
         vip_approved: { label: "✅ VIP Approved", cls: "vip_approved" }
     };
 
-    tbody.innerHTML = grouped.map((g, index) => {
+    tbody.innerHTML = paginatedGrouped.map((g, index) => {
         // Loại thông báo
         const typeInfo = typeMap[g.type] || { label: g.type || "Khác", cls: "system" };
 
@@ -5035,13 +5331,10 @@ function renderAdminNotifications(notifications) {
                 <td style="white-space: nowrap; font-size: 0.85rem;">${timeStr}</td>
                 <td>
                     ${g.isForAdmin ? '' : `
-                    <button class="btn btn-sm btn-warning" onclick="adminRecallNotification('${g.id}', '${(g.title || '').replace(/'/g, "\\'")}', '${(g.type || '')}')" title="Thu hồi từ tất cả Users" style="margin-right: 4px;">
-                        <i class="fas fa-undo"></i>
-                    </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteAdminNotifications('${g.ids.join(',')}')" title="Xóa thông báo này cho tất cả người nhận">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
                     `}
-                    <button class="btn btn-sm btn-danger" onclick="adminDeleteNotificationGroup(${index})" title="Xóa cá nhân (Ẩn khỏi bảng)">
-                        <i class="fas fa-trash"></i>
-                    </button>
                 </td>
             </tr>
         `;
@@ -7314,12 +7607,24 @@ function renderAdminWatchRooms(rooms) {
     const tableBody = document.getElementById("adminWatchRoomsTable");
     if (!tableBody) return;
 
-    if (rooms.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Không có phòng nào đang hoạt động.</td></tr>';
+    // --- LOGIC PHÂN TRANG ---
+    const totalItems = rooms.length;
+    const totalPages = Math.ceil(totalItems / adminPerPage);
+    
+    if (currentAdminRoomPage > totalPages && totalPages > 0) currentAdminRoomPage = totalPages;
+    if (currentAdminRoomPage < 1) currentAdminRoomPage = 1;
+
+    const startIndex = (currentAdminRoomPage - 1) * adminPerPage;
+    const paginatedRooms = rooms.slice(startIndex, startIndex + adminPerPage);
+
+    if (totalItems === 0) {
+        tableBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Không có phòng nào đang hoạt động.</td></tr>';
+        const paginationContainer = document.getElementById("adminWatchRoomPagination");
+        if (paginationContainer) paginationContainer.innerHTML = "";
         return;
     }
 
-    tableBody.innerHTML = rooms.map(room => {
+    tableBody.innerHTML = paginatedRooms.map(room => {
         const createdDate = room.createdAt ? (room.createdAt.toDate ? room.createdAt.toDate().toLocaleString('vi-VN') : new Date(room.createdAt).toLocaleString('vi-VN')) : 'N/A';
         const typeBadge = room.type === 'private' 
             ? '<span class="badge bg-danger"><i class="fas fa-lock"></i> Riêng tư</span>' 
@@ -7391,7 +7696,20 @@ function renderAdminWatchRooms(rooms) {
             </tr>
         `;
     }).join("");
+
+    // Render nút phân trang
+    renderAdminPagination("adminRoomPagination", totalItems, currentAdminRoomPage, adminPerPage, "changeAdminRoomPage", "phòng");
 }
+
+/**
+ * Chuyển trang Phòng xem chung
+ */
+window.changeAdminRoomPage = function(page) {
+    currentAdminRoomPage = page;
+    filterAdminWatchRooms();
+    const panel = document.getElementById("watchRoomsPanel");
+    if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+};
 
 // --- Cấu hình giới hạn phòng ---
 function toggleRoomLimitSettings() {

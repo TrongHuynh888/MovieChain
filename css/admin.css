@@ -1213,3 +1213,155 @@
         gap: 10px;
     }
 }
+
+/* --- PAGINATION (PHÂN TRANG) --- */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    margin-top: 25px;
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    flex-wrap: wrap;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-info {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-right: 15px;
+}
+
+.btn-page {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.btn-page:hover:not(:disabled) {
+    background: var(--bg-card);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-2px);
+}
+
+.btn-page.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(229, 9, 20, 0.3);
+}
+
+.btn-page:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.btn-page-nav {
+    width: auto;
+    padding: 0 15px;
+    gap: 6px;
+}
+
+/* Nhảy trang nhanh */
+.pagination-jump {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 10px;
+    padding-left: 20px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.jump-input {
+    width: 60px;
+    height: 38px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: #fff;
+    border-radius: 8px;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+.jump-input:focus {
+    border-color: var(--accent-primary);
+}
+
+.btn-jump {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0 12px;
+    height: 38px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-jump:hover {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .pagination-container {
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 10px;
+    }
+    .pagination-info {
+        margin-right: 0;
+        margin-bottom: 5px;
+        width: 100%;
+        text-align: center;
+    }
+    .pagination-controls {
+        gap: 5px;
+    }
+    .pagination-jump {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        width: 100%;
+        justify-content: center;
+        margin-top: 5px;
+    }
+    .btn-page {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+    .jump-input, .btn-jump {
+        height: 32px;
+        font-size: 0.8rem;
+    }
+    .btn-page-nav span {
+        display: none; /* Ẩn chữ "Trực" "Sau" trên mobile */
+    }
+}

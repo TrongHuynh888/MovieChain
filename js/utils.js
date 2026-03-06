@@ -407,7 +407,17 @@ function initializeUI() {
   document.querySelectorAll(".modal-overlay").forEach((overlay) => {
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) {
+        // Nếu overlay có class 'no-click-outside', không cho phép đóng khi click ra ngoài
+        if (overlay.classList.contains("no-click-outside")) return;
+        
         overlay.classList.remove("active");
+        // Kiểm tra xem còn modal nào mở không trước khi gỡ class modal-open
+        setTimeout(() => {
+          const anyActiveModal = document.querySelector(".modal-overlay.active, .custom-popup-overlay.active");
+          if (!anyActiveModal) {
+            document.body.classList.remove("modal-open");
+          }
+        }, 100);
       }
     });
   });

@@ -383,6 +383,7 @@
             <!-- Data sẽ được load động -->
           </tbody>
         </table>
+        <div id="adminMoviePagination" class="pagination-container"></div>
       </div>
 
       <!-- Episodes Panel -->
@@ -512,6 +513,7 @@
               <!-- Data sẽ được load động -->
             </tbody>
           </table>
+          <div id="adminEpisodePagination" class="pagination-container"></div>
         </div>
       </div>
 
@@ -668,7 +670,7 @@
               oninput="renderAdminActorsDebounced()"
             />
           </div>
-          <select class="form-select" id="adminSortActor" onchange="renderAdminActors()" style="width: 200px;">
+          <select class="form-select" id="adminSortActor" onchange="currentActorPage=1; renderAdminActors()" style="width: 200px;">
             <option value="newest">Mới nhất</option>
             <option value="oldest">Cũ nhất</option>
             <option value="az">Tên A-Z</option>
@@ -715,6 +717,11 @@
             <tbody id="adminActorsTable"></tbody>
           </table>
         </div>
+
+        <!-- Pagination for Actors -->
+        <div id="adminActorPagination" class="pagination-container">
+          <!-- Phân trang sẽ được render động ở đây -->
+        </div>
       </div>
 
       <!-- Users Panel -->
@@ -734,9 +741,10 @@
               class="form-input"
               id="adminSearchUsers"
               placeholder="Tìm kiếm người dùng..."
+              oninput="filterAdminUsersDebounced()"
             />
           </div>
-          <select class="form-select" id="adminFilterRole">
+          <select class="form-select" id="adminFilterRole" onchange="filterAdminUsers()">
             <option value="">Tất cả vai trò</option>
             <option value="admin">Admin</option>
             <option value="editor">Editor</option>
@@ -760,6 +768,7 @@
           </thead>
           <tbody id="adminUsersTable"></tbody>
         </table>
+        <div id="adminUserPagination" class="pagination-container"></div>
       </div>
 
       <!-- Comments Panel -->
@@ -1022,6 +1031,7 @@
               <!-- Data sẽ được load động -->
             </tbody>
           </table>
+          <div id="adminNotifPagination" class="pagination-container"></div>
         </div>
       </div>
 
@@ -1087,7 +1097,8 @@
                 <!-- Data sẽ được load động -->
               </tbody>
             </table>
-        </div>
+          </div>
+          <div id="adminVipPagination" class="pagination-container"></div>
       </div>
 
       <!-- Error Reports Panel -->
@@ -1144,7 +1155,7 @@
             </tbody>
           </table>
         </div>
-
+        <div id="adminErrorReportPagination" class="pagination-container"></div>
       </div>
 
       <!-- Watch Party Rooms Panel -->
@@ -1296,6 +1307,7 @@
             <!-- Dữ liệu được load động -->
           </tbody>
         </table>
+        <div id="adminRoomPagination" class="pagination-container"></div>
       </div>
 
     </div>
@@ -1303,7 +1315,7 @@
 </div>
 
 <!-- Modal Thêm/Sửa Diễn Viên -->
-<div class="modal-overlay" id="actorModal">
+<div class="modal-overlay no-click-outside" id="actorModal">
   <div class="modal">
     <div class="modal-header">
       <h3 id="actorModalTitle">Thêm Diễn Viên Mới</h3>
@@ -1424,7 +1436,7 @@
 </div>
 
 <!-- Modal Cập nhật hàng loạt Diễn viên -->
-<div class="modal-overlay" id="bulkUpdateActorModal">
+<div class="modal-overlay no-click-outside" id="bulkUpdateActorModal">
   <div class="modal" style="max-width: 450px;">
     <div class="modal-header">
       <h3 id="bulkUpdateModalTitle">Cập nhật hàng loạt</h3>
@@ -1470,7 +1482,7 @@
   </div>
 </div>
 <!-- Modal So sánh & Cập nhật Diễn viên từ API -->
-<div class="modal-overlay" id="actorImportCompareModal">
+<div class="modal-overlay no-click-outside" id="actorImportCompareModal">
   <div class="modal" style="max-width: 850px; width: 95%;">
     <div class="modal-header">
       <h3>So sánh & Bổ sung dữ liệu Diễn viên</h3>
