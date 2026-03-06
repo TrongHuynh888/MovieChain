@@ -209,14 +209,30 @@
 }
 
 .admin-table tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.03);
 }
-.admin-table img {
-  width: 40px;
-  height: 60px;
+
+/* Quy tắc an toàn cho mọi ảnh trong bảng admin */
+.admin-table td img {
+    max-width: 50px;
+    height: auto;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.admin-table-poster {
+  width: 50px;
+  height: 75px;
   object-fit: cover;
   border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
 }
+
+.admin-table tr:hover .admin-table-poster {
+    transform: scale(1.05);
+}
+
 
 /* Admin Header & Search */
 .admin-panel-header {
@@ -404,20 +420,31 @@
   /* BẢNG DỮ LIỆU: Cho phép cuộn ngang */
   .admin-panel {
     overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch; /* Cuộn mượt trên iOS */
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 20px;
   }
 
   .admin-table {
-    min-width: 700px; /* Đảm bảo bảng giữ nguyên layout, không co lại */
-    overflow: visible !important; /* Override overflow:hidden gốc */
+    min-width: 900px; /* Tăng min-width để 10 cột không bị quá chật */
+    overflow: visible !important;
   }
 
   .admin-table th,
   .admin-table td {
-    padding: 10px 8px;
+    padding: 12px 10px;
     font-size: 13px;
-    white-space: nowrap; /* Không xuống dòng, cho phép scroll */
+    white-space: normal; /* Cho phép xuống dòng ở một số nội dung */
   }
+
+  .admin-table td:nth-child(2) {
+      min-width: 180px; /* Cột tên cần rộng hơn */
+  }
+
+  .admin-actions {
+      flex-direction: row !important; /* Trên mobile nút hành động nên nằm ngang để dễ bấm */
+      justify-content: center;
+  }
+
 
   /* Stats cards xếp 2 cột trên mobile */
   .stats-grid {
@@ -502,6 +529,50 @@
 .admin-notif-stat i {
   font-size: 0.8rem;
   opacity: 0.7;
+}
+
+/* Status Badges - Premium Look */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-badge.public {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border-color: rgba(46, 204, 113, 0.3);
+}
+
+.status-badge.hidden {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border-color: rgba(231, 76, 60, 0.3);
+}
+
+.status-badge.pending {
+  background: rgba(241, 196, 15, 0.2);
+  color: #f1c40f;
+  border-color: rgba(241, 196, 15, 0.3);
+}
+
+.status-badge.free {
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
+    border-color: rgba(52, 152, 219, 0.3);
+}
+
+.movie-type-badge {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-weight: 600;
 }
 
 /* Badge loại thông báo */

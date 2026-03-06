@@ -422,12 +422,16 @@
                   <option value="">Chọn quốc gia</option>
                 </select>
                 <div class="form-group">
-    <label class="form-label">Loại phim *</label>
-    <select class="form-select" id="movieType" required>
-        <option value="single">Phim Lẻ</option>
-        <option value="series">Phim Bộ (Nhiều tập)</option>
-    </select>
-</div>
+                    <label class="form-label">Loại phim *</label>
+                    <select class="form-select" id="movieType" required onchange="toggleTotalEpsField(this.value)">
+                        <option value="single">Phim Lẻ</option>
+                        <option value="series">Phim Bộ (Nhiều tập)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="totalEpisodesGroup" style="display: none;">
+                    <label class="form-label">Tổng số tập dự kiến</label>
+                    <input type="number" id="movieTotalEpisodes" class="form-input" placeholder="Ví dụ: 12" min="1">
+                </div>
               </div>
             </div>
             <div
@@ -778,6 +782,44 @@
           </button>
           <button class="btn btn-primary" onclick="saveBatchImportedEpisodes()">
             <i class="fas fa-upload"></i> Lưu Lên Hệ Thống
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bulk Add Dubbed Links Modal (NEW) -->
+    <div class="modal-overlay" id="bulkAddDubbedModal">
+      <div class="modal" style="max-width: 700px;">
+        <div class="modal-header">
+          <h3 class="modal-title"><i class="fas fa-microphone-alt"></i> Bổ sung Link Lồng tiếng Hàng loạt</h3>
+          <button class="modal-close" onclick="closeModal('bulkAddDubbedModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px;">
+          <div class="alert alert-info" style="background: rgba(155, 89, 182, 0.1); border: 1px dashed #9b59b6; color: #9b59b6; padding: 15px; border-radius: 8px;">
+              <h4 style="margin-bottom: 8px; font-size: 1rem;"><i class="fas fa-info-circle"></i> Hướng dẫn định dạng</h4>
+              <p style="font-size: 0.9rem; margin-bottom: 5px;">Dán danh sách tập và link theo cấu trúc bên dưới (mỗi tập 1 dòng):</p>
+              <code style="display: block; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; font-size: 0.85rem; color: #fff;">
+                Tập 01|https://link-video.m3u8<br>
+                Tập 02|https://link-video.m3u8
+              </code>
+              <p style="font-size: 0.85rem; margin-top: 8px; font-style: italic; opacity: 0.8;">* Hệ thống sẽ tự động tìm Tập tương ứng và thêm/cập nhật nguồn "Lồng tiếng".</p>
+          </div>
+          
+          <div class="form-group" style="flex: 1;">
+              <label class="form-label">Danh sách Link Lồng tiếng:</label>
+              <textarea id="bulkDubbedInput" class="form-textarea" placeholder="Tập 01|https://..." style="height: 250px; font-family: monospace; font-size: 0.9rem;"></textarea>
+          </div>
+          
+          <div id="bulkDubbedStatus" style="font-size: 0.9rem; color: var(--text-secondary);"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('bulkAddDubbedModal')">
+            Đóng
+          </button>
+          <button class="btn" style="background: #9b59b6; color: #fff;" onclick="processBulkDubbedLinks()">
+            <i class="fas fa-magic"></i> Xử lý & Cập nhật
           </button>
         </div>
       </div>
