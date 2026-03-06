@@ -291,10 +291,13 @@ document.addEventListener("click", function (event) {
 /**
  * Search movies
  */
-function searchMovies() {
+/**
+ * Search movies (Đã tối ưu hóa với Debounce)
+ */
+const searchMovies = debounce(function () {
   const query = document.getElementById("searchMovies").value.toLowerCase();
   filterMovies(query);
-}
+}, 300);
 /**
  * Filter movies
  */

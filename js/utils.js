@@ -4,6 +4,48 @@
  */
 
 // ============================================
+// 0. HÀM TỐI ƯU HIỆU NĂNG (CORE OPTIMIZATION)
+// ============================================
+
+/**
+ * Debounce: Trì hoãn thực thi hàm cho đến khi ngừng kích hoạt trong một khoảng thời gian
+ */
+function debounce(fn, delay) {
+  let timeoutId;
+  return function (...args) {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn.apply(this, args);
+    }, delay);
+  };
+}
+
+/**
+ * Throttle: Giới hạn số lần thực thi hàm trong một khoảng thời gian
+ */
+function throttle(fn, limit) {
+  let lastFunc;
+  let lastRan;
+  return function (...args) {
+    if (!lastRan) {
+      fn.apply(this, args);
+      lastRan = Date.now();
+    } else {
+      clearTimeout(lastFunc);
+      lastFunc = setTimeout(
+        function () {
+          if (Date.now() - lastRan >= limit) {
+            fn.apply(this, args);
+            lastRan = Date.now();
+          }
+        },
+        limit - (Date.now() - lastRan),
+      );
+    }
+  };
+}
+
+// ============================================
 // 1. GIAO DIỆN & THÔNG BÁO
 // ============================================
 
@@ -381,13 +423,13 @@ function loadTheme() {
 
 function initNavbarScroll() {
   const navbar = document.getElementById("navbar");
-  window.addEventListener("scroll", () => {
+  window.addEventListener("scroll", throttle(() => {
     if (window.scrollY > 50) {
       navbar?.classList.add("scrolled");
     } else {
       navbar?.classList.remove("scrolled");
     }
-  });
+  }, 100));
 }
 
 // ... (Các code cũ giữ nguyên)

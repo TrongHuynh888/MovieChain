@@ -2340,6 +2340,12 @@ window.handleSkipIntro = function() {
 };
 
 window.skipTime = function(seconds) {
+    if (currentVideoType === 'youtube' && window.ytPlayer && typeof window.ytPlayer.getCurrentTime === 'function') {
+        const currentTime = window.ytPlayer.getCurrentTime();
+        window.ytPlayer.seekTo(currentTime + seconds, true);
+        return;
+    }
+
     let video = videoEl;
     if (!video) {
         video = document.getElementById("html5Player");
@@ -4500,3 +4506,46 @@ window.togglePartDropdown = function(event) {
 document.addEventListener("click", () => {
     document.querySelectorAll(".part-dropdown-menu").forEach(m => m.classList.remove("active"));
 });
+
+/**
+ * KHỞI TẠO PHÍM TẮT ĐIỀU KHIỂN VIDEO (PC)
+ */
+function initPlayerShortcuts() {
+    document.addEventListener("keydown", (e) => {
+        // 1. Chỉ chạy khi đang ở trang Chi tiết phim và không có modal nào đang mở
+        const detailPage = document.getElementById("movieDetailPage");
+        if (!detailPage || !detailPage.classList.contains("active")) return;
+        if (document.body.classList.contains("modal-open")) return;
+
+        // 2. Không chặn phím khi người dùng đang gõ vào các ô nhập liệu (Chat, Search, Bình luận)
+        const activeEl = document.activeElement;
+        const isInput = activeEl.tagName === "INPUT" || 
+                        activeEl.tagName === "TEXTAREA" || 
+                        activeEl.isContentEditable;
+        if (isInput) return;
+
+        // 3. Xử lý các phím tắt
+        switch (e.key.toLowerCase()) {
+            case " ":
+            case "space": // Một số trình duyệt cũ dùng "Space"
+                e.preventDefault(); // Chặn cuộn trang khi nhấn Space
+                if (window.togglePlay) window.togglePlay();
+                break;
+            
+            case "f":
+                if (window.toggleFullscreen) window.toggleFullscreen();
+                break;
+
+            case "arrowleft":
+                if (window.skipTime) window.skipTime(-10);
+                break;
+
+            case "arrowright":
+                if (window.skipTime) window.skipTime(10);
+                break;
+        }
+    });
+}
+
+// Khởi tạo phím tắt ngay khi script được load
+initPlayerShortcuts();

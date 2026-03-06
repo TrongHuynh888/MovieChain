@@ -7,6 +7,28 @@ window.latestAddedActorIds = JSON.parse(localStorage.getItem('latestAddedActorId
 window.latestAutoActorIds = JSON.parse(localStorage.getItem('latestAutoAutoIds') || '[]');
 
 /**
+ * TỐI ƯU HÓA: DEBOUNCE CHO CÁC HÀM TÌM KIẾM ADMIN
+ * Giúp giảm lag khi người dùng nhập liệu nhanh vào các ô tìm kiếm
+ */
+window.filterAdminMoviesDebounced = debounce(() => typeof filterAdminMovies === 'function' && filterAdminMovies(), 300);
+window.filterEpisodeMoviesDebounced = debounce(() => typeof filterEpisodeMovies === 'function' && filterEpisodeMovies(), 300);
+window.filterAdminUsersDebounced = debounce(() => typeof filterAdminUsers === 'function' && filterAdminUsers(), 300);
+window.renderAdminCategoriesDebounced = debounce(() => typeof renderAdminCategories === 'function' && renderAdminCategories(), 300);
+window.renderAdminCountriesDebounced = debounce(() => typeof renderAdminCountries === 'function' && renderAdminCountries(), 300);
+window.renderAdminActorsDebounced = debounce(() => typeof renderAdminActors === 'function' && renderAdminActors(), 300);
+window.filterAdminCommentsDebounced = debounce(() => typeof filterAdminComments === 'function' && filterAdminComments(), 300);
+window.filterAdminNotificationsDebounced = debounce(() => typeof filterAdminNotifications === 'function' && filterAdminNotifications(), 300);
+window.filterAdminVipRequestsDebounced = debounce(() => typeof filterAdminVipRequests === 'function' && filterAdminVipRequests(), 300);
+window.filterErrorReportsDebounced = debounce(() => typeof filterErrorReports === 'function' && filterErrorReports(), 300);
+window.filterAdminWatchRoomsDebounced = debounce(() => typeof filterAdminWatchRooms === 'function' && filterAdminWatchRooms(), 300);
+
+// Thêm debounced cho các tính năng khác trong admin.html
+window.adminHandleAvatarUrlInputDebounced = debounce((el) => typeof adminHandleAvatarUrlInput === 'function' && adminHandleAvatarUrlInput(el), 500);
+window.updateActorPreviewDebounced = debounce(() => typeof updateActorPreview === 'function' && updateActorPreview(), 500);
+window.checkActorDuplicateDebounced = debounce((val) => typeof checkActorDuplicate === 'function' && checkActorDuplicate(val), 500);
+window.handleBulkCountryInputDebounced = debounce((val) => typeof handleBulkCountryInput === 'function' && handleBulkCountryInput(val), 300);
+
+/**
  * Cập nhật danh sách ID diễn viên mới nhất
  * @param {Array|string} ids - ID hoặc mảng IDs mới
  * @param {boolean} append - Nếu true, cộng dồn vào danh sách hiện tại. Nếu false, thay thế hoàn toàn.
@@ -437,7 +459,17 @@ function loadEditMovieForm() {
     if (editSearchInput && editSelect) {
         // Set event listener for search input
         editSearchInput.addEventListener("input", function() {
-            filterEditMovieDropdown(editSearchInput, editSelect);
+            if (typeof filterEditMovieDropdown === 'function') {
+                filterEditMovieDropdown(editSearchInput, editSelect);
+            } else {
+                // Tự implement nhanh nếu thiếu hoặc dùng logic lọc cơ bản
+                const val = editSearchInput.value.toLowerCase();
+                Array.from(editSelect.options).forEach(opt => {
+                    if (opt.value === "") return;
+                    const txt = opt.text.toLowerCase();
+                    opt.style.display = txt.includes(val) ? "block" : "none";
+                });
+            }
         });
 
         // Tải danh sách phim vào Select
@@ -901,7 +933,11 @@ async function loadAdminMovies() {
     // 3. Cập nhật ngay Menu chọn phim (Tab Quản lý Tập)
     const select = document.getElementById("selectMovieForEpisodes");
     if (select) {
+        const currentVal = select.value; // Lưu lại giá trị đang chọn
         select.innerHTML = renderEpisodeMovieOptions(allAdminMovies);
+        if (currentVal && allAdminMovies.some(m => m.id === currentVal)) {
+            select.value = currentVal; // Khôi phục lại giá trị nếu phim vẫn tồn tại
+        }
     }
 
     // 4. Cập nhật ngay Bảng "Phim mới thêm gần đây" (Dashboard)
@@ -1859,7 +1895,7 @@ async function loadEpisodesForMovie(movieIdFromGrid) {
           
           // Cập nhật tên phim lên tiêu đề bảng tập
           const titleEl = document.getElementById("currentMovieEpisodesTitle");
-          if (titleEl) titleEl.textContent = `Danh sách tập: ${freshMovie.title}`;
+          if (titleEl) titleEl.innerHTML = `Danh sách tập: <span style="color: #f1c40f; font-weight: bold;">${freshMovie.title}</span>`;
 
           const episodes = freshMovie.episodes || [];
           
@@ -2238,7 +2274,7 @@ async function saveBatchImportedEpisodes() {
         await loadMovies();
         await loadAdminMovies();
         // Load lại danh sách Episodes trên màn Quản Lý Tập UI
-        loadEpisodesForMovie();
+        loadEpisodesForMovie(movieId);
 
     } catch (err) {
         console.error("Save Batch Episodes Error: ", err);
@@ -2629,7 +2665,7 @@ async function handleEpisodeSubmit(event) {
     closeEpisodeModal(); // [FIX] Dùng hàm mới để dừng video khi đóng
 
     await loadMovies();
-    loadEpisodesForMovie();
+    loadEpisodesForMovie(selectedMovieForEpisodes);
   } catch (error) {
     console.error("Lỗi lưu episode:", error);
     showNotification("Không thể lưu tập phim!", "error");
@@ -2704,7 +2740,7 @@ async function deleteEpisode(index) {
 
     // Reload
     await loadMovies();
-    loadEpisodesForMovie();
+    loadEpisodesForMovie(selectedMovieForEpisodes);
   } catch (error) {
     console.error("Lỗi xóa episode:", error);
     showNotification("Không thể xóa tập phim!", "error");
@@ -2738,7 +2774,7 @@ async function deleteAllEpisodes() {
 
     // Reload
     await loadMovies();
-    loadEpisodesForMovie();
+    loadEpisodesForMovie(selectedMovieForEpisodes);
   } catch (error) {
     console.error("Lỗi xóa tất cả episodes:", error);
     showNotification("Không thể xóa các tập phim!", "error");
@@ -3003,7 +3039,7 @@ async function loadAdminUsers() {
     const filterRole = document.getElementById("adminFilterRole");
 
     if (searchInput) {
-      searchInput.oninput = filterAdminUsers;
+      searchInput.oninput = window.filterAdminUsersDebounced;
     }
     if (filterRole) {
       filterRole.onchange = filterAdminUsers;
@@ -3543,8 +3579,8 @@ function openCountryModal(countryId = null) {
     idInput.value = "";
     codeInput.disabled = false;
     
-    // Tự động gợi ý mã khi nhập tên (chỉ khi thêm mới)
-    nameInput.oninput = function() {
+    // Tự động gợi ý mã khi nhập tên (chỉ khi thêm mới) - Dùng debounce để mượt hơn
+    nameInput.oninput = debounce(function() {
         if (!idInput.value) { // Chỉ tự động khi đang thêm mới
             const name = this.value;
             // Lấy thông tin từ bộ quy tắc getCountryInfo nếu có
@@ -3563,7 +3599,7 @@ function openCountryModal(countryId = null) {
                 codeInput.value = suggested;
             }
         }
-    };
+    }, 300);
   }
 
   openModal("countryModal");
@@ -7041,7 +7077,7 @@ async function saveQuickEditEpisodeNumber(index, newNumber) {
     } catch (error) {
         console.error("Lỗi sửa nhanh số tập:", error);
         showNotification("Lỗi khi sửa số tập.", "error");
-        loadEpisodesForMovie(); // Revert UI
+        loadEpisodesForMovie(movieId); // Revert UI
     }
 }
 

@@ -227,7 +227,7 @@
               <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label">Link hoặc Tải ảnh lên</label>
                 <div class="input-with-action" style="display: flex; gap: 8px; align-items: stretch; margin-bottom: 0;">
-                  <input type="url" class="form-input" id="newAdminAvatarUrl" placeholder="https://..." style="flex: 1; padding: 10px 15px;" oninput="adminHandleAvatarUrlInput(this)" />
+                  <input type="url" class="form-input" id="newAdminAvatarUrl" placeholder="https://..." style="flex: 1; padding: 10px 15px;" oninput="adminHandleAvatarUrlInputDebounced(this)" />
                   <button type="button" class="btn btn-action-glass" onclick="document.getElementById('adminAvatarFileUpload').click()" style="padding: 10px 15px; white-space: nowrap;">
                     <i class="fas fa-file-upload"></i> Chọn ảnh
                   </button>
@@ -329,7 +329,7 @@
               class="form-input"
               id="adminSearchMovies"
               placeholder="Tìm kiếm phim..."
-              oninput="filterAdminMovies()"
+              oninput="filterAdminMoviesDebounced()"
             />
           </div>
           <select class="form-select" id="adminSortMovies" onchange="filterAdminMovies()">
@@ -406,7 +406,7 @@
                 class="form-input"
                 id="episodeMovieSearch"
                 placeholder="Gõ tên phim..."
-                oninput="filterEpisodeMovies()"
+                oninput="filterEpisodeMoviesDebounced()"
                 style="padding-left: 38px"
               />
             </div>
@@ -535,7 +535,7 @@
               class="form-input"
               id="adminSearchCategory"
               placeholder="Tìm thể loại, slug, ID..."
-              oninput="renderAdminCategories()"
+              oninput="renderAdminCategoriesDebounced()"
             />
           </div>
         </div>
@@ -576,7 +576,7 @@
               class="form-input"
               id="adminSearchCountry"
               placeholder="Tìm tên quốc gia, mã code..."
-              oninput="renderAdminCountries()"
+              oninput="renderAdminCountriesDebounced()"
             />
           </div>
         </div>
@@ -665,7 +665,7 @@
               class="form-input"
               id="adminSearchActor"
               placeholder="Tìm tên diễn viên..."
-              oninput="renderAdminActors()"
+              oninput="renderAdminActorsDebounced()"
             />
           </div>
           <select class="form-select" id="adminSortActor" onchange="renderAdminActors()" style="width: 200px;">
@@ -779,7 +779,7 @@
               class="form-input"
               id="adminSearchComments"
               placeholder="Tìm nội dung, người dùng, tên phim..."
-              oninput="filterAdminComments()"
+              oninput="filterAdminCommentsDebounced()"
             />
           </div>
           <select class="form-select" id="adminFilterCommentRating" onchange="filterAdminComments()">
@@ -1042,7 +1042,7 @@
               class="form-input"
               id="adminSearchVip"
               placeholder="Tìm kiếm theo Email người dùng..."
-              oninput="filterAdminVipRequests()"
+              oninput="filterAdminVipRequestsDebounced()"
             />
           </div>
           
@@ -1107,7 +1107,7 @@
               class="form-input"
               id="adminSearchError"
               placeholder="Tìm kiếm theo tên phim, tập phim hoặc email người báo..."
-              oninput="filterErrorReports()"
+              oninput="filterErrorReportsDebounced()"
             />
           </div>
           <select class="form-select" id="errorFilterType" onchange="filterErrorReports()" style="min-width: 150px;">
@@ -1248,7 +1248,7 @@
               class="form-input"
               id="adminSearchRooms"
               placeholder="Tìm tên phòng, chủ phòng, tên phim..."
-              oninput="filterAdminWatchRooms()"
+              oninput="filterAdminWatchRoomsDebounced()"
             />
           </div>
           
@@ -1327,7 +1327,7 @@
             id="actorName"
             required
             placeholder="Nhập tên (VD: Tom Cruise, Christopher Nolan)"
-            oninput="updateActorPreview(); checkActorDuplicate(this.value);"
+            oninput="updateActorPreviewDebounced(); checkActorDuplicateDebounced(this.value);"
             autocomplete="off"
           />
           <div id="actorDuplicateSuggestions" class="suggestions-list"></div>
@@ -1453,7 +1453,7 @@
             id="bulkActorCountry" 
             placeholder="VD: Hàn Quốc, Mỹ..." 
             autocomplete="off"
-            oninput="handleBulkCountryInput(this.value)"
+            oninput="handleBulkCountryInputDebounced(this.value)"
             onfocus="handleBulkCountryInput(this.value)"
           />
           <div id="bulkActorCountrySuggestions" class="suggestions-list"></div>

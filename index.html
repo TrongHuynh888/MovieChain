@@ -11,7 +11,13 @@
     <link rel="stylesheet" href="css/responsive.css?v=158" />
     <link rel="stylesheet" href="css/detail-redesign.css?v=3" />
     <link rel="stylesheet" href="css/intro.css?v=3" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Preload Critical Assets -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" as="style">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/hls.js@latest" as="script">
+    <link rel="preload" href="js/main.js" as="script">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <!--<link rel="stylesheet" href="css/style.css" />-->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -69,7 +75,7 @@
     <!-- HLS.js for Streaming -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <!-- SortableJS for Drag & Drop -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
 
     <!-- Custom CSS -->
   </head>
