@@ -1,5 +1,6 @@
 const EPISODES_PER_PAGE = 10;
 let currentEpisodePage = 0;
+let reportLocks = {}; // Biến khóa toàn cục để chống race condition khi báo lỗi video
 
 // Thêm CSS cho phần trả lời bình luận
 const replyStyles = document.createElement("style");
@@ -1353,6 +1354,10 @@ async function checkAndUpdateVideoAccess() {
       html5Player.pause();
       html5Player.src = "";
       
+      // ✅ RESET ERROR OVERLAY
+      const errorOverlay = document.getElementById("videoError");
+      if (errorOverlay) errorOverlay.classList.add("hidden");
+      
       if (window.hlsInstance) {
           window.hlsInstance.destroy();
           window.hlsInstance = null;
@@ -1454,6 +1459,9 @@ async function checkAndUpdateVideoAccess() {
                             switch (data.type) {
                                 case Hls.ErrorTypes.NETWORK_ERROR:
                                     console.error("HLS Network Error: " + data.details);
+                                    if (data.details === 'manifestLoadError') {
+                                        showPlayerError("Link phim đã bị hỏng hoặc không tồn tại (404).");
+                                    }
                                     autoReportVideoError("HLS_NETWORK", data.details);
                                     hls.startLoad(); 
                                     break;
@@ -1463,6 +1471,7 @@ async function checkAndUpdateVideoAccess() {
                                     break;
                                 default:
                                     console.error("HLS Fatal Error: " + data.details);
+                                    showPlayerError("Lỗi hệ thống trình phát. Vui lòng thử lại.");
                                     autoReportVideoError("HLS_FATAL", data.details);
                                     hls.destroy();
                                     break;
@@ -1500,57 +1509,37 @@ async function checkAndUpdateVideoAccess() {
           html5Player.addEventListener('loadedmetadata', function() {
               handleInitialPlayback(html5Player);
           }, { once: true });
-           html5Player.onerror = async function() {
-               const err = html5Player.error;
-               if (!currentMovie || !currentMovie.id) return;
-               
-               const episode = currentMovie.episodes && currentMovie.episodes[currentEpisode];
-               const epName = episode 
-                    ? (episode.name || episode.episodeNumber || `Tập ${currentEpisode + 1}`) 
-                    : "Full";
-               
-               const errorKey = `reported_error_${currentMovie.id}_${currentEpisode}`;
-               const lastReported = sessionStorage.getItem(errorKey);
-               if (lastReported && (Date.now() - parseInt(lastReported) < 5 * 60 * 1000)) {
-                   console.log("Đã báo lỗi MP4 gần đây, bỏ qua.");
-                   return;
-               }
-               
-               try {
-                   const mId = currentMovie.id || currentMovieId || "unknown";
-                   const eName = epName || "Full";
- 
-                   const checkQuery = await db.collection("error_reports")
-                       .where("movieId", "==", mId)
-                       .where("episodeName", "==", eName)
-                       .where("status", "==", "pending")
-                       .get();
-                       
-                   if (!checkQuery.empty) {
-                       console.log("Tập phim này đã được báo lỗi MP4 và đang chờ xử lý. Bỏ qua.");
-                       sessionStorage.setItem(errorKey, Date.now());
-                       return;
-                   }
- 
-                   const reportData = {
-                       movieId: mId,
-                       movieTitle: currentMovie.title || "Không rõ tên",
-                       episodeName: eName,
-                       errorType: "broken_link",
-                       description: `[AUTO-DETECT] Lỗi tải Video (MP4): Error code ${err ? err.code : 'unknown'}\nVideo URL: ${videoSource}`,
-                       userId: currentUser ? currentUser.uid : "anonymous",
-                       userName: currentUser ? (currentUser.displayName || currentUser.email) : "Hệ thống tự động",
-                       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                       status: "pending"
-                   };
-                   
-                   await db.collection("error_reports").add(reportData);
-                   sessionStorage.setItem(errorKey, Date.now());
-                   console.log("✅ Đã tự động báo lỗi link MP4 chết về Admin!");
-               } catch (error) {
-                   console.error("Lỗi auto-report MP4:", error);
-               }
-           };
+            html5Player.onerror = async function() {
+                const err = html5Player.error;
+                showPlayerError("Rất tiếc, video (MP4) không thể tải được. Link phim có thể đã bị hỏng.");
+                if (!currentMovie || !currentMovie.id) return;
+                
+                const episode = currentMovie.episodes && currentMovie.episodes[currentEpisode];
+                const epName = episode 
+                     ? String(episode.name || episode.episodeNumber || `Tập ${currentEpisode + 1}`) 
+                     : "Full";
+                
+                const errorKey = `reported_error_${currentMovie.id}_${currentEpisode}`;
+                const lastReported = sessionStorage.getItem(errorKey);
+                if (lastReported && (Date.now() - parseInt(lastReported) < 5 * 60 * 1000)) {
+                    return;
+                }
+                
+                try {
+                    await processErrorReport({
+                        movieId: currentMovie.id || currentMovieId || "unknown",
+                        movieTitle: currentMovie.title || "Không rõ tên",
+                        episodeName: epName || "Full",
+                        errorType: "broken_link",
+                        description: `[AUTO-DETECT] Lỗi tải Video (MP4): Error code ${err ? err.code : 'unknown'}\nURL: ${videoSource}`,
+                        userId: currentUser ? currentUser.uid : "anonymous",
+                        userName: currentUser ? (currentUser.displayName || currentUser.email) : "Hệ thống tự động"
+                    });
+                    sessionStorage.setItem(errorKey, Date.now());
+                } catch (error) {
+                    console.error("Lỗi auto-report MP4:", error);
+                }
+            };
       }
 
       const customControls = document.getElementById("customControls");
@@ -2164,11 +2153,210 @@ window.togglePlay = function() {
     console.log("Toggling play, video:", video, "paused:", video.paused);
     
     if (video.paused) {
-        video.play().catch(e => console.error("Play error:", e));
+        // Fix AbortError: play() returns a promise
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                if (error.name === "AbortError") {
+                    console.log("Play request was interrupted by a pause() call. This is expected during rapid toggling.");
+                } else {
+                    console.error("Play error:", error);
+                }
+            });
+        }
     } else {
         video.pause();
     }
 };
+
+/**
+ * Hiển thị Overlay báo lỗi trong Video Player
+ */
+function showPlayerError(message) {
+    const errorOverlay = document.getElementById("videoError");
+    const errorMsgText = document.getElementById("videoErrorMessage");
+    
+    if (errorOverlay && errorMsgText) {
+        errorMsgText.textContent = message || "Rất tiếc, video hiện tại không thể tải được. Vui lòng thử lại sau hoặc báo cáo lỗi cho Admin.";
+        errorOverlay.classList.remove("hidden");
+        
+        // Ẩn các controls khác để tập trung vào lỗi
+        const customControls = document.getElementById("customControls");
+        const centerOverlay = document.getElementById("centerOverlay");
+        if (customControls) customControls.classList.add("hidden");
+        if (centerOverlay) centerOverlay.classList.add("hidden");
+    }
+}
+
+/**
+ * Tự động báo cáo lỗi Video về Firebase
+ */
+async function autoReportVideoError(type, details) {
+    if (!currentMovieId || !db) return;
+    
+    const movie = allMovies.find(m => m.id === currentMovieId);
+    if (!movie) return;
+    
+    const episode = movie.episodes && movie.episodes[currentEpisode];
+    const epName = episode 
+         ? String(episode.name || episode.episodeNumber || `Tập ${currentEpisode + 1}`) 
+         : "Full";
+         
+    const errorKey = `reported_error_${currentMovieId}_${currentEpisode}`;
+    const lastReported = sessionStorage.getItem(errorKey);
+    
+    // Chống spam: 5 phút báo 1 lần
+    if (lastReported && (Date.now() - parseInt(lastReported) < 5 * 60 * 1000)) {
+        return;
+    }
+
+    try {
+        await processErrorReport({
+            movieId: currentMovieId,
+            movieTitle: movie.title || "Không rõ tên",
+            episodeName: String(epName), // Ép kiểu String đồng nhất
+            errorType: "broken_link",
+            description: `[AUTO-DETECT] ${type}: ${details}`,
+            userId: currentUser ? currentUser.uid : "anonymous",
+            userName: currentUser ? (currentUser.displayName || currentUser.email) : "Hệ thống tự động"
+        });
+        sessionStorage.setItem(errorKey, Date.now());
+        console.log(`✅ Đã tự động báo lỗi [${type}] về hệ thống.`);
+    } catch (error) {
+        console.error("Lỗi auto-report:", error);
+    }
+}
+
+/**
+ * Người dùng nhấn nút Báo lỗi thủ công trên Overlay
+ */
+window.reportVideoErrorManual = async function() {
+    if (!currentMovieId) return;
+    
+    const movie = allMovies.find(m => m.id === currentMovieId);
+    if (!movie) return;
+
+    const epName = movie.episodes && movie.episodes[currentEpisode] 
+        ? (movie.episodes[currentEpisode].name || movie.episodes[currentEpisode].episodeNumber || `Tập ${currentEpisode + 1}`)
+        : "Full";
+    
+    showLoading(true);
+    try {
+        await processErrorReport({
+            movieId: currentMovieId,
+            movieTitle: movie.title,
+            episodeName: String(epName), // Ép kiểu String đồng nhất
+            errorType: "broken_link",
+            description: "[USER-REPORT] Người dùng báo lỗi qua Giao diện trình phát (Broken link).",
+            userId: currentUser ? currentUser.uid : "anonymous",
+            userName: currentUser ? (currentUser.displayName || currentUser.email) : "Người dùng"
+        });
+        
+        showNotification("Đã gửi báo cáo lỗi. Cảm ơn bạn!", "success");
+        // Đổi nút sau khi báo thành công
+        const btn = document.querySelector(".video-error .btn-danger");
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-check"></i> Đã báo lỗi';
+            btn.disabled = true;
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification("Lỗi khi gửi báo cáo!", "error");
+    } finally {
+        showLoading(false);
+    }
+};
+
+/**
+ * Hàm xử lý báo lỗi: Chống spam và Gom nhóm (Grouping)
+ * @param {Object} reportData Thông tin báo lỗi mới
+ */
+async function processErrorReport(reportData) {
+    const { movieId, episodeName, errorType } = reportData;
+    const lockKey = `${movieId}_${episodeName}_${errorType}`;
+    
+    // 1. Chống race condition trên cùng một client (HLS + Video Error thường nổ cùng lúc)
+    if (reportLocks[lockKey]) {
+        console.log("⏳ Đang xử lý báo lỗi này rùi, đợi xíu...");
+        return reportLocks[lockKey];
+    }
+    
+    reportLocks[lockKey] = (async () => {
+        try {
+            // Đảm bảo episodeName luôn là String để query Firestore chính xác
+            const safeEpName = String(episodeName);
+
+            // 2. Tìm báo lỗi "pending" tương tự
+            const q = await db.collection("error_reports")
+                .where("movieId", "==", movieId)
+                .where("episodeName", "==", safeEpName)
+                .where("errorType", "==", errorType)
+                .where("status", "==", "pending")
+                .limit(1)
+                .get();
+
+            if (!q.empty) {
+                const doc = q.docs[0];
+                const existingData = doc.data();
+                
+                let reporters = existingData.reporters || [];
+                if (reporters.length === 0) {
+                    reporters.push({
+                        uid: existingData.userId || "unknown",
+                        name: existingData.userName || "Người dùng",
+                        time: existingData.createdAt ? (existingData.createdAt.toDate ? existingData.createdAt.toDate() : new Date()) : new Date()
+                    });
+                }
+
+                const currentUid = reportData.userId || "anonymous";
+                const alreadyInList = reporters.find(r => r.uid === currentUid);
+                
+                if (!alreadyInList) {
+                    reporters.push({
+                        uid: currentUid,
+                        name: reportData.userName || "Người dùng",
+                        time: new Date()
+                    });
+                } else {
+                    alreadyInList.time = new Date();
+                    alreadyInList.name = reportData.userName || "Người dùng";
+                }
+
+                await db.collection("error_reports").doc(doc.id).update({
+                    userId: reportData.userId || "anonymous",
+                    userName: reportData.userName || "Người dùng",
+                    reporters: reporters,
+                    reportCount: reporters.length,
+                    description: reportData.description,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log(`🔄 Đã gộp báo lỗi cho tập ${safeEpName}. (Tổng: ${reporters.length})`);
+                return doc.id;
+            } else {
+                const newData = {
+                    ...reportData,
+                    episodeName: safeEpName, // Lưu dưới dạng string
+                    status: "pending",
+                    reportCount: 1,
+                    reporters: [{
+                        uid: reportData.userId || "anonymous",
+                        name: reportData.userName || "Người dùng",
+                        time: new Date()
+                    }],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                const ref = await db.collection("error_reports").add(newData);
+                console.log(`🆕 Đã tạo báo lỗi mới cho tập ${safeEpName}.`);
+                return ref.id;
+            }
+        } finally {
+            // Giải phóng khóa sau 2 giây (đủ để Firestore index cập nhật)
+            setTimeout(() => { delete reportLocks[lockKey]; }, 2000);
+        }
+    })();
+
+    return reportLocks[lockKey];
+}
 
 // --- RESUME WATCH MODAL FUNCTIONS ---
 let pendingResumeData = null;

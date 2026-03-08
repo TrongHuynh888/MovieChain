@@ -24,7 +24,18 @@ const firebaseConfig = {
 // Kiểm tra để tránh khởi tạo lại nếu đã có
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
-  console.log("✅ Firebase Config Loaded & Initialized");
+  
+  // 🔥 BẬT OFFLINE PERSISTENCE (CACHING CỦA FIREBASE SDK)
+  firebase.firestore().enablePersistence({ synchronizeTabs: true })
+    .catch((err) => {
+        if (err.code == 'failed-precondition') {
+            console.warn("⚠️ Persistence failed: Multiple tabs open");
+        } else if (err.code == 'unimplemented') {
+            console.warn("⚠️ Persistence is not supported by this browser");
+        }
+    });
+
+  console.log("✅ Firebase Config Loaded & Initialized with Persistence");
 } else {
   firebase.app(); // Nếu đã có rồi thì dùng lại
   console.log("ℹ️ Firebase already initialized");

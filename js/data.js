@@ -42,31 +42,69 @@ const SAMPLE_MOVIES = [
 ];
 
 /**
- * Danh sách diễn viên (Actors)
+ * Danh sách diễn viên (Actors) kèm Caching
  */
-async function loadActors() {
+async function loadActors(remoteTimestamp) {
   try {
+    const localTS = getCacheTimestamp("actors");
+    
+    // Nếu có timestamp hợp lệ và remote khớp với local -> Load từ cache
+    if (remoteTimestamp && localTS === remoteTimestamp) {
+        const cached = loadFromCache("actors");
+        if (cached) {
+            allActors = cached;
+            console.log("📦 Loaded Actors from Cache (0 reads)");
+            return;
+        }
+    }
+
+    // Nếu không có cache hoặc data đã cũ -> Fetch từ Firestore
     const snapshot = await db.collection("actors").get();
     allActors = snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id
     }));
+
+    // Lưu lại cache và cập nhật timestamp local
+    saveToCache("actors", allActors);
+    if (remoteTimestamp) setCacheTimestamp("actors", remoteTimestamp);
+    console.log("🌐 Fetched Actors from Firestore");
+
   } catch (error) {
     console.error("Lỗi load diễn viên:", error);
     allActors = [];
   }
 }
 
+let currentSyncData = null; // Lưu trữ timestamp hiện tại để so sánh
+
 /**
- * Load dữ liệu ban đầu
+ * Load dữ liệu ban đầu kèm theo cơ chế Metadata Sync Caching
  */
 async function loadInitialData() {
   try {
+    console.log("🔄 Đang kiểm tra Metadata Sync...");
+    
+    // 1. Đọc document sync để kiểm tra thay đổi
+    if (db) {
+        try {
+            const syncDoc = await db.collection("configs").doc("sync").get();
+            if (syncDoc.exists) {
+                currentSyncData = syncDoc.data();
+            } else {
+                console.log("ℹ️ configs/sync chưa tồn tại, sẽ khởi tạo sau khi load.");
+            }
+        } catch (e) {
+            console.warn("⚠️ Không thể đọc configs/sync, chuyển sang mode load mặc định.", e);
+        }
+    }
+
+    // 2. Chạy load song song các collection
     await Promise.all([
-      loadCategories(),
-      loadCountries(),
-      loadMovies(),
-      loadActors() // Tải thêm thông tin diễn viên
+      loadCategories(currentSyncData?.categories),
+      loadCountries(currentSyncData?.countries),
+      loadMovies(currentSyncData?.movies),
+      loadActors(currentSyncData?.actors)
     ]);
 
     // Populate filter dropdowns
@@ -76,15 +114,124 @@ async function loadInitialData() {
     if (currentUser) {
       await updateAllWatchProgress();
     }
+
+    // 3. Nếu Admin chưa tạo sync doc, hãy tạo nó
+    if (db && !currentSyncData && (typeof isAdmin !== 'undefined' && isAdmin)) {
+        initializeSyncConfig();
+    }
+
+    // 4. Kích hoạt listener để nhận cập nhật real-time từ Admin mà không cần F5
+    startMetadataSyncListener();
+
   } catch (error) {
     console.error("Lỗi load dữ liệu:", error);
   }
 }
+
 /**
- * Load danh sách thể loại
+ * Lắng nghe thay đổi Metadata từ Admin để cập nhật cache và UI tức thì
  */
-async function loadCategories() {
+function startMetadataSyncListener() {
+    if (!db) return;
+    
+    // Đăng ký listener trên document sync
+    db.collection("configs").doc("sync").onSnapshot(snapshot => {
+        if (!snapshot.exists) return;
+        
+        const newData = snapshot.data();
+        
+        // Nếu đây là lần đầu (snapshot lúc vừa gán listener), bỏ qua vì loadInitialData đã làm rồi
+        if (!currentSyncData) {
+            currentSyncData = newData;
+            return;
+        }
+
+        // So sánh timestamp để biết collection nào cần load lại
+        
+        // 1. Phim & Tập phim
+        if (newData.movies !== currentSyncData.movies) {
+            console.log("🔔 [Sync] Phát hiện dữ liệu Phim thay đổi, đang cập nhật...");
+            loadMovies(newData.movies).then(() => {
+                // Cập nhật UI Home nếu đang ở Home
+                if (typeof renderMovies === 'function') renderMovies();
+                // Cập nhật UI Admin nếu đang mở Admin
+                if (typeof renderAdminMoviesList === 'function' && typeof allMovies !== 'undefined') {
+                    renderAdminMoviesList(allMovies);
+                }
+                // Cập nhật trang chi tiết nếu đang xem phim đó
+                if (typeof currentMovieId !== 'undefined' && currentMovieId) {
+                    const updatedMovie = allMovies.find(m => m.id === currentMovieId);
+                    if (updatedMovie && typeof updateDetailRedesignUI === 'function') {
+                        updateDetailRedesignUI(updatedMovie);
+                        console.log("✅ [Sync] Đã cập nhật thông tin phim lên màn hình.");
+                    }
+                }
+            });
+        }
+
+        // 2. Diễn viên
+        if (newData.actors !== currentSyncData.actors) {
+            console.log("🔔 [Sync] Phát hiện dữ liệu Diễn viên thay đổi...");
+            loadActors(newData.actors).then(() => {
+                if (typeof renderAdminActors === 'function') renderAdminActors();
+                if (typeof renderActorsPage === 'function') renderActorsPage();
+            });
+        }
+
+        // 3. Thể loại & Quốc gia
+        if (newData.categories !== currentSyncData.categories || newData.countries !== currentSyncData.countries) {
+            console.log("🔔 [Sync] Phát hiện Thể loại/Quốc gia thay đổi...");
+            Promise.all([
+                loadCategories(newData.categories),
+                loadCountries(newData.countries)
+            ]).then(() => {
+                populateFilters();
+                if (typeof populateAdminMovieFilters === 'function') populateAdminMovieFilters();
+                if (typeof renderAdminCountries === 'function') renderAdminCountries();
+            });
+        }
+
+        // Cập nhật timestamp hiện tại
+        currentSyncData = newData;
+    }, error => {
+        console.error("❌ [Sync] Lỗi Listener:", error);
+    });
+}
+
+/**
+ * Khởi tạo document sync mặc định (Admin only)
+ */
+async function initializeSyncConfig() {
+    if (!db) return;
+    try {
+        const now = Date.now();
+        await db.collection("configs").doc("sync").set({
+            movies: now,
+            actors: now,
+            categories: now,
+            countries: now,
+            lastUpdated: now
+        });
+        console.log("✅ Đã khởi tạo configs/sync");
+    } catch (e) {
+        console.error("Lỗi khởi tạo sync config:", e);
+    }
+}
+/**
+ * Load danh sách thể loại kèm Caching
+ */
+async function loadCategories(remoteTimestamp) {
   try {
+    const localTS = getCacheTimestamp("categories");
+    if (remoteTimestamp && localTS === remoteTimestamp) {
+        const cached = loadFromCache("categories");
+        if (cached) {
+            allCategories = cached;
+            console.log("📦 Loaded Categories from Cache (0 reads)");
+            return;
+        }
+    }
+
     if (db) {
       const snapshot = await db.collection("categories").get();
       if (!snapshot.empty) {
@@ -92,8 +239,11 @@ async function loadCategories() {
           id: doc.id,
           ...doc.data(),
         }));
+
+        saveToCache("categories", allCategories);
+        if (remoteTimestamp) setCacheTimestamp("categories", remoteTimestamp);
+        console.log("🌐 Fetched Categories from Firestore");
       } else {
-        // Sử dụng sample data và tạo trong Firestore
         allCategories = SAMPLE_CATEGORIES;
         await initializeSampleCategories();
       }
@@ -106,10 +256,20 @@ async function loadCategories() {
   }
 }
 /**
- * Load danh sách quốc gia
+ * Load danh sách quốc gia kèm Caching
  */
-async function loadCountries() {
+async function loadCountries(remoteTimestamp) {
   try {
+    const localTS = getCacheTimestamp("countries");
+    if (remoteTimestamp && localTS === remoteTimestamp) {
+        const cached = loadFromCache("countries");
+        if (cached) {
+            allCountries = cached;
+            console.log("📦 Loaded Countries from Cache (0 reads)");
+            return;
+        }
+    }
+
     if (db) {
       const snapshot = await db.collection("countries").get();
       if (!snapshot.empty) {
@@ -117,6 +277,10 @@ async function loadCountries() {
           id: doc.id,
           ...doc.data(),
         }));
+
+        saveToCache("countries", allCountries);
+        if (remoteTimestamp) setCacheTimestamp("countries", remoteTimestamp);
+        console.log("🌐 Fetched Countries from Firestore");
       } else {
         allCountries = SAMPLE_COUNTRIES;
         await initializeSampleCountries();
@@ -131,10 +295,21 @@ async function loadCountries() {
 }
 
 /**
- * Load danh sách phim
+ * Load danh sách phim kèm Caching
  */
-async function loadMovies() {
+async function loadMovies(remoteTimestamp) {
   try {
+    const localTS = getCacheTimestamp("movies");
+    if (remoteTimestamp && localTS === remoteTimestamp) {
+        const cached = loadFromCache("movies");
+        if (cached) {
+            allMovies = cached;
+            console.log("📦 Loaded Movies from Cache (0 reads)");
+            renderAllInitialMovies(); // Chạy hàm render
+            return;
+        }
+    }
+
     if (db) {
       const snapshot = await db
         .collection("movies")
@@ -144,7 +319,10 @@ async function loadMovies() {
 
       if (!snapshot.empty) {
         allMovies = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        console.log(`DEBUG: Loaded ${allMovies.length} movies. Statuses:`, allMovies.map(m => m.status));
+        
+        saveToCache("movies", allMovies);
+        if (remoteTimestamp) setCacheTimestamp("movies", remoteTimestamp);
+        console.log(`🌐 Fetched ${allMovies.length} Movies from Firestore`);
       } else {
         allMovies = SAMPLE_MOVIES;
         await initializeSampleMovies();
@@ -153,22 +331,24 @@ async function loadMovies() {
       allMovies = SAMPLE_MOVIES;
     }
 
-    // Render movies
-    renderFeaturedMovies();
-    renderNewMovies();
-    renderAllMovies();
-    renderCountrySections();
-    // Render banner slider phim nổi bật
-    renderBannerSlider();
+    renderAllInitialMovies();
+
   } catch (error) {
     console.error("Lỗi load movies:", error);
     allMovies = SAMPLE_MOVIES;
+    renderAllInitialMovies();
+  }
+}
+
+/**
+ * Hàm gom nhóm các lệnh render phim ban đầu
+ */
+function renderAllInitialMovies() {
     renderFeaturedMovies();
     renderNewMovies();
     renderAllMovies();
     renderCountrySections();
     renderBannerSlider();
-  }
 }
 
 /**

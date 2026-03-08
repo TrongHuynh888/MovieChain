@@ -1113,6 +1113,27 @@
           <h2 class="admin-panel-title">Báo Lỗi Phim & Hệ Thống</h2>
         </div>
 
+        <div id="errorReportsSummary" style="display: flex; gap: 20px; margin-bottom: 20px;">
+            <div style="flex: 1; background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3); padding: 15px; border-radius: 12px; display: flex; align-items: center; gap: 15px;">
+                <div style="width: 45px; height: 45px; background: #e74c3c; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <div style="font-size: 13px; color: #aaa;">Tập phim đang lỗi</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #fff;" id="sumPendingErrors">0</div>
+                </div>
+            </div>
+            <div style="flex: 1; background: rgba(52, 152, 219, 0.1); border: 1px solid rgba(52, 152, 219, 0.3); padding: 15px; border-radius: 12px; display: flex; align-items: center; gap: 15px;">
+                <div style="width: 45px; height: 45px; background: #3498db; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff;">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div>
+                    <div style="font-size: 13px; color: #aaa;">Tổng lượt người báo</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #fff;" id="sumTotalReports">0</div>
+                </div>
+            </div>
+        </div>
+
         <div class="search-filter mb-3" style="display: flex; gap: 15px; align-items: center;">
           <div class="search-box" style="flex: 1;">
             <i class="fas fa-search"></i>
@@ -1145,6 +1166,7 @@
             <thead>
               <tr>
                 <th>Người Báo</th>
+                <th style="text-align: center;">Số Lượt</th>
                 <th>Phim & Tập</th>
                 <th>Phân Loại</th>
                 <th>Mô Tả Lỗi</th>
@@ -1535,6 +1557,20 @@
         <button type="button" class="btn btn-primary" onclick="applyAllActorUpdates()" style="background: var(--accent-primary);">
             <i class="fas fa-file-import"></i> Duyệt cập nhật tất cả (<span id="compareTotalAll">0</span>)
         </button>
+    </div>
+  </div>
+</div>
+<!-- Modal Xem ảnh Bill Lớn -->
+<div class="modal-overlay" id="billViewportModal" onclick="closeModal('billViewportModal')">
+  <div class="modal bill-viewport-modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Chi tiết ảnh xác nhận</h3>
+      <button class="modal-close" onclick="closeModal('billViewportModal')">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body bill-viewport-body">
+      <img id="billViewportImage" src="" alt="Bill Image" />
     </div>
   </div>
 </div>

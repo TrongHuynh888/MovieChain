@@ -111,30 +111,64 @@ function showLoading(show, text = "Đang xử lý...") {
 function formatNumber(num) {
   return num ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "0";
 }
+
+/**
+ * Phân giải ngày từ Firestore (hỗ trợ cả Timestamp thực và object từ Cache)
+ */
+function parseFirebaseDate(date) {
+    if (!date) return null;
+    
+    // 1. Nếu là Timestamp thực (có method toDate)
+    if (typeof date.toDate === 'function') return date.toDate();
+    
+    // 2. Nếu là object từ Cache (JSON.stringify mất method, chỉ còn {seconds, nanoseconds})
+    if (date.seconds !== undefined) {
+        return new Date(date.seconds * 1000);
+    }
+    
+    // 3. Nếu đã là đối tượng Date
+    if (date instanceof Date) return date;
+
+    // 4. Nếu là chuỗi ISO hoặc timestamp số
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? null : d;
+}
+
 /**Định dạng ngày theo dd/mm/yyyy */
 function formatDate(date) {
-  if (!date) return "N/A";
-  const d = date.toDate ? date.toDate() : new Date(date);
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(d);
+  const d = parseFirebaseDate(date);
+  if (!d) return "N/A";
+  
+  try {
+    return new Intl.DateTimeFormat("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(d);
+  } catch (e) {
+    return "N/A";
+  }
 }
+
 /**
  * Format ngày giờ chi tiết (dd/mm/yyyy HH:mm:ss)
  */
 function formatDateTime(date) {
-  if (!date) return "N/A";
-  const d = date.toDate ? date.toDate() : new Date(date);
-  return new Intl.DateTimeFormat("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(d);
+  const d = parseFirebaseDate(date);
+  if (!d) return "N/A";
+  
+  try {
+    return new Intl.DateTimeFormat("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(d);
+  } catch (e) {
+    return "N/A";
+  }
 }
 function formatTimeAgo(date) {
   const now = new Date();
@@ -1033,3 +1067,55 @@ window.addEventListener('scroll', function() {
   }
 });
 
+// ============================================
+// 8. HỆ THỐNG CACHING (LOCAL STORAGE)
+// ============================================
+
+/**
+ * Lưu dữ liệu vào LocalStorage kèm theo timestamp
+ */
+function saveToCache(key, data) {
+    try {
+        const cacheData = {
+            data: data,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(`cache_${key}`, JSON.stringify(cacheData));
+    } catch (e) {
+        console.warn(`⚠️ Lỗi lưu cache [${key}]:`, e);
+    }
+}
+
+/**
+ * Tải dữ liệu từ LocalStorage
+ */
+function loadFromCache(key) {
+    try {
+        const cached = localStorage.getItem(`cache_${key}`);
+        if (!cached) return null;
+        const parsed = JSON.parse(cached);
+        return parsed.data;
+    } catch (e) {
+        console.warn(`⚠️ Lỗi đọc cache [${key}]:`, e);
+        return null;
+    }
+}
+
+/**
+ * Lấy timestamp của dữ liệu trong cache
+ */
+function getCacheTimestamp(key) {
+    try {
+        const cached = localStorage.getItem(`cache_sync_${key}`);
+        return cached ? parseInt(cached) : 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+/**
+ * Cập nhật timestamp đồng bộ cho bộ nhớ thiết bị
+ */
+function setCacheTimestamp(key, timestamp) {
+    localStorage.setItem(`cache_sync_${key}`, timestamp.toString());
+}

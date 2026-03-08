@@ -363,16 +363,24 @@ let _schedCheckerTimer = null;
  * Chạy mỗi 30 giây, hoàn toàn invisible với user
  */
 function startSilentScheduleChecker() {
+    // 🔥 TỐI ƯU HÓA: Phân quyền tần suất
+    // Admin: 1 phút (để xử lý nhanh các thông báo hệ thống)
+    // User: 5 phút (để tiết kiệm lượt đọc Firestore cho hệ thống)
+    const isAdminUser = typeof isAdmin !== 'undefined' && isAdmin;
+    const intervalTime = isAdminUser ? 60000 : 300000; 
+
     // Hủy timer cũ nếu có
     if (_schedCheckerTimer) clearInterval(_schedCheckerTimer);
 
-    // Check ngay lần đầu (delay 5s để trang load xong)
-    setTimeout(() => { _silentCheckScheduled(); }, 5000);
+    // Check ngay lần đầu (delay 10s để trang load xong hẳn)
+    setTimeout(() => { _silentCheckScheduled(); }, 10000);
 
-    // Lặp lại mỗi 30 giây
+    // Lặp lại theo tần suất đã tối ưu
     _schedCheckerTimer = setInterval(() => {
         _silentCheckScheduled();
-    }, 30000);
+    }, intervalTime);
+    
+    console.log(`🔔 Notification Checker: ${intervalTime/1000}s interval active.`);
 }
 
 /**

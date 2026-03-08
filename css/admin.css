@@ -1436,3 +1436,50 @@
         display: none; /* Ẩn chữ "Trực" "Sau" trên mobile */
     }
 }
+/* --- BILL VIEWPORT MODAL --- */
+.bill-viewport-modal {
+    max-width: 90vw !important;
+    width: auto !important;
+    max-height: 90vh;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.bill-viewport-modal .modal-header {
+    background: rgba(0, 0, 0, 0.8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 20px;
+    border-radius: 12px 12px 0 0;
+}
+
+.bill-viewport-body {
+    padding: 0 !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: #000;
+    border-radius: 0 0 12px 12px;
+}
+
+.bill-viewport-body img {
+    max-width: 100%;
+    max-height: calc(90vh - 60px);
+    object-fit: contain;
+    display: block;
+    cursor: zoom-in;
+    transition: transform 0.3s ease;
+}
+
+.bill-viewport-body img:active {
+    cursor: grabbing;
+}
+
+/* Mobile optimization for Bill Viewport */
+@media (max-width: 768px) {
+    .bill-viewport-modal {
+        max-width: 95vw !important;
+    }
+}

@@ -13,9 +13,9 @@
     <link rel="stylesheet" href="css/intro.css?v=3" />
     
     <!-- Preload Critical Assets -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" as="style">
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/hls.js@latest" as="script">
-    <link rel="preload" href="js/main.js" as="script">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" as="style">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/hls.js@latest" as="script" crossorigin>
+    <link rel="preload" href="js/main.js?v=2" as="script">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <!--<link rel="stylesheet" href="css/style.css" />-->
@@ -73,7 +73,7 @@
     />
 
     <!-- HLS.js for Streaming -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" crossorigin></script>
     <!-- SortableJS for Drag & Drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js" defer></script>
 
@@ -472,6 +472,28 @@
                   <p class="secure-text">
                     <i class="fas fa-shield-alt"></i> Thanh toán an toàn bằng CRO Token
                   </p>
+                </div>
+              </div>
+
+              <!-- LỚP PHỦ BÁO LỖI VIDEO -->
+              <div class="video-error hidden" id="videoError">
+                <div class="video-error-bg"></div>
+                <div class="video-error-content">
+                  <div class="error-icon-wrapper">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <div class="error-info">
+                    <h3>Lỗi Trình Phát</h3>
+                    <p id="videoErrorMessage">Rất tiếc, video hiện tại không thể tải được. Vui lòng thử lại sau hoặc báo cáo lỗi cho Admin.</p>
+                  </div>
+                  <div class="error-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="location.reload()">
+                      <i class="fas fa-sync-alt"></i> Thử lại
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="reportVideoErrorManual()">
+                      <i class="fas fa-bug"></i> Báo lỗi Admin
+                    </button>
+                  </div>
                 </div>
               </div>
               

@@ -6,6 +6,25 @@ window.latestAddedActorIds = JSON.parse(localStorage.getItem('latestAddedActorId
 // Danh sách diễn viên tự động tạo từ Quản lý Phim
 window.latestAutoActorIds = JSON.parse(localStorage.getItem('latestAutoAutoIds') || '[]');
 
+/**
+ * 🔥 TỐI ƯU HÓA: Hàm thông báo thay đổi dữ liệu để đồng bộ Cache người dùng
+ * @param {string} type - 'movies', 'actors', 'categories', 'countries'
+ */
+async function notifyDataChange(type) {
+    if (!db) return;
+    try {
+        const now = Date.now();
+        const updateData = {
+            [type]: now,
+            lastUpdated: now
+        };
+        await db.collection("configs").doc("sync").set(updateData, { merge: true });
+        console.log(`📡 Đã gửi tín hiệu đồng bộ Metadata cho: ${type}`);
+    } catch (e) {
+        console.warn("⚠️ Không thể cập nhật Metadata Sync:", e);
+    }
+}
+
 // Phân trang diễn viên
 let currentActorPage = 1;
 const actorsPerPage = 20;
@@ -264,7 +283,6 @@ function renderAdminVipRequests(requests) {
     }
 
     tbody.innerHTML = paginatedRequests.map(req => {
-        const date = req.createdAt?.toDate ? req.createdAt.toDate() : new Date(req.createdAt);
         const statusClass = req.status === "pending" ? "warning" : req.status === "approved" ? "success" : "danger";
         const statusText = req.status === "pending" ? "Đang chờ duyệt" : req.status === "approved" ? "Đã duyệt" : "Đã từ chối";
         
@@ -284,7 +302,7 @@ function renderAdminVipRequests(requests) {
                         title="Bấm để xem lớn" />
                 </td>
                 <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                <td>${formatDateTime(date)}</td>
+                <td>${formatDateTime(req.createdAt)}</td>
                 <td style="text-align: center;">
                     <button class="btn btn-sm btn-success" style="margin-right: 5px; ${opcStyle}" ${disabledAttr} onclick="approveVipRequest('${req.id}', '${req.userId}', '${req.package}')" title="Duyệt nâng cấp">
                         <i class="fas fa-check"></i> Duyệt
@@ -484,31 +502,25 @@ async function loadAdminStats() {
  */
 function renderRecentMovies() {
   const tbody = document.getElementById("recentMoviesTable");
+  if (!tbody) return;
 
   const recent = [...allMovies]
     .sort((a, b) => {
-      const dateA = a.createdAt?.toDate
-        ? a.createdAt.toDate()
-        : new Date(a.createdAt);
-      const dateB = b.createdAt?.toDate
-        ? b.createdAt.toDate()
-        : new Date(b.createdAt);
+      const dateA = parseFirebaseDate(a.createdAt) || new Date(0);
+      const dateB = parseFirebaseDate(b.createdAt) || new Date(0);
       return dateB - dateA;
     })
     .slice(0, 5);
 
   tbody.innerHTML = recent
     .map((movie) => {
-      const date = movie.createdAt?.toDate
-        ? movie.createdAt.toDate()
-        : new Date(movie.createdAt);
       return `
             <tr>
                 <td><img src="${movie.posterUrl}" alt="${movie.title}" onerror="this.src='https://placehold.co/50x75'"></td>
                 <td>${movie.title}</td>
                 <td>${movie.price} CRO</td>
                 <td><span class="status-badge ${movie.status}">${getStatusText(movie.status)}</span></td>
-                <td>${formatDate(date)}</td>
+                <td>${formatDate(movie.createdAt)}</td>
             </tr>
         `;
     })
@@ -570,8 +582,10 @@ function loadErrorReports() {
         errorReportsUnsubscribe();
     }
 
+    // TỐI ƯU HÓA: Chỉ lắng nghe 50 báo lỗi mới nhất
     errorReportsUnsubscribe = db.collection("error_reports")
         .orderBy("createdAt", "desc")
+        .limit(50)
         .onSnapshot((snapshot) => {
             allErrorReports = [];
             snapshot.forEach(doc => {
@@ -621,6 +635,16 @@ window.filterErrorReports = function() {
  * Render bảng
  */
 function renderErrorReports(list) {
+    // --- CẬP NHẬT TÓM TẮT ---
+    const pendingList = list.filter(item => item.status === "pending");
+    const sumPending = document.getElementById("sumPendingErrors");
+    const sumTotal = document.getElementById("sumTotalReports");
+    if (sumPending) sumPending.innerText = pendingList.length;
+    if (sumTotal) {
+        const total = pendingList.reduce((acc, item) => acc + (item.reportCount || 1), 0);
+        sumTotal.innerText = total;
+    }
+
     const tbody = document.getElementById("errorReportsTable");
     if (!tbody) return;
 
@@ -667,6 +691,11 @@ function renderErrorReports(list) {
                 <td>
                     <div style="font-weight: 500;">${item.userName || "Ẩn danh"}</div>
                     <div style="font-size: 11px; color: #888;">${(item.userId || "").substring(0,8)}...</div>
+                </td>
+                <td style="text-align: center;">
+                    <span style="background: ${item.reportCount > 1 ? '#e74c3c' : '#555'}; color: #fff; font-size: 13px; font-weight: bold; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;" title="Tổng cộng ${item.reportCount} lượt báo">
+                        ${item.reportCount || 1}
+                    </span>
                 </td>
                 <td>
                     <div style="font-weight: 500; color: #4db8ff;">${item.movieTitle || "—"}</div>
@@ -929,11 +958,12 @@ async function loadAdminMovies() {
   try {
     let movies = [];
 
-    // 1. Lấy TẤT CẢ phim từ Firestore (Mới nhất lên đầu)
+    // 1. Lấy phim từ Firestore (Tối ưu: Giới hạn 100 phim mới nhất)
     if (db) {
       const snapshot = await db
         .collection("movies")
         .orderBy("createdAt", "desc")
+        .limit(100)
         .get();
       movies = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     } else {
@@ -969,26 +999,7 @@ async function loadAdminMovies() {
     }
 
     // 4. Cập nhật ngay Bảng "Phim mới thêm gần đây" (Dashboard)
-    const recentTbody = document.getElementById("recentMoviesTable");
-    if (recentTbody) {
-      const recent = movies.slice(0, 5); // Lấy 5 phim mới nhất
-      recentTbody.innerHTML = recent
-        .map((movie) => {
-          const date = movie.createdAt?.toDate
-            ? movie.createdAt.toDate()
-            : new Date(movie.createdAt);
-          return `
-                <tr>
-                    <td><img src="${movie.posterUrl}" class="admin-table-poster" alt="${movie.title}" onerror="this.src='https://placehold.co/50x75'"></td>
-                    <td>${movie.title}</td>
-                    <td>${movie.price ? movie.price + ' CRO' : 'Miễn phí'}</td>
-                    <td><span class="status-badge ${movie.status}">${getStatusText(movie.status)}</span></td>
-                    <td>${formatDate(date)}</td>
-                </tr>
-             `;
-        })
-        .join("");
-    }
+    renderRecentMovies();
 
     // 5. Cập nhật Thống kê Tổng số phim (Dashboard)
     const statTotal = document.getElementById("statTotalMovies");
@@ -1608,6 +1619,7 @@ async function handleMovieSubmit(event) {
       // Update
       await db.collection("movies").doc(movieId).update(movieData);
       showNotification("Đã cập nhật phim!", "success");
+      notifyDataChange("movies"); // 📡 Đồng bộ cache
     } else {
       // Create
       movieData.views = 0;
@@ -1617,6 +1629,7 @@ async function handleMovieSubmit(event) {
 
       await db.collection("movies").add(movieData);
       showNotification("Đã thêm phim mới!", "success");
+      notifyDataChange("movies"); // 📡 Đồng bộ cache
 
       // Gửi thông báo phim mới tới tất cả users (chạy nền, không block UI)
       const movieTitle = movieData.title || "Phim không tên";
@@ -1765,6 +1778,7 @@ async function deleteMovie(movieId) {
     await db.collection("movies").doc(movieId).delete();
 
     showNotification("Đã xóa phim!", "success");
+    notifyDataChange("movies"); // 📡 Đồng bộ cache
 
     // Reload data
     await loadMovies();
@@ -2067,6 +2081,7 @@ async function saveTotalEpisodes() {
     }
     
     showNotification(`Đã lưu tổng số tập: ${totalEpisodes}`, "success");
+    notifyDataChange("movies"); // 📡 Đồng bộ cache
   } catch (err) {
     console.error("Lỗi lưu tổng số tập:", err);
     showNotification("Lỗi khi lưu tổng số tập!", "error");
@@ -2347,6 +2362,7 @@ async function saveBatchImportedEpisodes() {
         await loadAdminMovies();
         // Load lại danh sách Episodes trên màn Quản Lý Tập UI
         loadEpisodesForMovie(movieId);
+        notifyDataChange("movies"); // 📡 Đồng bộ cache
 
     } catch (err) {
         console.error("Save Batch Episodes Error: ", err);
@@ -2488,6 +2504,7 @@ async function processBulkDubbedLinks() {
             } else {
                 statusEl.innerHTML = `<span style="color: #e67e22;">⚠️ Cập nhật ${updatedCount} tập. Không tìm thấy ${notFoundCount} tập: ${notFoundEps.join(", ")}</span>`;
             }
+            notifyDataChange("movies"); // 📡 Đồng bộ cache
         } else {
             showNotification("Không tìm thấy tập nào khớp để cập nhật!", "warning");
             statusEl.innerText = "❌ Không có dữ liệu nào được cập nhật. Vui lòng kiểm tra lại định dạng.";
@@ -2859,6 +2876,14 @@ async function handleEpisodeSubmit(event) {
       episodes.push(episodeData);
     }
 
+    await movieRef.update({
+        episodes: episodes,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    showNotification("Đã lưu tập phim!", "success");
+    notifyDataChange("movies"); // 📡 Đồng bộ cache
+
     // [NEW] Kiểm tra nếu áp dụng cho tất cả tập
     const applyIntroToAll = document.getElementById("applyIntroToAll")?.checked;
     if (applyIntroToAll) {
@@ -2878,6 +2903,7 @@ async function handleEpisodeSubmit(event) {
     await movieRef.update({ episodes });
 
     showNotification("Đã lưu tập phim!", "success");
+    notifyDataChange("movies"); // 📡 Đồng bộ cache
     closeEpisodeModal(); // [FIX] Dùng hàm mới để dừng video khi đóng
 
     await loadMovies();
@@ -2957,6 +2983,7 @@ async function deleteEpisode(index) {
     // Reload
     await loadMovies();
     loadEpisodesForMovie(selectedMovieForEpisodes);
+    notifyDataChange("movies"); // 📡 Đồng bộ cache
   } catch (error) {
     console.error("Lỗi xóa episode:", error);
     showNotification("Không thể xóa tập phim!", "error");
@@ -2991,6 +3018,7 @@ async function deleteAllEpisodes() {
     // Reload
     await loadMovies();
     loadEpisodesForMovie(selectedMovieForEpisodes);
+    notifyDataChange("movies"); // 📡 Đồng bộ cache
   } catch (error) {
     console.error("Lỗi xóa tất cả episodes:", error);
     showNotification("Không thể xóa các tập phim!", "error");
@@ -3696,6 +3724,8 @@ async function handleCategorySubmit(event) {
       showNotification("Đã thêm thể loại mới!", "success");
     }
 
+    notifyDataChange("categories"); // 📡 Đồng bộ cache
+
     closeModal("categoryModal");
 
     // Load lại dữ liệu mới nhất
@@ -3719,6 +3749,7 @@ async function deleteCategory(categoryId) {
     await db.collection("categories").doc(categoryId).delete();
 
     showNotification("Đã xóa thể loại!", "success");
+    notifyDataChange("categories"); // 📡 Đồng bộ cache
 
     await loadCategories();
     renderAdminCategories();
@@ -4005,6 +4036,7 @@ async function handleCountrySubmit(event) {
     }
 
     showNotification("Đã lưu quốc gia!", "success");
+    notifyDataChange("countries"); // 📡 Đồng bộ cache
     closeModal("countryModal");
 
     await loadCountries();
@@ -4026,6 +4058,7 @@ async function deleteCountry(countryId) {
     showLoading(true, "Đang xóa...");
     await db.collection("countries").doc(countryId).delete();
     showNotification("Đã xóa quốc gia!", "success");
+    notifyDataChange("countries"); // 📡 Đồng bộ cache
     await loadCountries();
     renderAdminCountries();
     populateFilters();
@@ -4535,14 +4568,17 @@ async function handleActorSubmit(event) {
       actorData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       
       await db.collection("actors").doc(newId).set(actorData);
-      
+      showNotification("Đã thêm diễn viên!", "success");
       // Đánh dấu đây là ID mới nhất vừa thêm (Reset batch mới khi thêm thủ công)
       window.setLatestActorIds(newId, false);
       
       // Tự động chuyển bộ lọc về "Mới nhất" để Admin thấy ngay người vừa thêm
       const sortSelect = document.getElementById("adminSortActor");
       if (sortSelect) sortSelect.value = "newest";
+
     }
+    
+    notifyDataChange("actors"); // 📡 Đồng bộ cache (cho cả Thêm và Sửa)
 
     showNotification("Đã lưu thông tin!", "success");
     closeModal("actorModal");
@@ -4738,6 +4774,7 @@ window.deleteSelectedActors = async function() {
         await batch.commit();
         
         showNotification(`Đã xóa thành công ${selectedActorIds.length} diễn viên!`, "success");
+        notifyDataChange("actors"); // 📡 Đồng bộ cache
         
         selectedActorIds = [];
         updateBulkActionsBar();
@@ -4834,6 +4871,7 @@ window.handleBulkUpdateSubmit = async function(e) {
         updateBulkActionsBar();
         await loadActors();
         renderAdminActors();
+        notifyDataChange("actors"); // 📡 Đồng bộ cache
         
     } catch (error) {
         console.error("Lỗi cập nhật hàng loạt:", error);
@@ -4891,6 +4929,7 @@ async function deleteActor(actorId) {
     showLoading(true, "Đang xóa...");
     await db.collection("actors").doc(actorId).delete();
     showNotification("Đã xóa diễn viên!", "success");
+    notifyDataChange("actors"); // 📡 Đồng bộ cache
     await loadActors();
     renderAdminActors();
   } catch (error) {

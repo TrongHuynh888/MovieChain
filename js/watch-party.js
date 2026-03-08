@@ -153,7 +153,7 @@ async function loadRooms() {
         // Luôn trigger filter (và render) để các tag "Sắp chiếu", "LIVE" tự cập nhật sang "Đã kết thúc" mà ko cần click
         filterWatchRooms();
       }
-    }, 60000);
+    }, 300000); // Tăng lên 5 phút (300,000ms) để tiết kiệm lượt đọc Firestore
 
     roomsUnsubscribe = db
       .collection("watchRooms")
@@ -780,17 +780,18 @@ async function handleCreateRoom(e) {
       const userLimit = config.userRoomLimit || 3;
       const totalLimit = config.totalRoomLimit || 50;
 
-      // 1. Kiểm tra tổng số phòng toàn hệ thống
-      const allRooms = await db.collection("watchRooms").get();
+      // 1. Kiểm tra tổng số phòng toàn hệ thống (Tối ưu: chỉ đọc tối đa limit + 1)
+      const allRooms = await db.collection("watchRooms").limit(totalLimit + 1).get();
       if (allRooms.size >= totalLimit) {
         showLoading(false);
         showNotification(`Hệ thống đã đạt giới hạn tối đa ${totalLimit} phòng. Vui lòng quay lại sau!`, "warning");
         return;
       }
       
-      // 2. Kiểm tra giới hạn của từng User
+      // 2. Kiểm tra giới hạn của từng User (Tối ưu: chỉ đọc tối đa limit + 1)
       const userRooms = await db.collection("watchRooms")
         .where("hostId", "==", currentUser.uid)
+        .limit(userLimit + 1)
         .get();
       
       if (userRooms.size >= userLimit) {
